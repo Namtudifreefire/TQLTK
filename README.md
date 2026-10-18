@@ -9,4 +9,4 @@ Là hàng C# thử nghiệm made by thienthuongthienha_duyngadocton_ (Với mụ
 - Cho phép đăng nhập cũng như sử dụng lớp bảo mật = Windows Hello.
 - Backup vault = Google Drive.
 # Lưu ý:
-- Tính năng BETA mới chỉ đc test ở máy Nhà Phát Triển, có thể 1 số máy sẽ gặp lỗi hoặc hoạt động không ổn định (khi kiểm nghiệm hoàn thành thì sẽ tháo BETA)
+- Tính năng BETA mới chỉ đc test ở máy của Nhà Phát Triển, có thể 1 số máy sẽ gặp lỗi hoặc hoạt động không ổn định (khi kiểm nghiệm hoàn thành thì sẽ tháo BETA)
