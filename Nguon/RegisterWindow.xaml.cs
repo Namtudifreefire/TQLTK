@@ -1,0 +1,184 @@
+using System.Linq;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
+using PersonalInfoManager.Models;
+using PersonalInfoManager.Services;
+
+namespace PersonalInfoManager
+{
+    public partial class RegisterWindow : Window
+    {
+        private readonly UserService _userService = new();
+
+        /// <summary>
+        /// Username sau khi đăng ký thành công — LoginWindow sẽ đọc để tự điền.
+        /// </summary>
+        public string RegisteredUsername { get; private set; } = "";
+
+        public RegisterWindow()
+        {
+            InitializeComponent();
+            Loaded += (_, _) => txtUsername.Focus();
+        }
+
+        // ================== ĐÁNH GIÁ ĐỘ MẠNH MẬT KHẨU ==================
+
+        private void TxtPassword_PasswordChanged(object sender, RoutedEventArgs e)
+        {
+            string pwd = txtPassword.Password;
+            if (string.IsNullOrEmpty(pwd))
+            {
+                lblStrength.Text = "";
+                return;
+            }
+
+            int score = CalculateStrength(pwd);
+            (string text, Brush color) = score switch
+            {
+                <= 2 => ("Yếu", Brushes.Red),
+                3 => ("Trung bình", Brushes.Orange),
+                4 => ("Mạnh", Brushes.Green),
+                _ => ("Rất mạnh", Brushes.DarkGreen)
+            };
+
+            lblStrength.Text = $"Độ mạnh: {text}";
+            lblStrength.Foreground = color;
+        }
+
+        private void TxtConfirm_PasswordChanged(object sender, RoutedEventArgs e)
+        {
+            if (string.IsNullOrEmpty(txtConfirm.Password))
+            {
+                lblConfirmStatus.Text = "";
+                return;
+            }
+
+            if (txtConfirm.Password == txtPassword.Password)
+            {
+                lblConfirmStatus.Text = "✓ Mật khẩu khớp";
+                lblConfirmStatus.Foreground = Brushes.Green;
+            }
+            else
+            {
+                lblConfirmStatus.Text = "✗ Mật khẩu không khớp";
+                lblConfirmStatus.Foreground = Brushes.Red;
+            }
+        }
+
+        private static int CalculateStrength(string pwd)
+        {
+            int score = 0;
+            if (pwd.Length >= 8) score++;
+            if (pwd.Length >= 12) score++;
+            if (pwd.Any(char.IsUpper) && pwd.Any(char.IsLower)) score++;
+            if (pwd.Any(char.IsDigit)) score++;
+            if (pwd.Any(c => !char.IsLetterOrDigit(c))) score++;
+            return score;
+        }
+
+        // ================== XỬ LÝ ĐĂNG KÝ ==================
+
+        private void BtnRegister_Click(object sender, RoutedEventArgs e)
+        {
+            string username = txtUsername.Text.Trim();
+            string password = txtPassword.Password;
+            string confirm = txtConfirm.Password;
+            string fullName = txtFullName.Text.Trim();
+            string email = txtEmail.Text.Trim();
+            string phone = txtPhone.Text.Trim();
+
+            // ===== VALIDATE =====
+
+            if (string.IsNullOrWhiteSpace(username) || username.Length < 3)
+            {
+                ShowError("Tên đăng nhập phải từ 3 ký tự trở lên.");
+                txtUsername.Focus();
+                return;
+            }
+
+            // Kiểm tra ký tự đặc biệt trong username
+            if (username.Any(c => !char.IsLetterOrDigit(c) && c != '_'))
+            {
+                ShowError("Tên đăng nhập chỉ được chứa chữ, số và dấu gạch dưới.");
+                txtUsername.Focus();
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(password) || password.Length < 6)
+            {
+                ShowError("Mật khẩu phải từ 6 ký tự trở lên.");
+                txtPassword.Focus();
+                return;
+            }
+
+            if (password != confirm)
+            {
+                ShowError("Mật khẩu xác nhận không khớp.");
+                txtConfirm.Clear();
+                txtConfirm.Focus();
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(fullName))
+            {
+                ShowError("Vui lòng nhập họ tên.");
+                txtFullName.Focus();
+                return;
+            }
+
+            // ===== TẠO TÀI KHOẢN =====
+            var result = _userService.CreateUserFull(
+                username,
+                password,
+                UserRole.User,   // ⚠️ User tự đăng ký → chỉ có role User
+                fullName,
+                email,
+                phone);
+
+            if (!result.ok)
+            {
+                ShowError(result.message);
+                return;
+            }
+
+            // ===== THÀNH CÔNG =====
+            try
+            {
+                ActivityLogger.Log(username, "REGISTER",
+                    $"Họ tên: {fullName}, Email: {email}");
+            }
+            catch { }
+
+            RegisteredUsername = username;
+
+            MessageBox.Show(
+                $"Đăng ký thành công!\n\n" +
+                $"Tên đăng nhập: {username}\n" +
+                $"Họ tên: {fullName}\n\n" +
+                $"Vui lòng đăng nhập để sử dụng.",
+                "Thành công",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+
+            DialogResult = true;
+            Close();
+        }
+
+        // ================== HỦY ==================
+
+        private void BtnCancel_Click(object sender, RoutedEventArgs e)
+        {
+            DialogResult = false;
+            Close();
+        }
+
+        // ================== HELPER ==================
+
+        private void ShowError(string message)
+        {
+            MessageBox.Show(message, "Lỗi",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+}

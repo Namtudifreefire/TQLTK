@@ -1,0 +1,194 @@
+<Window x:Class="PersonalInfoManager.RegisterWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Đăng ký tài khoản - TQLTK"
+        Height="700" Width="520"
+        MinHeight="600" MinWidth="480"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResize"
+        Background="{DynamicResource BackgroundBrush}"
+        Style="{StaticResource SlideInWindow}">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled"
+                  PanningMode="VerticalOnly">
+
+        <Grid Margin="35,25,35,30">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- Tiêu đề -->
+            <TextBlock Grid.Row="0"
+                       Text="📝 Đăng ký tài khoản"
+                       FontSize="24"
+                       FontWeight="Bold"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       HorizontalAlignment="Center"
+                       Margin="0,0,0,6" />
+
+            <TextBlock Grid.Row="1"
+                       Text="Tạo tài khoản mới để sử dụng TQLTK"
+                       FontSize="12"
+                       Foreground="{DynamicResource TextSecondaryBrush}"
+                       HorizontalAlignment="Center"
+                       Margin="0,0,0,25" />
+
+            <!-- Username -->
+            <StackPanel Grid.Row="2">
+                <TextBlock Text="Tên đăng nhập (*):"
+                           FontWeight="SemiBold"
+                           FontSize="13"
+                           Foreground="{DynamicResource TextPrimaryBrush}"
+                           Margin="0,0,0,6" />
+                <TextBox x:Name="txtUsername"
+                         Height="44"
+                         FontSize="14"
+                         Padding="12,10"
+                         VerticalContentAlignment="Center" />
+                <TextBlock Text="Từ 3 ký tự trở lên, không dấu, không khoảng trắng"
+                           FontSize="10"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           Margin="0,4,0,0" />
+            </StackPanel>
+
+            <!-- Password -->
+            <StackPanel Grid.Row="3" Margin="0,15,0,0">
+                <TextBlock Text="Mật khẩu (*):"
+                           FontWeight="SemiBold"
+                           FontSize="13"
+                           Foreground="{DynamicResource TextPrimaryBrush}"
+                           Margin="0,0,0,6" />
+                <PasswordBox x:Name="txtPassword"
+                             Height="44"
+                             FontSize="14"
+                             Padding="12,10"
+                             VerticalContentAlignment="Center"
+                             PasswordChanged="TxtPassword_PasswordChanged" />
+                <TextBlock x:Name="lblStrength"
+                           FontSize="11"
+                           FontStyle="Italic"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           Margin="0,4,0,0" />
+            </StackPanel>
+
+            <!-- Confirm Password -->
+            <StackPanel Grid.Row="4" Margin="0,15,0,0">
+                <TextBlock Text="Xác nhận mật khẩu (*):"
+                           FontWeight="SemiBold"
+                           FontSize="13"
+                           Foreground="{DynamicResource TextPrimaryBrush}"
+                           Margin="0,0,0,6" />
+                <PasswordBox x:Name="txtConfirm"
+                             Height="44"
+                             FontSize="14"
+                             Padding="12,10"
+                             VerticalContentAlignment="Center"
+                             PasswordChanged="TxtConfirm_PasswordChanged" />
+                <TextBlock x:Name="lblConfirmStatus"
+                           FontSize="11"
+                           FontStyle="Italic"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           Margin="0,4,0,0" />
+            </StackPanel>
+
+            <!-- FullName -->
+            <StackPanel Grid.Row="5" Margin="0,15,0,0">
+                <TextBlock Text="Họ tên (*):"
+                           FontWeight="SemiBold"
+                           FontSize="13"
+                           Foreground="{DynamicResource TextPrimaryBrush}"
+                           Margin="0,0,0,6" />
+                <TextBox x:Name="txtFullName"
+                         Height="44"
+                         FontSize="14"
+                         Padding="12,10"
+                         VerticalContentAlignment="Center" />
+            </StackPanel>
+
+            <!-- Email -->
+            <StackPanel Grid.Row="6" Margin="0,15,0,0">
+                <TextBlock Text="Gmail:"
+                           FontWeight="SemiBold"
+                           FontSize="13"
+                           Foreground="{DynamicResource TextPrimaryBrush}"
+                           Margin="0,0,0,6" />
+                <TextBox x:Name="txtEmail"
+                         Height="44"
+                         FontSize="14"
+                         Padding="12,10"
+                         VerticalContentAlignment="Center" />
+                <TextBlock Text="Ví dụ: tenban@gmail.com"
+                           FontSize="10"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           Margin="0,4,0,0" />
+            </StackPanel>
+
+            <!-- Phone -->
+            <StackPanel Grid.Row="7" Margin="0,15,0,0">
+                <TextBlock Text="Số điện thoại:"
+                           FontWeight="SemiBold"
+                           FontSize="13"
+                           Foreground="{DynamicResource TextPrimaryBrush}"
+                           Margin="0,0,0,6" />
+                <TextBox x:Name="txtPhone"
+                         Height="44"
+                         FontSize="14"
+                         Padding="12,10"
+                         VerticalContentAlignment="Center" />
+            </StackPanel>
+
+            <!-- Nút hành động -->
+            <Grid Grid.Row="8" Margin="0,30,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <Button Grid.Column="0"
+                        Height="46"
+                        Margin="0,0,6,0"
+                        Click="BtnCancel_Click"
+                        Style="{StaticResource OutlineButton}">
+                    <TextBlock Text="Hủy"
+                               FontSize="14"
+                               VerticalAlignment="Center"
+                               HorizontalAlignment="Center" />
+                </Button>
+
+                <Button Grid.Column="1"
+                        Height="46"
+                        Margin="6,0,0,0"
+                        Click="BtnRegister_Click">
+                    <TextBlock Text="✓ Đăng ký"
+                               FontSize="14"
+                               FontWeight="Bold"
+                               Foreground="White"
+                               VerticalAlignment="Center"
+                               HorizontalAlignment="Center" />
+                </Button>
+            </Grid>
+
+            <!-- Nút quay lại đăng nhập -->
+            <TextBlock Grid.Row="9"
+                       FontSize="12"
+                       Foreground="{DynamicResource TextSecondaryBrush}"
+                       HorizontalAlignment="Center"
+                       Margin="0,20,0,0"
+                       TextWrapping="Wrap"
+                       TextAlignment="Center">
+                Đã có tài khoản? Đóng cửa sổ này để quay lại đăng nhập.
+            </TextBlock>
+
+        </Grid>
+    </ScrollViewer>
+</Window>
