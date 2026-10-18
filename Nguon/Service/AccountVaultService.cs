@@ -7,11 +7,6 @@ using PersonalInfoManager.Models;
 
 namespace PersonalInfoManager.Services
 {
-    /// <summary>
-    /// Quản lý danh sách tài khoản đã lưu của từng user.
-    /// Toàn bộ dữ liệu được mã hóa AES trước khi lưu xuống file.
-    /// Vị trí: %AppData%\PersonalInfoManager\vault_<username>.dat
-    /// </summary>
     public class AccountVaultService
     {
         private readonly string _root = Path.Combine(
