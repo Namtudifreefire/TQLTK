@@ -9,6 +9,7 @@
     <NoWarn>$(NoWarn);NU1510</NoWarn>
     <AssemblyName>PersonalInfoManager</AssemblyName>
     <RootNamespace>PersonalInfoManager</RootNamespace>
+    <Version>3.6.1</Version>
     <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
     <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
     <ApplicationManifest>app.manifest</ApplicationManifest>
@@ -18,8 +19,7 @@
     <PackageReference Include="HaemmerElectronics.SeppPenner.WindowsHello" Version="1.1.5" />
     <PackageReference Include="QRCoder" Version="1.8.1" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.13" />
-    
-    <!-- ✅ Thêm package cho Google Drive -->
+
     <PackageReference Include="Google.Apis.Drive.v3" Version="1.77.0.4276" />
   </ItemGroup>
 
@@ -35,11 +35,8 @@
     </Page>
   </ItemGroup>
 
-  <!-- ✅ Copy file credentials.json vào thư mục build -->
-  <ItemGroup>
-    <None Update="credentials.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
+  <ItemGroup Condition="Exists('credentials.json')">
+    <EmbeddedResource Include="credentials.json" LogicalName="credentials.json" />
   </ItemGroup>
 
 </Project>

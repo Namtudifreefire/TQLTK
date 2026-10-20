@@ -12,7 +12,7 @@ echo [3/5] Building...
 dotnet build -c Release
 
 echo [4/5] Publishing single-file exe...
-dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true
+dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
 
 if %errorlevel% neq 0 (
     echo.
