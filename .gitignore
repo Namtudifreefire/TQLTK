@@ -1,7 +1,13 @@
 bin/
 obj/
+publish/
 .vs/
 *.user
 *.suo
 credentials.json
+client_secret*.json
+token.json
+*.dat
 *.log
+*.bak
+*.tmp
