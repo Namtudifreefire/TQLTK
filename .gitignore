@@ -6,3 +6,6 @@ obj/
 credentials.json
 token.json
 *.log
+*.dat
+*.bak
+*.tmp
