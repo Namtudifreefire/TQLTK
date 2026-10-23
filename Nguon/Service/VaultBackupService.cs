@@ -8,7 +8,10 @@ namespace PersonalInfoManager.Services
 {
     /// <summary>
     /// Xuất / Nhập toàn bộ vault (tài khoản đã lưu) của user.
-    /// File backup được mã hóa AES.
+    /// File backup được mã hóa AES:
+    /// - Đã đặt cụm mật khẩu sao lưu của người dùng này: mã hóa bằng cụm đó (BackupCrypto, "v3p:"), mở được trên máy khác.
+    /// - Chưa đặt: mã hóa bằng khóa của máy (AesCrypto), chỉ mở được trên máy này.
+    /// Khi nhập, định dạng được nhận biết từ phần đầu file nên file cũ vẫn đọc được.
     /// </summary>
     public static class VaultBackupService
     {
@@ -37,7 +40,11 @@ namespace PersonalInfoManager.Services
                 string json = JsonSerializer.Serialize(package,
                     new JsonSerializerOptions { WriteIndented = true });
 
-                string encrypted = AesCrypto.Encrypt(json);
+                string? passphrase = BackupCrypto.GetStoredPassphrase(username);
+                string encrypted = passphrase != null
+                    ? BackupCrypto.Encrypt(json, passphrase)
+                    : AesCrypto.Encrypt(json);
+
                 File.WriteAllText(destPath, encrypted);
 
                 try
@@ -47,7 +54,12 @@ namespace PersonalInfoManager.Services
                 }
                 catch { }
 
-                return (true, $"Đã xuất {accounts.Count} tài khoản.");
+                string msg = $"Đã xuất {accounts.Count} tài khoản.";
+                if (passphrase == null)
+                    msg += "\n\nLưu ý: bạn chưa đặt cụm mật khẩu sao lưu nên file này chỉ mở được trên máy này " +
+                           "(Tiện ích → Cụm mật khẩu sao lưu).";
+
+                return (true, msg);
             }
             catch (Exception ex)
             {
@@ -56,10 +68,51 @@ namespace PersonalInfoManager.Services
         }
 
         /// <summary>
+        /// true nếu file cần cụm mật khẩu để mở (định dạng "v3p:").
+        /// </summary>
+        public static bool IsPassphraseProtected(string sourcePath)
+        {
+            try { return BackupCrypto.IsPassphraseFormat(File.ReadAllText(sourcePath)); }
+            catch { return false; }
+        }
+
+        /// <summary>
+        /// Kiểm tra file mở được bằng cụm mật khẩu này không (passphrase = null thì dùng cụm đã lưu của người dùng này).
+        /// File kiểu cũ không cần cụm nên trả về true.
+        /// </summary>
+        public static bool PassphraseWorks(string username, string sourcePath, string? passphrase = null)
+        {
+            try
+            {
+                string text = File.ReadAllText(sourcePath);
+                if (!BackupCrypto.IsPassphraseFormat(text)) return true;
+
+                passphrase ??= BackupCrypto.GetStoredPassphrase(username);
+                if (passphrase == null) return false;
+
+                BackupCrypto.Decrypt(text, passphrase);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
         /// Nhập vault từ file backup.
         /// </summary>
+        /// <param name="passphrase">
+        /// Cụm mật khẩu để mở file định dạng "v3p:". Bỏ trống thì dùng cụm đã lưu của người dùng này.
+        /// File kiểu cũ (khóa của máy) không dùng tham số này.
+        /// </param>
+        /// <param name="confirmForeignOwner">
+        /// Gọi khi file ghi người xuất (ExportedBy) khác người dùng hiện tại, nhận tên người xuất.
+        /// Trả true để vẫn nhập. Bỏ trống thì từ chối nhập file của người dùng khác.
+        /// </param>
         public static (bool ok, string message, int importedCount) ImportFromFile(
-            string username, string sourcePath)
+            string username, string sourcePath, string? passphrase = null,
+            Func<string, bool>? confirmForeignOwner = null)
         {
             try
             {
@@ -71,20 +124,51 @@ namespace PersonalInfoManager.Services
                     return (false, "File trống.", 0);
 
                 string json;
-                try
+                if (BackupCrypto.IsPassphraseFormat(encrypted))
                 {
-                    json = AesCrypto.Decrypt(encrypted);
+                    passphrase ??= BackupCrypto.GetStoredPassphrase(username);
+                    if (passphrase == null)
+                        return (false, "File này được bảo vệ bằng cụm mật khẩu sao lưu. Hãy nhập cụm mật khẩu để mở.", 0);
+
+                    try
+                    {
+                        json = BackupCrypto.Decrypt(encrypted, passphrase);
+                    }
+                    catch
+                    {
+                        return (false,
+                            "Không thể giải mã file.\n" +
+                            "Cụm mật khẩu không đúng, hoặc file bị hỏng.", 0);
+                    }
                 }
-                catch
+                else
                 {
-                    return (false,
-                        "Không thể giải mã file.\n" +
-                        "File có thể bị hỏng hoặc không đúng định dạng.", 0);
+                    try
+                    {
+                        json = AesCrypto.Decrypt(encrypted);
+                    }
+                    catch
+                    {
+                        return (false,
+                            "Không thể giải mã file.\n" +
+                            "File có thể bị hỏng hoặc không đúng định dạng.\n\n" +
+                            "Nếu file được tạo trên máy khác trước khi đặt cụm mật khẩu sao lưu, " +
+                            "nó chỉ mở được trên máy đã tạo ra nó.", 0);
+                    }
                 }
 
                 var package = JsonSerializer.Deserialize<VaultPackage>(json);
                 if (package?.Accounts == null || package.Accounts.Count == 0)
                     return (false, "File không chứa tài khoản nào.", 0);
+
+                // File ghi người xuất khác người dùng hiện tại: chỉ nhập khi được xác nhận rõ ràng
+                string owner = (package.ExportedBy ?? "").Trim();
+                bool foreignOwner = owner.Length > 0 &&
+                                    !string.Equals(owner, username, StringComparison.OrdinalIgnoreCase);
+
+                if (foreignOwner && (confirmForeignOwner == null || !confirmForeignOwner(owner)))
+                    return (false,
+                        $"Đã hủy nhập: bản sao lưu này thuộc về người dùng '{owner}', không phải '{username}'.", 0);
 
                 var vaultService = new AccountVaultService();
                 var existing = vaultService.Load(username);
@@ -117,7 +201,8 @@ namespace PersonalInfoManager.Services
                 try
                 {
                     ActivityLogger.Log(username, "IMPORT_VAULT",
-                        $"Đã nhập {imported} tài khoản (bỏ qua {skipped} trùng) từ {Path.GetFileName(sourcePath)}");
+                        $"Đã nhập {imported} tài khoản (bỏ qua {skipped} trùng) từ {Path.GetFileName(sourcePath)}" +
+                        (foreignOwner ? $" (bản sao lưu của người dùng '{owner}')" : ""));
                 }
                 catch { }
 

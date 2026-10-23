@@ -1063,8 +1063,12 @@ namespace PersonalInfoManager
                 string username = SessionService.CurrentUser!.Username;
                 if (MessageBox.Show($"Nhập vault từ file:\n{Path.GetFileName(dlg.FileName)}?\n\nCác tài khoản trùng sẽ được bỏ qua.", "Xác nhận nhập", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
 
-                var result = VaultBackupService.ImportFromFile(username, dlg.FileName);
+                if (!TryGetImportPassphrase(dlg.FileName, out string? passphrase)) return;
+
+                var result = VaultBackupService.ImportFromFile(username, dlg.FileName, passphrase, ConfirmForeignOwner);
                 MessageBox.Show(result.message, result.ok ? "Thành công" : "Lỗi", MessageBoxButton.OK, result.ok ? MessageBoxImage.Information : MessageBoxImage.Warning);
+
+                if (result.ok) OfferSavePassphrase(passphrase);
 
                 if (result.ok && result.importedCount > 0)
                 {
@@ -1084,12 +1088,24 @@ namespace PersonalInfoManager
             try
             {
                 string username = SessionService.CurrentUser!.Username;
+                OfferAdoptLegacyPassphrase(username);
+                if (!BackupCrypto.HasStoredPassphrase(username))
+                {
+                    var ask = MessageBox.Show(
+                        "Bản sao lưu lên Google Drive chưa có cụm mật khẩu khôi phục, nên chỉ mở được trên máy này. " +
+                        "Nếu mất máy hoặc cài lại Windows, bạn sẽ không khôi phục được.\n\nĐặt cụm mật khẩu ngay bây giờ?",
+                        "Nên đặt cụm mật khẩu sao lưu", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning);
+
+                    if (ask == MessageBoxResult.Cancel) return;
+                    if (ask == MessageBoxResult.Yes && !SetBackupPassphrase()) return;
+                }
+
                 string tempFile = Path.Combine(Path.GetTempPath(), $"vault_backup_{DateTime.Now:yyyyMMdd_HHmmss}.vault");
 
                 var exportResult = VaultBackupService.ExportToFile(username, tempFile);
                 if (!exportResult.ok) { MessageBox.Show(exportResult.message, "Lỗi xuất file", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
 
-                var syncService = new CloudSyncService();
+                var syncService = new CloudSyncService(username);
 
                 Mouse.OverrideCursor = Cursors.Wait;
                 bool success = await syncService.UploadVaultAsync(tempFile);
@@ -1099,18 +1115,193 @@ namespace PersonalInfoManager
 
                 if (success)
                 {
-                    MessageBox.Show("Đã đồng bộ vault lên Google Drive thành công!\n\nBạn có thể kiểm tra trong thư mục 'My Drive' của Google.", "Thành công", MessageBoxButton.OK, MessageBoxImage.Information);
+                    MessageBox.Show("Đã đồng bộ vault lên Google Drive thành công!\n\nBản sao lưu nằm trong thư mục 'TQLTK Backup' trên Google Drive của bạn.", "Thành công", MessageBoxButton.OK, MessageBoxImage.Information);
                     ActivityLogger.Log(username, "SYNC_GOOGLE_DRIVE", "Upload vault thành công");
                 }
                 else
                 {
-                    MessageBox.Show("Đồng bộ thất bại.\n\nVui lòng kiểm tra:\n- Kết nối mạng\n- Quyền truy cập Google Drive\n- Xem lại cửa sổ trình duyệt (nếu có) để cấp quyền.", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    MessageBox.Show("Đồng bộ thất bại.\n\n" + (syncService.LastError ?? "Vui lòng kiểm tra kết nối mạng, quyền truy cập Google Drive và cửa sổ trình duyệt (nếu có)."), "Lỗi", MessageBoxButton.OK, MessageBoxImage.Warning);
                 }
             }
             catch (Exception ex)
             {
                 Mouse.OverrideCursor = null;
                 MessageBox.Show($"Lỗi đồng bộ: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        // Khôi phục = tải bản sao lưu (file .vault) từ Drive về file tạm rồi nhập bằng đúng hàm
+        // "Nhập vault" có sẵn: tài khoản trùng bị bỏ qua, dữ liệu hiện tại không bị xóa.
+        private async void MnuRestoreGoogleDrive_Click(object? sender, RoutedEventArgs e)
+        {
+            string tempFile = Path.Combine(Path.GetTempPath(), $"vault_restore_{DateTime.Now:yyyyMMdd_HHmmss}.vault");
+
+            try
+            {
+                string username = SessionService.CurrentUser!.Username;
+                var syncService = new CloudSyncService(username);
+
+                var dlg = new RestoreBackupWindow(syncService) { Owner = this };
+                if (dlg.ShowDialog() != true || dlg.Selected is not { } pick) return;
+
+                if (MessageBox.Show(
+                        $"Nhập dữ liệu từ bản sao lưu trên Google Drive:\n{pick.CreatedText} ({pick.SizeText})?\n\n" +
+                        "Các tài khoản trùng sẽ được bỏ qua, dữ liệu hiện tại không bị xóa.",
+                        "Xác nhận khôi phục", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+
+                Mouse.OverrideCursor = Cursors.Wait;
+                bool downloaded = await syncService.DownloadBackupAsync(pick.Id, tempFile);
+                Mouse.OverrideCursor = null;
+
+                if (!downloaded)
+                {
+                    MessageBox.Show(syncService.LastError ?? "Tải bản sao lưu từ Google Drive thất bại.", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                if (!TryGetImportPassphrase(tempFile, out string? passphrase)) return;
+
+                var result = VaultBackupService.ImportFromFile(username, tempFile, passphrase, ConfirmForeignOwner);
+                MessageBox.Show(result.message, result.ok ? "Thành công" : "Lỗi", MessageBoxButton.OK, result.ok ? MessageBoxImage.Information : MessageBoxImage.Warning);
+
+                if (result.ok)
+                {
+                    OfferSavePassphrase(passphrase);
+                    ActivityLogger.Log(username, "RESTORE_GOOGLE_DRIVE", $"Nhập vault từ Drive: {pick.Name}");
+
+                    if (result.importedCount > 0)
+                    {
+                        RefreshAccounts();
+                        UpdateStorageInfo();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Mouse.OverrideCursor = null;
+                MessageBox.Show($"Lỗi khôi phục: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                try { if (File.Exists(tempFile)) File.Delete(tempFile); } catch { }
+            }
+        }
+
+        // ================================================================
+        // ================== CỤM MẬT KHẨU SAO LƯU ==================
+        // ================================================================
+
+        private void MnuBackupPassphrase_Click(object? sender, RoutedEventArgs e)
+        {
+            try
+            {
+                string username = SessionService.CurrentUser!.Username;
+                OfferAdoptLegacyPassphrase(username);
+
+                if (BackupCrypto.HasStoredPassphrase(username) &&
+                    MessageBox.Show(
+                        "Máy này đã có cụm mật khẩu sao lưu.\n\nĐổi sang cụm mới? Các bản sao lưu đã tạo trước đó " +
+                        "vẫn cần cụm cũ để mở, nên hãy giữ lại cụm cũ.",
+                        "Đổi cụm mật khẩu sao lưu", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+                    return;
+
+                SetBackupPassphrase();
+            }
+            catch (Exception ex) { MessageBox.Show($"Lỗi: {ex.Message}"); }
+        }
+
+        // Mở cửa sổ đặt cụm, lưu lại trên máy (DPAPI). Trả về false nếu người dùng hủy.
+        private bool SetBackupPassphrase()
+        {
+            var dlg = new BackupPassphraseWindow(confirmMode: true) { Owner = this };
+            if (dlg.ShowDialog() != true) return false;
+
+            string username = SessionService.CurrentUser!.Username;
+            BackupCrypto.SaveStoredPassphrase(username, dlg.Passphrase);
+            try { ActivityLogger.Log(SessionService.CurrentUser!.Username, "SET_BACKUP_PASSPHRASE", ""); } catch { }
+
+            MessageBox.Show(
+                "Đã đặt cụm mật khẩu sao lưu.\n\nTừ giờ các bản sao lưu và file xuất vault mới sẽ mở được trên máy khác " +
+                "bằng cụm này. Hãy ghi lại cụm ở nơi an toàn.",
+                "Thành công", MessageBoxButton.OK, MessageBoxImage.Information);
+            return true;
+        }
+
+        // Chuẩn bị cụm để nhập một file sao lưu.
+        // Trả về false nếu người dùng hủy hoặc nhập sai 3 lần.
+        // passphrase = null nghĩa là không cần nhập: file kiểu cũ, hoặc cụm đã lưu trên máy này mở được.
+        private bool TryGetImportPassphrase(string file, out string? passphrase)
+        {
+            passphrase = null;
+            string username = SessionService.CurrentUser!.Username;
+
+            if (!VaultBackupService.IsPassphraseProtected(file)) return true;
+            if (VaultBackupService.PassphraseWorks(username, file)) return true;
+
+            for (int i = 0; i < 3; i++)
+            {
+                var dlg = new BackupPassphraseWindow(confirmMode: false) { Owner = this };
+                if (dlg.ShowDialog() != true) return false;
+
+                if (VaultBackupService.PassphraseWorks(username, file, dlg.Passphrase))
+                {
+                    passphrase = dlg.Passphrase;
+                    return true;
+                }
+
+                MessageBox.Show("Cụm mật khẩu không đúng.", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+
+            return false;
+        }
+
+        // Máy chưa có cụm mật khẩu: sau khi nhập thành công bằng một cụm, gợi ý dùng luôn cụm đó cho máy này.
+        private void OfferSavePassphrase(string? passphrase)
+        {
+            string username = SessionService.CurrentUser!.Username;
+            if (passphrase == null || BackupCrypto.HasStoredPassphrase(username)) return;
+
+            if (MessageBox.Show(
+                    "Dùng cụm mật khẩu vừa nhập làm cụm sao lưu cho máy này?\n\n" +
+                    "Từ giờ các bản sao lưu mới từ máy này sẽ mở được bằng cùng cụm đó.",
+                    "Lưu cụm mật khẩu", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+            {
+                BackupCrypto.SaveStoredPassphrase(username, passphrase);
+            }
+        }
+
+        // Bản sao lưu ghi tên người dùng khác: hỏi xác nhận (mặc định Không) trước khi nhập vào vault hiện tại.
+        private bool ConfirmForeignOwner(string owner)
+        {
+            string current = SessionService.CurrentUser!.Username;
+
+            return MessageBox.Show(
+                $"Bản sao lưu này được tạo bởi người dùng '{owner}', không phải '{current}'.\n\n" +
+                $"Nhập vào sẽ thêm các tài khoản của '{owner}' vào vault của '{current}'.\n" +
+                "Chỉ tiếp tục nếu đây là dữ liệu của chính bạn (ví dụ bạn dùng tên đăng nhập khác trên máy mới).\n\n" +
+                "Tiếp tục?",
+                "Bản sao lưu của người dùng khác",
+                MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) == MessageBoxResult.Yes;
+        }
+
+        // Trước khi tách theo người dùng, máy chỉ có một cụm mật khẩu sao lưu dùng chung.
+        // Hỏi người dùng hiện tại có nhận cụm đó không (chỉ người đầu tiên nhận được, sau đó file cũ bị xóa).
+        private void OfferAdoptLegacyPassphrase(string username)
+        {
+            if (BackupCrypto.HasStoredPassphrase(username) || !BackupCrypto.HasLegacyPassphrase()) return;
+
+            var ask = MessageBox.Show(
+                "Máy này có một cụm mật khẩu sao lưu được đặt từ phiên bản trước, khi app chưa tách theo người dùng.\n\n" +
+                $"Đây có phải cụm của '{username}'?\n\n" +
+                "Có: dùng cụm đó cho tài khoản này (người dùng khác sẽ không nhận được nữa).\n" +
+                "Không: giữ nguyên để đúng người đã đặt cụm đó nhận sau.",
+                "Cụm mật khẩu sao lưu cũ", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No);
+
+            if (ask == MessageBoxResult.Yes && !BackupCrypto.TryAdoptLegacyPassphrase(username))
+            {
+                MessageBox.Show(
+                    "Không đọc được cụm cũ trên máy này. Hãy đặt cụm mới (Tiện ích → Cụm mật khẩu sao lưu).",
+                    "Lỗi", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
 

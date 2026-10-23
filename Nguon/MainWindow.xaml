@@ -45,6 +45,10 @@
 
                 <MenuItem Header="☁️ Đồng bộ Google Drive (BETA)"
                           Click="MnuSyncGoogleDrive_Click" />
+                <MenuItem Header="☁️ Khôi phục từ Google Drive (BETA)"
+                          Click="MnuRestoreGoogleDrive_Click" />
+                <MenuItem Header="🔑 Cụm mật khẩu sao lưu"
+                          Click="MnuBackupPassphrase_Click" />
 
                 <Separator />
 
