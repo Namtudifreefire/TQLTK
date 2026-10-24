@@ -32,7 +32,7 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <TextBlock Grid.Row="0" Text="☁️ Khôi phục từ Google Drive"
+        <TextBlock x:Name="txtTitle" Grid.Row="0" Text="☁️ Khôi phục từ Google Drive"
                    FontSize="16" FontWeight="Bold"
                    HorizontalAlignment="Center" Margin="0,0,0,12" />
 
@@ -68,7 +68,7 @@
                   Content="Hiện cả bản sao lưu của người dùng khác (khi dùng chung một tài khoản Google)"
                   Checked="ChkOthers_Changed" Unchecked="ChkOthers_Changed" />
 
-        <TextBlock Grid.Row="4"
+        <TextBlock x:Name="txtNote" Grid.Row="4"
                    Text="Dữ liệu của bản sao lưu được nhập thêm vào tài khoản hiện tại. Tài khoản trùng sẽ được bỏ qua, dữ liệu hiện có không bị xóa."
                    Foreground="{DynamicResource TextSecondaryBrush}"
                    FontSize="12" TextWrapping="Wrap" Margin="0,8,0,0" />

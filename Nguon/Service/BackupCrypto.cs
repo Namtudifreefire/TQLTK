@@ -154,6 +154,111 @@ namespace PersonalInfoManager.Services
         }
 
         // ============================================================
+        //  DỮ LIỆU NHỊ PHÂN (bản sao lưu File cá nhân, định dạng "TQFB")
+        // ============================================================
+
+        // Định dạng: "TQFB" + byte phiên bản (1) | salt 16 | iterations 4 (big-endian) | nonce 12 | tag 16 | cipher
+        // Toàn bộ phần đầu (nhận dạng, salt, iterations) được đưa vào dữ liệu xác thực nên sửa header sẽ bị phát hiện.
+        private static readonly byte[] BinaryMagic = { (byte)'T', (byte)'Q', (byte)'F', (byte)'B', 1 };
+
+        /// <summary>true nếu dữ liệu bắt đầu bằng phần nhận dạng của định dạng nhị phân "TQFB".</summary>
+        public static bool IsBinaryFormat(byte[] data)
+        {
+            if (data.Length < BinaryMagic.Length) return false;
+
+            for (int i = 0; i < BinaryMagic.Length; i++)
+                if (data[i] != BinaryMagic[i]) return false;
+
+            return true;
+        }
+
+        /// <summary>
+        /// Mã hóa dữ liệu nhị phân bằng cụm mật khẩu. Trả về nguyên nội dung file (đã gồm phần nhận dạng "TQFB").
+        /// </summary>
+        public static byte[] EncryptBytes(ReadOnlySpan<byte> plain, string passphrase)
+        {
+            byte[] salt = RandomNumberGenerator.GetBytes(SaltSize);
+            byte[] header = BuildHeader(salt, DefaultIterations);
+            byte[] key = DeriveKey(passphrase, salt, DefaultIterations);
+
+            try
+            {
+                byte[] nonce = RandomNumberGenerator.GetBytes(NonceSize);
+                int prefixLen = BinaryMagic.Length + header.Length;
+                byte[] result = new byte[prefixLen + NonceSize + TagSize + plain.Length];
+
+                Buffer.BlockCopy(BinaryMagic, 0, result, 0, BinaryMagic.Length);
+                Buffer.BlockCopy(header, 0, result, BinaryMagic.Length, header.Length);
+                Buffer.BlockCopy(nonce, 0, result, prefixLen, NonceSize);
+
+                Span<byte> tag = result.AsSpan(prefixLen + NonceSize, TagSize);
+                Span<byte> cipher = result.AsSpan(prefixLen + NonceSize + TagSize, plain.Length);
+
+                using (var gcm = new AesGcm(key, TagSize))
+                {
+                    gcm.Encrypt(nonce, plain, cipher, tag, result.AsSpan(0, prefixLen));
+                }
+
+                return result;
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(key);
+            }
+        }
+
+        /// <summary>
+        /// Giải mã dữ liệu do EncryptBytes tạo ra (nguyên nội dung file).
+        /// Ném CryptographicException nếu sai cụm mật khẩu, file bị sửa/hỏng hoặc không đúng định dạng.
+        /// </summary>
+        public static byte[] DecryptBytes(byte[] data, string passphrase)
+        {
+            if (!IsBinaryFormat(data))
+                throw new CryptographicException("Không phải định dạng sao lưu nhị phân của TQLTK.");
+
+            int headerLen = SaltSize + IterationsSize;
+            int prefixLen = BinaryMagic.Length + headerLen;
+
+            if (data.Length < prefixLen + NonceSize + TagSize)
+                throw new CryptographicException("Dữ liệu mã hóa không hợp lệ.");
+
+            ReadOnlySpan<byte> span = data;
+            ReadOnlySpan<byte> aad = span.Slice(0, prefixLen);
+            ReadOnlySpan<byte> salt = span.Slice(BinaryMagic.Length, SaltSize);
+            int iterations = BinaryPrimitives.ReadInt32BigEndian(
+                span.Slice(BinaryMagic.Length + SaltSize, IterationsSize));
+
+            if (iterations < MinIterations || iterations > MaxIterations)
+                throw new CryptographicException("Tham số mã hóa không hợp lệ.");
+
+            ReadOnlySpan<byte> nonce = span.Slice(prefixLen, NonceSize);
+            ReadOnlySpan<byte> tag = span.Slice(prefixLen + NonceSize, TagSize);
+            ReadOnlySpan<byte> cipher = span.Slice(prefixLen + NonceSize + TagSize);
+
+            byte[] key = DeriveKey(passphrase, salt, iterations);
+            byte[] plain = new byte[cipher.Length];
+
+            try
+            {
+                using (var gcm = new AesGcm(key, TagSize))
+                {
+                    gcm.Decrypt(nonce, cipher, tag, plain, aad);   // sai cụm / bị sửa → ném lỗi
+                }
+
+                return plain;
+            }
+            catch
+            {
+                CryptographicOperations.ZeroMemory(plain);
+                throw;
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(key);
+            }
+        }
+
+        // ============================================================
         //  NHÃN NGƯỜI DÙNG
         // ============================================================
 

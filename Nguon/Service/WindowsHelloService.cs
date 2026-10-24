@@ -43,16 +43,27 @@ namespace PersonalInfoManager.Services
         // ================== KIỂM TRA KHẢ DỤNG ==================
         // ================================================================
 
-        public static Task<bool> IsAvailableAsync()
+        /// <summary>
+        /// Hỏi Windows xem máy này đã có và đã thiết lập Windows Hello (PIN / vân tay / khuôn mặt) chưa.
+        /// Nếu chính lời gọi kiểm tra bị lỗi (không xác định được) thì giữ hành vi cũ là coi như khả dụng,
+        /// bước xác thực thật phía sau sẽ báo lỗi nếu thực sự không dùng được.
+        /// </summary>
+        public static async Task<bool> IsAvailableAsync()
         {
             try
             {
-                Log("IsAvailableAsync = true");
-                return Task.FromResult(true);
+                var availability = await global::Windows.Security.Credentials.UI
+                    .UserConsentVerifier.CheckAvailabilityAsync();
+
+                Log($"IsAvailableAsync: {availability}");
+
+                return availability == global::Windows.Security.Credentials.UI
+                    .UserConsentVerifierAvailability.Available;
             }
-            catch
+            catch (Exception ex)
             {
-                return Task.FromResult(false);
+                Log($"IsAvailableAsync không kiểm tra được ({ex.GetType().Name}: {ex.Message}) → coi như khả dụng");
+                return true;
             }
         }
 

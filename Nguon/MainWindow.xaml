@@ -47,6 +47,10 @@
                           Click="MnuSyncGoogleDrive_Click" />
                 <MenuItem Header="☁️ Khôi phục từ Google Drive (BETA)"
                           Click="MnuRestoreGoogleDrive_Click" />
+                <MenuItem Header="📁 Sao lưu File cá nhân lên Drive (BETA)"
+                          Click="MnuSyncFilesGoogleDrive_Click" />
+                <MenuItem Header="📁 Khôi phục File cá nhân từ Drive (BETA)"
+                          Click="MnuRestoreFilesGoogleDrive_Click" />
                 <MenuItem Header="🔑 Cụm mật khẩu sao lưu"
                           Click="MnuBackupPassphrase_Click" />
 

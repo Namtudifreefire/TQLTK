@@ -1,42 +1,46 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <OutputType>WinExe</OutputType>
-    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <UseWPF>true</UseWPF>
-    <NoWarn>$(NoWarn);NU1510</NoWarn>
-    <AssemblyName>PersonalInfoManager</AssemblyName>
-    <RootNamespace>PersonalInfoManager</RootNamespace>
-    <Version>3.6.2</Version>
-    <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
-    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
-    <ApplicationManifest>app.manifest</ApplicationManifest>
-  </PropertyGroup>
+	<PropertyGroup>
+		<OutputType>WinExe</OutputType>
+		<TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
 
-  <ItemGroup>
-    <PackageReference Include="HaemmerElectronics.SeppPenner.WindowsHello" Version="1.1.5" />
-    <PackageReference Include="QRCoder" Version="1.8.1" />
-    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.13" />
+		<RuntimeIdentifiers>win-x64;win-x86</RuntimeIdentifiers>
 
-    <PackageReference Include="Google.Apis.Drive.v3" Version="1.77.0.4276" />
-  </ItemGroup>
+		<WindowsSdkPackageVersion>10.0.19041.54</WindowsSdkPackageVersion>
 
-  <ItemGroup>
-    <Page Update="Themes\LightTheme.xaml">
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Update="Themes\DarkTheme.xaml">
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Update="Themes\Controls.xaml">
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-  </ItemGroup>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<UseWPF>true</UseWPF>
+		<NoWarn>$(NoWarn);NU1510</NoWarn>
+		<AssemblyName>PersonalInfoManager</AssemblyName>
+		<RootNamespace>PersonalInfoManager</RootNamespace>
+		<Version>3.6.3</Version>
+		<SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
+		<TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+		<ApplicationManifest>app.manifest</ApplicationManifest>
+	</PropertyGroup>
 
-  <ItemGroup Condition="Exists('credentials.json')">
-    <EmbeddedResource Include="credentials.json" LogicalName="credentials.json" />
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="HaemmerElectronics.SeppPenner.WindowsHello" Version="1.1.5" />
+		<PackageReference Include="QRCoder" Version="1.8.1" />
+		<PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.13" />
+		<PackageReference Include="Google.Apis.Drive.v3" Version="1.77.0.4276" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Page Update="Themes\LightTheme.xaml">
+			<Generator>MSBuild:Compile</Generator>
+		</Page>
+		<Page Update="Themes\DarkTheme.xaml">
+			<Generator>MSBuild:Compile</Generator>
+		</Page>
+		<Page Update="Themes\Controls.xaml">
+			<Generator>MSBuild:Compile</Generator>
+		</Page>
+	</ItemGroup>
+
+	<ItemGroup Condition="Exists('credentials.json')">
+		<EmbeddedResource Include="credentials.json" LogicalName="credentials.json" />
+	</ItemGroup>
 
 </Project>

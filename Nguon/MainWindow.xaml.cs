@@ -122,6 +122,7 @@ namespace PersonalInfoManager
         private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
         {
             StopAutoLock();
+            try { ClipboardGuard.ClearNow(); } catch { }   // đăng xuất / tự khóa / thoát: xóa mật khẩu còn trong clipboard
             SaveWindowState();
         }
 
@@ -416,11 +417,6 @@ namespace PersonalInfoManager
             try { Clipboard.SetText(selected.Username); MessageBox.Show("Đã copy username!"); } catch { }
         }
 
-        // ✅ Copy Password:
-        //    0. Vừa xác thực trong AuthRememberSeconds giây qua -> copy luôn.
-        //    1. Windows Hello.
-        //    2. Windows Hello thất bại / hủy / không hỗ trợ -> xác thực 2 bước (Authenticator).
-        //    Không qua cả hai (hoặc chưa bật 2FA) -> KHÔNG copy.
         private async void BtnCopyPassword_Click(object? sender, RoutedEventArgs e)
         {
             var selected = GetSelectedAccount();
@@ -482,9 +478,9 @@ namespace PersonalInfoManager
                     return;
                 }
 
-                Clipboard.SetText(selected.Password);
+                ClipboardGuard.CopySensitive(selected.Password);
                 try { ActivityLogger.Log(username, "COPY_PASSWORD", $"{selected.ServiceName} (xác thực: {method})"); } catch { }
-                MessageBox.Show("Đã copy password!");
+                MessageBox.Show($"Đã copy password! Clipboard sẽ tự xóa sau {ClipboardGuard.ClearAfterSeconds} giây.");
             }
             catch (Exception ex)
             {
@@ -1303,6 +1299,181 @@ namespace PersonalInfoManager
                     "Không đọc được cụm cũ trên máy này. Hãy đặt cụm mới (Tiện ích → Cụm mật khẩu sao lưu).",
                     "Lỗi", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
+        }
+
+        // ================================================================
+        // ================== SAO LƯU FILE CÁ NHÂN LÊN DRIVE ==================
+        // ================================================================
+
+        // Sao lưu File cá nhân: nén toàn bộ kho, mã hóa bằng cụm mật khẩu sao lưu rồi đưa lên thư mục "TQLTK Backup".
+        // File cá nhân lưu KHÔNG mã hóa trên máy, nên bản đưa lên Drive luôn phải được mã hóa.
+        private async void MnuSyncFilesGoogleDrive_Click(object? sender, RoutedEventArgs e)
+        {
+            string tempFile = Path.Combine(Path.GetTempPath(), $"files_backup_{DateTime.Now:yyyyMMdd_HHmmss}.tqf");
+
+            try
+            {
+                string username = SessionService.CurrentUser!.Username;
+
+                var (count, bytes) = FileBackupService.Summarize(username);
+                if (count == 0)
+                {
+                    MessageBox.Show("Kho File cá nhân đang trống, không có gì để sao lưu.", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+
+                if (bytes > FileBackupService.MaxTotalBytes)
+                {
+                    MessageBox.Show(
+                        $"Kho File cá nhân hiện là {FileBackupService.FormatSize(bytes)}, vượt giới hạn sao lưu {FileBackupService.FormatSize(FileBackupService.MaxTotalBytes)}.\n\n" +
+                        "Hãy xóa bớt hoặc xuất bớt file ra ngoài rồi thử lại.",
+                        "Quá dung lượng", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                OfferAdoptLegacyPassphrase(username);
+                string? passphrase = BackupCrypto.GetStoredPassphrase(username);
+                if (passphrase == null)
+                {
+                    var ask = MessageBox.Show(
+                        "File cá nhân được lưu không mã hóa trên máy này, nên bản sao lưu lên Google Drive cần được mã hóa bằng cụm mật khẩu sao lưu.\n\n" +
+                        "Đặt cụm mật khẩu ngay bây giờ?",
+                        "Cần cụm mật khẩu sao lưu", MessageBoxButton.YesNo, MessageBoxImage.Question);
+
+                    if (ask != MessageBoxResult.Yes || !SetBackupPassphrase()) return;
+
+                    passphrase = BackupCrypto.GetStoredPassphrase(username);
+                    if (passphrase == null) return;
+                }
+
+                if (MessageBox.Show(
+                        $"Sao lưu {count} File cá nhân ({FileBackupService.FormatSize(bytes)}) lên Google Drive?\n\n" +
+                        "Các file được nén và mã hóa bằng cụm mật khẩu sao lưu trước khi tải lên.",
+                        "Xác nhận sao lưu", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+
+                Mouse.OverrideCursor = Cursors.Wait;
+                string pass = passphrase;
+                var pack = await Task.Run(() => FileBackupService.CreateArchive(username, tempFile, pass));
+
+                if (!pack.ok)
+                {
+                    Mouse.OverrideCursor = null;
+                    MessageBox.Show(pack.message, "Không thể sao lưu", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                var syncService = new CloudSyncService(username);
+                bool success = await syncService.UploadFilesBackupAsync(tempFile);
+                Mouse.OverrideCursor = null;
+
+                if (_isLocked) return; // app đã tự khóa trong lúc chờ
+
+                if (success)
+                {
+                    MessageBox.Show(
+                        $"{pack.message}\n\nĐã đồng bộ lên Google Drive thành công!\n\nBản sao lưu nằm trong thư mục 'TQLTK Backup' trên Google Drive của bạn.",
+                        "Thành công", MessageBoxButton.OK, MessageBoxImage.Information);
+                    ActivityLogger.Log(username, "SYNC_FILES_GOOGLE_DRIVE", $"Upload {pack.count} File cá nhân ({FileBackupService.FormatSize(pack.bytes)})");
+                }
+                else
+                {
+                    MessageBox.Show(
+                        "Đồng bộ thất bại.\n\n" + (syncService.LastError ?? "Vui lòng kiểm tra kết nối mạng và quyền truy cập Google Drive."),
+                        "Lỗi", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+            }
+            catch (Exception ex)
+            {
+                Mouse.OverrideCursor = null;
+                if (!_isLocked)
+                    MessageBox.Show($"Lỗi đồng bộ File cá nhân: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                try { if (File.Exists(tempFile)) File.Delete(tempFile); } catch { }
+            }
+        }
+
+        // Khôi phục File cá nhân: tải bản sao lưu về file tạm rồi giải mã và đưa vào kho. Không ghi đè file nào.
+        private async void MnuRestoreFilesGoogleDrive_Click(object? sender, RoutedEventArgs e)
+        {
+            string tempFile = Path.Combine(Path.GetTempPath(), $"files_restore_{DateTime.Now:yyyyMMdd_HHmmss}.tqf");
+
+            try
+            {
+                string username = SessionService.CurrentUser!.Username;
+                var syncService = new CloudSyncService(username);
+
+                var dlg = new RestoreBackupWindow(syncService, BackupKind.Files) { Owner = this };
+                if (dlg.ShowDialog() != true || dlg.Selected is not { } pick) return;
+
+                if (MessageBox.Show(
+                        $"Khôi phục File cá nhân từ bản sao lưu trên Google Drive:\n{pick.CreatedText} ({pick.SizeText})?\n\n" +
+                        "Không có file nào bị ghi đè: file trùng nội dung được bỏ qua, file trùng tên nhưng khác nội dung được lưu thêm với tên mới.",
+                        "Xác nhận khôi phục", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+
+                Mouse.OverrideCursor = Cursors.Wait;
+                bool downloaded = await syncService.DownloadBackupAsync(pick.Id, tempFile);
+
+                if (!downloaded)
+                {
+                    Mouse.OverrideCursor = null;
+                    MessageBox.Show(syncService.LastError ?? "Tải bản sao lưu từ Google Drive thất bại.", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                // Giải mã, đóng gói và ghi file chạy ở luồng nền; hộp thoại hỏi cụm/xác nhận được chuyển về luồng giao diện
+                string? typed = null;
+                var result = await Task.Run(() => FileBackupService.RestoreFromFile(
+                    username, tempFile, null,
+                    err => { typed = AskOnUi(() => PromptRestorePassphrase(err)); return typed; },
+                    owner => AskOnUi(() => ConfirmForeignOwner(owner))));
+                Mouse.OverrideCursor = null;
+
+                if (_isLocked) return; // app đã tự khóa trong lúc chờ
+
+                MessageBox.Show(result.message, result.ok ? "Thành công" : "Lỗi", MessageBoxButton.OK, result.ok ? MessageBoxImage.Information : MessageBoxImage.Warning);
+
+                // Làm mới cả khi lỗi giữa chừng, vì có thể một số file đã được khôi phục
+                RefreshFiles();
+                UpdateStorageInfo();
+
+                if (result.ok)
+                {
+                    OfferSavePassphrase(typed);
+                    ActivityLogger.Log(username, "RESTORE_FILES_GOOGLE_DRIVE",
+                        $"Khôi phục File cá nhân từ Drive: {pick.Name} ({result.added} file, bỏ qua {result.skipped})");
+                }
+            }
+            catch (Exception ex)
+            {
+                Mouse.OverrideCursor = null;
+                if (!_isLocked)
+                    MessageBox.Show($"Lỗi khôi phục File cá nhân: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                try { if (File.Exists(tempFile)) File.Delete(tempFile); } catch { }
+            }
+        }
+
+        // Hộp thoại phải hiện từ luồng giao diện, nhưng việc khôi phục chạy trong Task.Run:
+        // chuyển về luồng giao diện và tạm bỏ con trỏ chờ để người dùng thấy con trỏ bình thường.
+        private T AskOnUi<T>(Func<T> ask) => Dispatcher.Invoke(() =>
+        {
+            Mouse.OverrideCursor = null;
+            try { return ask(); }
+            finally { Mouse.OverrideCursor = Cursors.Wait; }
+        });
+
+        // Hỏi cụm mật khẩu để mở một bản sao lưu File cá nhân (previousError: lý do lần nhập trước thất bại, nếu có).
+        private string? PromptRestorePassphrase(string? previousError)
+        {
+            if (previousError != null)
+                MessageBox.Show(this, previousError, "Cụm mật khẩu sao lưu", MessageBoxButton.OK, MessageBoxImage.Warning);
+
+            var dlg = new BackupPassphraseWindow(confirmMode: false) { Owner = this };
+            return dlg.ShowDialog() == true ? dlg.Passphrase : null;
         }
 
         // ================================================================

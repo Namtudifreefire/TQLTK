@@ -1,6 +1,6 @@
 using System;
-using System.Linq;
-using System.Text;
+using System.Collections.Generic;
+using System.Security.Cryptography;
 using System.Windows;
 using System.Windows.Media;
 using PersonalInfoManager.Models;
@@ -71,6 +71,10 @@ namespace PersonalInfoManager
             lblPwdStrength.Foreground = Brushes.Green;
         }
 
+        /// <summary>
+        /// Sinh mật khẩu bằng bộ sinh số ngẫu nhiên mật mã học (RandomNumberGenerator),
+        /// không dùng System.Random vì có thể đoán được. Trộn bằng Fisher–Yates.
+        /// </summary>
         private static string GenerateStrongPassword(int length)
         {
             const string upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
@@ -79,21 +83,28 @@ namespace PersonalInfoManager
             const string special = "!@#$%^&*_-+=";
 
             string all = upper + lower + digits + special;
-            var rnd = new Random();
-            var sb = new StringBuilder();
+            var chars = new List<char>(length);
 
             // Đảm bảo có ít nhất 1 ký tự mỗi loại
-            sb.Append(upper[rnd.Next(upper.Length)]);
-            sb.Append(lower[rnd.Next(lower.Length)]);
-            sb.Append(digits[rnd.Next(digits.Length)]);
-            sb.Append(special[rnd.Next(special.Length)]);
+            chars.Add(Pick(upper));
+            chars.Add(Pick(lower));
+            chars.Add(Pick(digits));
+            chars.Add(Pick(special));
 
             for (int i = 4; i < length; i++)
-                sb.Append(all[rnd.Next(all.Length)]);
+                chars.Add(Pick(all));
 
-            // Trộn ngẫu nhiên
-            return new string(sb.ToString().OrderBy(_ => rnd.Next()).ToArray());
+            // Trộn (Fisher–Yates) để 4 ký tự bắt buộc không luôn nằm đầu chuỗi
+            for (int i = chars.Count - 1; i > 0; i--)
+            {
+                int j = RandomNumberGenerator.GetInt32(i + 1);
+                (chars[i], chars[j]) = (chars[j], chars[i]);
+            }
+
+            return new string(chars.ToArray());
         }
+
+        private static char Pick(string set) => set[RandomNumberGenerator.GetInt32(set.Length)];
 
         // ================== LƯU ==================
 

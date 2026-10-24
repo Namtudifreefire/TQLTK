@@ -7,28 +7,41 @@ namespace PersonalInfoManager
 {
     /// <summary>
     /// Cửa sổ liệt kê các bản sao lưu trên Google Drive và cho người dùng chọn một bản.
-    /// Mặc định chỉ hiện bản của người dùng đang đăng nhập và bản cũ chưa có nhãn;
+    /// Mặc định chỉ hiện bản của người dùng đang đăng nhập (và bản cũ chưa có nhãn, với loại Vault);
     /// tick ô dưới danh sách để hiện thêm bản của người dùng khác.
     /// Cửa sổ này chỉ CHỌN, không tự khôi phục: sau ShowDialog() == true, đọc thuộc tính Selected,
-    /// tải về bằng CloudSyncService.DownloadBackupAsync rồi nhập bằng VaultBackupService.ImportFromFile.
+    /// tải về bằng CloudSyncService.DownloadBackupAsync rồi đưa vào app bằng VaultBackupService.ImportFromFile
+    /// (loại Vault) hoặc FileBackupService.RestoreFromFile (loại Files).
     /// </summary>
     public partial class RestoreBackupWindow : Window
     {
         private readonly CloudSyncService _cloud;
+        private readonly BackupKind _kind;
 
         /// <summary>Bản sao lưu người dùng đã chọn (null nếu hủy).</summary>
         public BackupInfo? Selected { get; private set; }
 
-        public RestoreBackupWindow(CloudSyncService cloud)
+        public RestoreBackupWindow(CloudSyncService cloud, BackupKind kind = BackupKind.Vault)
         {
             InitializeComponent();
             _cloud = cloud;
+            _kind = kind;
+
+            if (kind == BackupKind.Files)
+            {
+                Title = "Khôi phục File cá nhân từ Google Drive";
+                txtTitle.Text = "📁 Khôi phục File cá nhân từ Google Drive";
+                txtNote.Text = "Không có file nào bị ghi đè: file trùng nội dung được bỏ qua, " +
+                               "file trùng tên nhưng khác nội dung được lưu thêm với tên mới.";
+            }
+
             Loaded += async (_, _) => await LoadAsync();
         }
 
         private async Task LoadAsync()
         {
             bool includeOthers = chkOthers.IsChecked == true;
+            bool files = _kind == BackupKind.Files;
 
             chkOthers.IsEnabled = false;
             btnRestore.IsEnabled = false;
@@ -38,7 +51,7 @@ namespace PersonalInfoManager
             List<BackupInfo>? items;
             try
             {
-                items = await _cloud.ListBackupsAsync(includeOthers);
+                items = await _cloud.ListBackupsAsync(_kind, includeOthers);
             }
             finally
             {
@@ -53,20 +66,32 @@ namespace PersonalInfoManager
 
             if (items.Count == 0)
             {
-                txtStatus.Text = includeOthers
-                    ? "Chưa có bản sao lưu nào trên Google Drive của tài khoản này. " +
-                      "Lưu ý: bản sao lưu tạo bằng phiên bản cũ hơn 3.6.1 sẽ không hiện ở đây."
-                    : "Chưa có bản sao lưu nào của bạn trên Google Drive của tài khoản này. " +
-                      "Nếu bạn dùng tên đăng nhập khác trên máy cũ, hãy tick ô bên dưới để xem thêm. " +
-                      "Bản sao lưu tạo bằng phiên bản cũ hơn 3.6.1 sẽ không hiện ở đây.";
+                if (files)
+                {
+                    txtStatus.Text = includeOthers
+                        ? "Chưa có bản sao lưu File cá nhân nào trên Google Drive của tài khoản này."
+                        : "Chưa có bản sao lưu File cá nhân nào của bạn trên Google Drive của tài khoản này. " +
+                          "Nếu bạn dùng tên đăng nhập khác trên máy cũ, hãy tick ô bên dưới để xem thêm.";
+                }
+                else
+                {
+                    txtStatus.Text = includeOthers
+                        ? "Chưa có bản sao lưu nào trên Google Drive của tài khoản này. " +
+                          "Lưu ý: bản sao lưu tạo bằng phiên bản cũ hơn 3.6.1 sẽ không hiện ở đây."
+                        : "Chưa có bản sao lưu nào của bạn trên Google Drive của tài khoản này. " +
+                          "Nếu bạn dùng tên đăng nhập khác trên máy cũ, hãy tick ô bên dưới để xem thêm. " +
+                          "Bản sao lưu tạo bằng phiên bản cũ hơn 3.6.1 sẽ không hiện ở đây.";
+                }
                 return;
             }
 
             dgBackups.ItemsSource = items;
             dgBackups.SelectedIndex = 0;
-            txtStatus.Text = $"Tìm thấy {items.Count} bản sao lưu, mới nhất ở trên cùng. " +
-                             "Cột \"Thuộc về\": \"Của bạn\" là bản tạo từ tài khoản này, \"Bản cũ\" là bản tạo trước khi tách theo người dùng. " +
-                             "Chọn một bản rồi bấm Khôi phục.";
+            txtStatus.Text = files
+                ? $"Tìm thấy {items.Count} bản sao lưu File cá nhân, mới nhất ở trên cùng. Chọn một bản rồi bấm Khôi phục."
+                : $"Tìm thấy {items.Count} bản sao lưu, mới nhất ở trên cùng. " +
+                  "Cột \"Thuộc về\": \"Của bạn\" là bản tạo từ tài khoản này, \"Bản cũ\" là bản tạo trước khi tách theo người dùng. " +
+                  "Chọn một bản rồi bấm Khôi phục.";
         }
 
         private async void ChkOthers_Changed(object sender, RoutedEventArgs e)

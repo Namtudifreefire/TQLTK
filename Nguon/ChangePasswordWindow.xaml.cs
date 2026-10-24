@@ -9,10 +9,30 @@ namespace PersonalInfoManager
     public partial class ChangePasswordWindow : Window
     {
         private readonly UserService _userService = new();
+        private readonly bool _forced;
 
-        public ChangePasswordWindow()
+        /// <summary>true nếu người dùng đã đổi mật khẩu thành công trong cửa sổ này.</summary>
+        public bool Changed { get; private set; }
+
+        public ChangePasswordWindow() : this(false) { }
+
+        /// <param name="forced">
+        /// true: mở khi đăng nhập vì tài khoản đang dùng mật khẩu mặc định / vừa được admin reset.
+        /// Người gọi (LoginWindow) kiểm tra thuộc tính Changed sau ShowDialog() để quyết định có cho vào app không.
+        /// </param>
+        public ChangePasswordWindow(bool forced)
         {
             InitializeComponent();
+            _forced = forced;
+
+            if (_forced)
+            {
+                Title = "Bắt buộc đổi mật khẩu - TQLTK";
+                lblStatus.Text =
+                    "Mật khẩu hiện tại là mật khẩu mặc định hoặc do quản trị viên cấp. " +
+                    "Hãy đặt mật khẩu mới để tiếp tục.";
+            }
+
             Loaded += (_, _) => txtOldPwd.Focus();
         }
 
@@ -114,14 +134,16 @@ namespace PersonalInfoManager
 
             if (result.ok)
             {
+                Changed = true;
+
                 try
                 {
                     ActivityLogger.Log(username, "CHANGE_PASSWORD",
-                        "Đổi mật khẩu thành công");
+                        _forced ? "Đổi mật khẩu bắt buộc thành công" : "Đổi mật khẩu thành công");
                 }
                 catch { }
 
-                MessageBox.Show(result.message, "Thành công",
+                MessageBox.Show(this, result.message, "Thành công",
                     MessageBoxButton.OK, MessageBoxImage.Information);
                 Close();
             }

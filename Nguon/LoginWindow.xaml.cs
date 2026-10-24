@@ -86,7 +86,7 @@ namespace PersonalInfoManager
             if (!available)
             {
                 ShowError(
-                    "Máy tính không hỗ trợ Windows Hello.\n\n" +
+                    "Máy tính không hỗ trợ Windows Hello hoặc chưa thiết lập.\n\n" +
                     "Vui lòng thiết lập vân tay / khuôn mặt / PIN trong Windows Settings.");
                 return;
             }
@@ -153,6 +153,28 @@ namespace PersonalInfoManager
                     txtPassword.Focus();
                     return;
                 }
+            }
+
+            // Mật khẩu mặc định (admin lần đầu) hoặc vừa được admin reset: bắt buộc đổi trước khi vào app
+            if (user.MustChangePassword)
+            {
+                SessionService.Login(user);   // ChangePasswordWindow lấy tên người dùng từ SessionService
+
+                var dlg = new ChangePasswordWindow(forced: true) { Owner = this };
+                dlg.ShowDialog();
+
+                var fresh = _userService.FindById(user.Id);
+                if (!dlg.Changed || fresh == null || fresh.MustChangePassword)
+                {
+                    SessionService.Logout();
+                    try { ActivityLogger.Log(user.Username, "LOGIN_FORCED_CHANGE_CANCELLED", "Không đổi mật khẩu bắt buộc"); } catch { }
+                    ShowError("Bạn cần đổi mật khẩu mới để tiếp tục đăng nhập.");
+                    txtPassword.Clear();
+                    txtPassword.Focus();
+                    return;
+                }
+
+                user = fresh;
             }
 
             SessionService.Login(user);
