@@ -190,7 +190,11 @@ namespace PersonalInfoManager
             var main = new MainWindow();
             Application.Current.MainWindow = main;
             main.Show();
-            Hide();
+
+            // ĐÓNG hẳn (không Hide): cửa sổ đăng nhập bị ẩn vẫn tính là cửa sổ còn mở,
+            // nên thoát MainWindow xong tiến trình vẫn chạy ngầm và không tự kết thúc.
+            // Phải Show() MainWindow trước rồi mới Close() để app không tắt giữa chừng.
+            Close();
         }
 
         // ================== ĐĂNG KÝ ==================

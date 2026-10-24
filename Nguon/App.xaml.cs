@@ -10,6 +10,12 @@ namespace PersonalInfoManager
         {
             base.OnStartup(e);
 
+            // Chỉ thoát app khi cửa sổ chính (Application.MainWindow) đóng.
+            // Code đăng nhập / đăng xuất / tự khóa luôn gán lại MainWindow cho cửa sổ mới TRƯỚC khi đóng cửa sổ cũ,
+            // nên đăng xuất và tự khóa không làm tắt app, còn thoát thật thì tắt hẳn
+            // dù vẫn còn cửa sổ nào đó đang bị ẩn (mặc định WPF chờ MỌI cửa sổ, kể cả cửa sổ ẩn, đóng hết).
+            ShutdownMode = ShutdownMode.OnMainWindowClose;
+
             // 1. Load theme từ Registry
             try { ThemeService.Initialize(); } catch { }
 
@@ -89,6 +95,19 @@ namespace PersonalInfoManager
         protected override void OnExit(ExitEventArgs e)
         {
             try { AutoThemeService.Stop(); } catch { }
+
+            // Chẩn đoán lỗi "thoát rồi mà vẫn còn trong Task Manager":
+            // - Log có dòng EXIT_APP (menu Thoát) nhưng KHÔNG có APP_EXIT → WPF chưa hề tắt app (còn cửa sổ giữ lại).
+            // - Log có cả APP_EXIT mà tiến trình vẫn còn → còn một luồng nền giữ tiến trình.
+            try
+            {
+                ActivityLogger.Log(
+                    SessionService.CurrentUser?.Username ?? "SYSTEM",
+                    "APP_EXIT",
+                    $"OnExit đã chạy, mã thoát {e.ApplicationExitCode}");
+            }
+            catch { }
+
             base.OnExit(e);
         }
     }
