@@ -19,10 +19,32 @@ namespace PersonalInfoManager.Services
             : base(message, inner) { }
     }
 
+    /// <summary>
+    /// Đọc / ghi vault tài khoản (mã hóa AES).
+    ///
+    /// CACHE: danh sách đã giải mã được giữ trong bộ nhớ (dùng chung cho mọi instance, theo từng file vault)
+    /// để Search / Count / Load không phải đọc file và giải mã lại mỗi lần.
+    /// - Cache chỉ dùng được khi file trên đĩa còn y nguyên (so ngày sửa + dung lượng); file đổi bởi bất kỳ
+    ///   instance nào (Save) hay bởi bên ngoài thì lần đọc sau tự nạp lại.
+    /// - Load / Search luôn trả về BẢN SAO, nên nơi gọi sửa danh sách thoải mái mà không làm hỏng cache.
+    /// - Gọi ClearCache() khi đăng xuất / tự khóa / thoát để không giữ mật khẩu đã giải mã trong bộ nhớ.
+    /// </summary>
     public class AccountVaultService
     {
         private static readonly JsonSerializerOptions JsonOpts =
             new JsonSerializerOptions { WriteIndented = true };
+
+        private sealed class CacheEntry
+        {
+            public List<SavedAccount> Accounts = new();   // không bao giờ bị sửa tại chỗ, chỉ bị thay cả entry
+            public DateTime WriteTimeUtc;
+            public long Length;
+        }
+
+        private static readonly Dictionary<string, CacheEntry> Cache =
+            new(StringComparer.OrdinalIgnoreCase);
+
+        private static readonly object CacheLock = new();
 
         private readonly string _root = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
@@ -35,9 +57,45 @@ namespace PersonalInfoManager.Services
             return Path.Combine(_root, $"vault_{safe}.dat");
         }
 
+        // ================================================================
+        // ================== CACHE ==================
+        // ================================================================
+
+        /// <summary>Xóa toàn bộ danh sách đã giải mã khỏi bộ nhớ (gọi khi đăng xuất / tự khóa / thoát).</summary>
+        public static void ClearCache()
+        {
+            lock (CacheLock) Cache.Clear();
+        }
+
+        private static List<SavedAccount> CloneAll(IEnumerable<SavedAccount> source) =>
+            source.Select(a => a.Clone()).ToList();
+
+        private static void StoreCache(string file, FileInfo info, List<SavedAccount> ownedList)
+        {
+            lock (CacheLock)
+            {
+                Cache[file] = new CacheEntry
+                {
+                    Accounts = ownedList,
+                    WriteTimeUtc = info.LastWriteTimeUtc,
+                    Length = info.Length
+                };
+            }
+        }
+
+        private static void DropCache(string file)
+        {
+            lock (CacheLock) Cache.Remove(file);
+        }
+
+        // ================================================================
+        // ================== ĐỌC ==================
+        // ================================================================
+
         /// <summary>
         /// Đọc và giải mã một file vault. Trả về null nếu file không tồn tại hoặc không giải mã được
         /// (lý do nằm trong "error"). Lỗi I/O (file đang bị khóa...) vẫn được ném ra ngoài.
+        /// Hàm này KHÔNG dùng cache (Save dựa vào nó để kiểm tra file hiện tại còn đọc được không).
         /// </summary>
         private static List<SavedAccount>? TryRead(string file, out Exception? error)
         {
@@ -65,18 +123,40 @@ namespace PersonalInfoManager.Services
         }
 
         /// <summary>
-        /// Đọc danh sách tài khoản. Chưa có file → danh sách rỗng.
-        /// File có nhưng không đọc được → thử bản .bak, nếu vẫn không được thì ném VaultUnreadableException.
+        /// Lấy danh sách dùng chung (từ cache nếu file chưa đổi, không thì đọc và giải mã rồi nạp cache).
+        /// CHỈ ĐỌC: không được sửa danh sách trả về, vì nó chính là bản trong cache.
         /// </summary>
-        public List<SavedAccount> Load(string username)
+        private List<SavedAccount> LoadShared(string username)
         {
             string file = GetVaultFile(username);
-            if (!File.Exists(file)) return new List<SavedAccount>();
+
+            var info = new FileInfo(file);
+            if (!info.Exists)
+            {
+                DropCache(file);
+                return new List<SavedAccount>();
+            }
+
+            // Lấy dấu file TRƯỚC khi đọc: nếu file đổi giữa chừng thì lần sau dấu lệch và tự nạp lại
+            DateTime stamp = info.LastWriteTimeUtc;
+            long length = info.Length;
+
+            lock (CacheLock)
+            {
+                if (Cache.TryGetValue(file, out var hit) &&
+                    hit.WriteTimeUtc == stamp && hit.Length == length)
+                    return hit.Accounts;
+            }
 
             var accounts = TryRead(file, out Exception? mainError);
-            if (accounts != null) return accounts;
+            if (accounts != null)
+            {
+                StoreCache(file, info, accounts);
+                return accounts;
+            }
 
-            // File chính hỏng → thử bản dự phòng gần nhất
+            // File chính hỏng → thử bản dự phòng gần nhất (không nạp cache, trường hợp hiếm)
+            DropCache(file);
             var fromBackup = TryRead(file + ".bak", out _);
             if (fromBackup != null) return fromBackup;
 
@@ -88,8 +168,20 @@ namespace PersonalInfoManager.Services
         }
 
         /// <summary>
+        /// Đọc danh sách tài khoản. Chưa có file → danh sách rỗng.
+        /// File có nhưng không đọc được → thử bản .bak, nếu vẫn không được thì ném VaultUnreadableException.
+        /// Trả về BẢN SAO: được phép sửa / thêm / xóa rồi gọi Save.
+        /// </summary>
+        public List<SavedAccount> Load(string username) => CloneAll(LoadShared(username));
+
+        // ================================================================
+        // ================== GHI ==================
+        // ================================================================
+
+        /// <summary>
         /// Ghi danh sách tài khoản. Ghi qua file tạm, giữ bản .bak của lần ghi trước,
         /// và kiểm tra giải mã lại được trước khi thay file chính.
+        /// Ghi xong thì cache được cập nhật luôn bằng danh sách vừa ghi.
         /// </summary>
         public void Save(string username, List<SavedAccount> accounts)
         {
@@ -124,21 +216,30 @@ namespace PersonalInfoManager.Services
             }
 
             File.Move(tmp, file, overwrite: true);
+
+            // Cache giữ BẢN SAO của danh sách vừa ghi (nơi gọi có thể còn sửa danh sách của họ)
+            try { StoreCache(file, new FileInfo(file), CloneAll(accounts)); }
+            catch { DropCache(file); }
         }
+
+        // ================================================================
+        // ================== TÌM KIẾM / ĐẾM ==================
+        // ================================================================
 
         public List<SavedAccount> Search(string username, string keyword)
         {
-            var all = Load(username);
-            if (string.IsNullOrWhiteSpace(keyword)) return all;
+            var all = LoadShared(username);
+            if (string.IsNullOrWhiteSpace(keyword)) return CloneAll(all);
 
             keyword = keyword.Trim().ToLower();
-            return all.Where(a =>
+            return CloneAll(all.Where(a =>
                 (a.ServiceName ?? "").ToLower().Contains(keyword) ||
                 (a.Username ?? "").ToLower().Contains(keyword) ||
                 (a.Note ?? "").ToLower().Contains(keyword)
-            ).ToList();
+            ));
         }
 
-        public int Count(string username) => Load(username).Count;
+        /// <summary>Đếm số tài khoản, không cần tạo bản sao.</summary>
+        public int Count(string username) => LoadShared(username).Count;
     }
 }

@@ -29,12 +29,14 @@ namespace PersonalInfoManager
                 bool isDuplicate = existingKeys.Contains(key);
                 if (isDuplicate) dupCount++;
 
-                Items.Add(new CsvPreviewItem
+                var item = new CsvPreviewItem
                 {
                     Account = acc,
                     IsSelected = !isDuplicate,   // mặc định bỏ chọn nếu trùng
                     Status = isDuplicate ? "⚠ Trùng lặp" : "✓ Mới"
-                });
+                };
+                item.PropertyChanged += (_, _) => UpdateWillImportCount();   // tick lẻ cũng cập nhật số đếm
+                Items.Add(item);
             }
 
             dgPreview.ItemsSource = Items;

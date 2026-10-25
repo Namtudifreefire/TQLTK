@@ -26,10 +26,13 @@ namespace PersonalInfoManager
         // ================== TỰ KHÓA / TỰ ẨN MK / NHỚ XÁC THỰC ==================
         private const int AutoLockMinutes = 5;            // không thao tác bao lâu thì tự khóa
         private const int AutoHidePasswordSeconds = 30;   // mật khẩu đang hiện tự ẩn lại sau bao lâu
-        private const int AuthRememberSeconds = 60;       // nhớ xác thực bao lâu (Hiện MK / Copy Password)
+        private const int AuthRememberSeconds = 60;       // nhớ xác thực bao lâu (Hiện MK / Copy Password / Sửa)
 
         private readonly DispatcherTimer _idleTimer = new() { Interval = TimeSpan.FromSeconds(5) };
         private readonly DispatcherTimer _hidePasswordTimer = new() { Interval = TimeSpan.FromSeconds(AutoHidePasswordSeconds) };
+
+        // Debounce ô tìm kiếm: chỉ lọc khi người dùng ngừng gõ một chút, không lọc sau từng phím
+        private readonly DispatcherTimer _searchTimer = new() { Interval = TimeSpan.FromMilliseconds(250) };
         private DateTime _lastActivity = DateTime.UtcNow;
         private DateTime _lastAuthTime = DateTime.MinValue;
         private bool _isLocked = false;
@@ -73,6 +76,11 @@ namespace PersonalInfoManager
 
             _idleTimer.Tick += IdleTimer_Tick;
             _hidePasswordTimer.Tick += (_, _) => HidePasswordNow();
+            _searchTimer.Tick += (_, _) =>
+            {
+                _searchTimer.Stop();
+                if (SessionService.IsLoggedIn) RefreshAccounts(updateStatus: false);
+            };
 
             Loaded += MainWindow_Loaded;
             Closing += MainWindow_Closing;
@@ -123,6 +131,7 @@ namespace PersonalInfoManager
         {
             StopAutoLock();
             try { ClipboardGuard.ClearNow(); } catch { }   // đăng xuất / tự khóa / thoát: xóa mật khẩu còn trong clipboard
+            try { AccountVaultService.ClearCache(); } catch { }   // và xóa danh sách đã giải mã khỏi bộ nhớ
             SaveWindowState();
         }
 
@@ -168,14 +177,17 @@ namespace PersonalInfoManager
         {
             _lastActivity = DateTime.UtcNow;
             InputManager.Current.PreProcessInput += OnPreProcessInput;
+            SystemEvents.SessionSwitch += OnSessionSwitch;   // sự kiện static: BẮT BUỘC gỡ ở StopAutoLock
             _idleTimer.Start();
         }
 
         private void StopAutoLock()
         {
             try { InputManager.Current.PreProcessInput -= OnPreProcessInput; } catch { }
+            try { SystemEvents.SessionSwitch -= OnSessionSwitch; } catch { }
             _idleTimer.Stop();
             _hidePasswordTimer.Stop();
+            _searchTimer.Stop();   // tránh timer chạy sau khi đã đăng xuất (CurrentUser = null)
         }
 
         // Mọi thao tác chuột / bàn phím trong app đều làm mới thời điểm hoạt động
@@ -186,6 +198,22 @@ namespace PersonalInfoManager
                 _lastActivity = DateTime.UtcNow;
         }
 
+        // Windows khóa (Win+L) hoặc phiên bị ngắt kết nối: khóa app ngay.
+        // Sự kiện này chạy ở luồng khác, nên phải chuyển về luồng giao diện trước khi khóa.
+        private void OnSessionSwitch(object sender, SessionSwitchEventArgs e)
+        {
+            if (e.Reason is SessionSwitchReason.SessionLock
+                or SessionSwitchReason.ConsoleDisconnect
+                or SessionSwitchReason.RemoteDisconnect)
+            {
+                string why = e.Reason == SessionSwitchReason.SessionLock
+                    ? "Windows bị khóa (Win+L)"
+                    : $"Phiên Windows ngắt kết nối ({e.Reason})";
+
+                Dispatcher.BeginInvoke(new Action(() => LockNow(why)));
+            }
+        }
+
         private void IdleTimer_Tick(object? sender, EventArgs e)
         {
             if (_isLocked) return;
@@ -194,14 +222,14 @@ namespace PersonalInfoManager
         }
 
         // Khóa = đăng xuất và quay về màn hình đăng nhập
-        private void LockNow()
+        private void LockNow(string? reason = null)
         {
             if (_isLocked) return;
             _isLocked = true;
 
             string username = SessionService.CurrentUser?.Username ?? "SYSTEM";
             StopAutoLock();
-            try { ActivityLogger.Log(username, "AUTO_LOCK", $"Không hoạt động {AutoLockMinutes} phút"); } catch { }
+            try { ActivityLogger.Log(username, "AUTO_LOCK", reason ?? $"Không hoạt động {AutoLockMinutes} phút"); } catch { }
 
             // Các cửa sổ con đang mở (Thêm/Sửa tài khoản, nhập mã 2FA...) cũng phải đóng để không lộ dữ liệu
             var others = Application.Current.Windows.Cast<Window>()
@@ -258,11 +286,51 @@ namespace PersonalInfoManager
 
         private void MarkAuthenticated() => _lastAuthTime = DateTime.UtcNow;
 
+        // Xác thực trước khi làm việc nhạy cảm: nhớ xác thực → Windows Hello → (dự phòng) 2FA.
+        // Trả về false nếu bị từ chối / hủy / app đã tự khóa. Đã tự hiện thông báo và ghi log.
+        private async Task<bool> RequireAuthAsync(string actionText, string deniedLogCode)
+        {
+            string username = SessionService.CurrentUser!.Username;
+
+            if (IsAuthFresh()) return true;
+
+            bool helloAvailable = false;
+            try { helloAvailable = await WindowsHelloService.IsAvailableAsync(); } catch { }
+
+            if (helloAvailable)
+            {
+                bool ok = false;
+                try { ok = await WindowsHelloService.VerifyAsync(this, $"Xác nhận để {actionText}"); } catch { }
+                if (_isLocked) return false;
+                if (ok) { MarkAuthenticated(); return true; }
+            }
+
+            if (!TwoFactorService.IsEnabled(username))
+            {
+                try { ActivityLogger.Log(username, deniedLogCode, "Windows Hello thất bại, chưa bật 2FA"); } catch { }
+                MessageBox.Show(
+                    $"Cần xác thực để {actionText}, nhưng Windows Hello không thành công và bạn chưa bật xác thực 2 bước.\n\n" +
+                    "Vào Tiện ích → Bật xác thực 2 bước (Authenticator) để có cách xác thực dự phòng.",
+                    "Từ chối", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return false;
+            }
+
+            bool ok2 = TwoFactorPromptWindow.AskIfEnabled(this, username);
+            if (_isLocked) return false;
+            if (ok2) { MarkAuthenticated(); return true; }
+
+            try { ActivityLogger.Log(username, deniedLogCode, "Windows Hello và 2FA đều thất bại"); } catch { }
+            MessageBox.Show("Xác thực thất bại.", "Từ chối", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return false;
+        }
+
         // ================================================================
         // ================== TAB TÀI KHOẢN ==================
         // ================================================================
 
-        private void RefreshAccounts()
+        // updateStatus = false khi chỉ lọc theo từ khóa: thanh trạng thái hiển thị tổng số tài khoản
+        // và dung lượng file, không đổi khi lọc nên khỏi tính lại (đỡ quét thư mục mỗi lần).
+        private void RefreshAccounts(bool updateStatus = true)
         {
             string user = SessionService.CurrentUser!.Username;
             string keyword = txtSearch.Text;
@@ -281,17 +349,23 @@ namespace PersonalInfoManager
                 _original = a
             }).ToList();
 
-            dgAccounts.ItemsSource = null;
+            // Gán thẳng danh sách mới (bỏ bước đặt null trước, đỡ một lần xóa và dựng lại bảng)
             dgAccounts.ItemsSource = viewList;
 
-            UpdateStorageInfo();
+            if (updateStatus) UpdateStorageInfo();
         }
 
-        private void TxtSearch_TextChanged(object? sender, TextChangedEventArgs e) => RefreshAccounts();
+        // Mỗi phím gõ chỉ đặt lại đồng hồ; việc lọc chạy một lần khi ngừng gõ ~250 ms
+        private void TxtSearch_TextChanged(object? sender, TextChangedEventArgs e)
+        {
+            _searchTimer.Stop();
+            _searchTimer.Start();
+        }
 
         private void BtnRefreshAccounts_Click(object? sender, RoutedEventArgs e)
         {
-            txtSearch.Clear();
+            txtSearch.Clear();        // có thể làm timer tìm kiếm khởi động
+            _searchTimer.Stop();      // hủy để khỏi làm mới lần thứ hai
             RefreshAccounts();
         }
 
@@ -368,12 +442,34 @@ namespace PersonalInfoManager
             }
         }
 
-        private void BtnEditAccount_Click(object? sender, RoutedEventArgs e)
+        // ✅ Sửa: cửa sổ Sửa nạp sẵn mật khẩu và có nút 👁, nên BẮT BUỘC xác thực trước khi mở
+        //    (nếu không thì xem/copy được mật khẩu mà không qua Windows Hello).
+        private async void BtnEditAccount_Click(object? sender, RoutedEventArgs e)
         {
             var selected = GetSelectedAccount();
             if (selected == null) { MessageBox.Show("Chọn một tài khoản để sửa."); return; }
 
-            var dlg = new EditAccountWindow(selected);
+            var btn = sender as Button;
+            if (btn != null) btn.IsEnabled = false; // tránh bấm liên tục khi đang chờ xác thực
+
+            bool authorized = false;
+            try
+            {
+                authorized = await RequireAuthAsync("sửa tài khoản (cửa sổ Sửa hiển thị được mật khẩu)", "EDIT_ACCOUNT_DENIED");
+            }
+            catch (Exception ex)
+            {
+                if (!_isLocked)
+                    MessageBox.Show($"Lỗi: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                if (btn != null) btn.IsEnabled = true;
+            }
+
+            if (!authorized || _isLocked) return;
+
+            var dlg = new EditAccountWindow(selected) { Owner = this };
             if (dlg.ShowDialog() == true)
             {
                 string user = SessionService.CurrentUser!.Username;
@@ -856,17 +952,15 @@ namespace PersonalInfoManager
                     return;
                 }
 
-                var sb = new System.Text.StringBuilder();
-                sb.AppendLine("ServiceName,Username,Password,Note,UpdatedAt");
-                foreach (var acc in accounts)
+                var res = CsvService.ExportToFile(accounts, dlg.FileName);
+                if (!res.ok)
                 {
-                    sb.AppendLine($"{EscapeCsv(acc.ServiceName)},{EscapeCsv(acc.Username)},{EscapeCsv(acc.Password)},{EscapeCsv(acc.Note)},{acc.UpdatedAt:yyyy-MM-dd HH:mm:ss}");
+                    MessageBox.Show(res.message, "Lỗi xuất CSV", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
                 }
 
-                File.WriteAllText(dlg.FileName, sb.ToString(), System.Text.Encoding.UTF8);
-
                 ActivityLogger.Log(username, "EXPORT_CSV", $"Xuất {accounts.Count} tài khoản ra CSV");
-                MessageBox.Show($"Đã xuất {accounts.Count} tài khoản ra file CSV thành công!", "Thành công", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show(res.message, "Thành công", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
@@ -874,6 +968,8 @@ namespace PersonalInfoManager
             }
         }
 
+        // ✅ Nhập CSV: đọc bằng CsvService (nhận TQLTK, Chrome, Bitwarden, LastPass, ô có xuống dòng)
+        //    rồi cho xem trước / chọn dòng bằng CsvImportWindow (dòng trùng được bỏ tick sẵn).
         private void MnuImportCsv_Click(object? sender, RoutedEventArgs e)
         {
             try
@@ -882,78 +978,31 @@ namespace PersonalInfoManager
                 if (dlg.ShowDialog() != true) return;
 
                 string username = SessionService.CurrentUser!.Username;
-                var existingAccounts = _vaultService.Load(username);
 
-                var lines = File.ReadAllLines(dlg.FileName, System.Text.Encoding.UTF8);
-                if (lines.Length <= 1) { MessageBox.Show("File CSV trống hoặc không đúng định dạng.", "Lỗi"); return; }
-
-                int importedCount = 0;
-                int skippedCount = 0;
-
-                for (int i = 1; i < lines.Length; i++)
+                var parsed = CsvService.ImportFromFile(dlg.FileName);
+                if (!parsed.ok)
                 {
-                    string line = lines[i].Trim();
-                    if (string.IsNullOrWhiteSpace(line)) continue;
-
-                    var parts = ParseCsvLine(line);
-                    if (parts.Count < 3) continue;
-
-                    string serviceName = parts[0].Trim();
-                    string usernameCsv = parts[1].Trim();
-                    string password = parts[2].Trim();
-                    string note = parts.Count > 3 ? parts[3].Trim() : "";
-
-                    bool isDuplicate = existingAccounts.Any(a =>
-                        string.Equals(a.ServiceName, serviceName, StringComparison.OrdinalIgnoreCase) &&
-                        string.Equals(a.Username, usernameCsv, StringComparison.OrdinalIgnoreCase));
-
-                    if (isDuplicate) { skippedCount++; continue; }
-
-                    existingAccounts.Add(new SavedAccount { ServiceName = serviceName, Username = usernameCsv, Password = password, Note = note, UpdatedAt = DateTime.Now });
-                    importedCount++;
+                    MessageBox.Show(parsed.message, "Lỗi nhập CSV", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
                 }
 
-                if (importedCount > 0)
-                {
-                    _vaultService.Save(username, existingAccounts);
-                    RefreshAccounts();
-                    UpdateStorageInfo();
-                    ActivityLogger.Log(username, "IMPORT_CSV", $"Nhập {importedCount} tài khoản từ CSV");
-                }
+                var preview = new CsvImportWindow(parsed.accounts, _vaultService.Load(username)) { Owner = this };
+                bool confirmed = preview.ShowDialog() == true;
+                if (_isLocked || !confirmed) return;   // app tự khóa trong lúc xem trước thì thôi
 
-                string msg = $"Đã nhập thành công {importedCount} tài khoản.";
-                if (skippedCount > 0) msg += $"\nBỏ qua {skippedCount} tài khoản trùng lặp.";
-                MessageBox.Show(msg, "Kết quả nhập CSV", MessageBoxButton.OK, MessageBoxImage.Information);
+                // Nạp lại danh sách ngay trước khi ghi để không đè lên thay đổi trong lúc xem trước
+                var list = _vaultService.Load(username);
+                list.AddRange(preview.Result);
+                _vaultService.Save(username, list);
+
+                RefreshAccounts();
+                UpdateStorageInfo();
+                ActivityLogger.Log(username, "IMPORT_CSV", $"Nhập {preview.Result.Count} tài khoản từ CSV ({parsed.message})");
+
+                MessageBox.Show($"Đã nhập {preview.Result.Count} tài khoản.", "Kết quả nhập CSV",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex) { MessageBox.Show($"Lỗi nhập CSV: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error); }
-        }
-
-        private string EscapeCsv(string field)
-        {
-            if (string.IsNullOrEmpty(field)) return "";
-            if (field.Contains(",") || field.Contains("\"") || field.Contains("\n")) return $"\"{field.Replace("\"", "\"\"")}\"";
-            return field;
-        }
-
-        private System.Collections.Generic.List<string> ParseCsvLine(string line)
-        {
-            var result = new System.Collections.Generic.List<string>();
-            bool inQuotes = false;
-            var currentField = new System.Text.StringBuilder();
-
-            for (int i = 0; i < line.Length; i++)
-            {
-                char c = line[i];
-                if (c == '"')
-                {
-                    if (inQuotes && i + 1 < line.Length && line[i + 1] == '"') { currentField.Append('"'); i++; }
-                    else { inQuotes = !inQuotes; }
-                }
-                else if (c == ',' && !inQuotes) { result.Add(currentField.ToString()); currentField.Clear(); }
-                else { currentField.Append(c); }
-            }
-            result.Add(currentField.ToString());
-            return result;
         }
 
         // ================================================================

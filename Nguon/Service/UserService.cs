@@ -573,22 +573,28 @@ namespace PersonalInfoManager.Services
         // ================== PHÂN QUYỀN ==================
         // ================================================================
 
-        public void SetRole(Guid userId, UserRole role)
+        /// <summary>
+        /// Đổi vai trò. Không thu quyền được admin cuối cùng (trả về ok = false kèm lý do,
+        /// để giao diện báo cho người dùng và không ghi nhật ký "đã đổi").
+        /// </summary>
+        public (bool ok, string message) SetRole(Guid userId, UserRole role)
         {
             lock (Sync)
             {
                 Reload();
 
                 var user = FindByIdCore(userId);
-                if (user == null) return;
+                if (user == null)
+                    return (false, "Không tìm thấy user.");
 
                 if (user.Role == UserRole.Admin &&
                     role == UserRole.User &&
                     _users.Count(u => u.Role == UserRole.Admin) <= 1)
-                    return;
+                    return (false, "Không thể thu quyền admin cuối cùng.");
 
                 user.Role = role;
                 Save();
+                return (true, "Đã đổi vai trò.");
             }
         }
 

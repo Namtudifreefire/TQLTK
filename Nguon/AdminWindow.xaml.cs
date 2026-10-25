@@ -164,7 +164,13 @@ namespace PersonalInfoManager
 
             var oldRole = u.Role;
             var newRole = oldRole == UserRole.Admin ? UserRole.User : UserRole.Admin;
-            _userService.SetRole(u.Id, newRole);
+
+            var result = _userService.SetRole(u.Id, newRole);
+            if (!result.ok)
+            {
+                MessageBox.Show(result.message, "Lỗi", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
 
             try
             {

@@ -7,48 +7,48 @@
         ResizeMode="CanResize"
         Background="{DynamicResource BackgroundBrush}">
 
-    <Grid Margin="20">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
+	<Grid Margin="20">
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="*" />
+			<RowDefinition Height="Auto" />
+		</Grid.RowDefinitions>
 
-        <!-- Tiêu đề -->
-        <StackPanel Grid.Row="0" Margin="0,0,0,15">
-            <TextBlock Text="📥 Import tài khoản từ CSV"
+		<!-- Tiêu đề -->
+		<StackPanel Grid.Row="0" Margin="0,0,0,15">
+			<TextBlock Text="📥 Import tài khoản từ CSV"
                        FontSize="20" FontWeight="Bold"
                        Foreground="{DynamicResource TextPrimaryBrush}"
                        Margin="0,0,0,6" />
-            <TextBlock x:Name="lblInfo"
+			<TextBlock x:Name="lblInfo"
                        FontSize="12"
                        Foreground="{DynamicResource TextSecondaryBrush}"
                        TextWrapping="Wrap" />
-        </StackPanel>
+		</StackPanel>
 
-        <!-- Thống kê -->
-        <Border Grid.Row="1"
+		<!-- Thống kê -->
+		<Border Grid.Row="1"
                 Background="{DynamicResource SurfaceBrush}"
                 BorderBrush="{DynamicResource BorderBrush}"
                 BorderThickness="1"
                 CornerRadius="8"
                 Padding="12"
                 Margin="0,0,0,12">
-            <StackPanel Orientation="Horizontal">
-                <TextBlock x:Name="lblTotal" FontSize="13" FontWeight="SemiBold"
+			<StackPanel Orientation="Horizontal">
+				<TextBlock x:Name="lblTotal" FontSize="13" FontWeight="SemiBold"
                            Foreground="{DynamicResource TextPrimaryBrush}"
                            Margin="0,0,20,0" />
-                <TextBlock x:Name="lblDuplicates" FontSize="13" FontWeight="SemiBold"
+				<TextBlock x:Name="lblDuplicates" FontSize="13" FontWeight="SemiBold"
                            Foreground="#EF4444"
                            Margin="0,0,20,0" />
-                <TextBlock x:Name="lblWillImport" FontSize="13" FontWeight="SemiBold"
+				<TextBlock x:Name="lblWillImport" FontSize="13" FontWeight="SemiBold"
                            Foreground="#22C55E" />
-            </StackPanel>
-        </Border>
+			</StackPanel>
+		</Border>
 
-        <!-- DataGrid preview -->
-        <DataGrid Grid.Row="2"
+		<!-- DataGrid preview -->
+		<DataGrid Grid.Row="2"
                   x:Name="dgPreview"
                   AutoGenerateColumns="False"
                   CanUserAddRows="False"
@@ -57,41 +57,48 @@
                   HeadersVisibility="Column"
                   GridLinesVisibility="Horizontal"
                   RowHeight="32">
-            <DataGrid.Columns>
-                <DataGridCheckBoxColumn Header="✓" Binding="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}"
-                                        Width="40" />
-                <DataGridTextColumn Header="Dịch vụ" Binding="{Binding ServiceName}" Width="180" />
-                <DataGridTextColumn Header="Username" Binding="{Binding Username}" Width="180" />
-                <DataGridTextColumn Header="Password" Binding="{Binding MaskedPassword}" Width="120" />
-                <DataGridTextColumn Header="Note" Binding="{Binding Note}" Width="*" />
-                <DataGridTextColumn Header="Trạng thái" Binding="{Binding Status}" Width="120" />
-            </DataGrid.Columns>
-        </DataGrid>
+			<DataGrid.Columns>
+				<!-- Dùng template thay vì DataGridCheckBoxColumn: DataGrid đang IsReadOnly nên cột tick mặc định không bấm được -->
+				<DataGridTemplateColumn Header="✓" Width="50">
+					<DataGridTemplateColumn.CellTemplate>
+						<DataTemplate>
+							<CheckBox IsChecked="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}"
+                                      HorizontalAlignment="Center" VerticalAlignment="Center" />
+						</DataTemplate>
+					</DataGridTemplateColumn.CellTemplate>
+				</DataGridTemplateColumn>
+				<DataGridTextColumn Header="Dịch vụ" Binding="{Binding ServiceName}" Width="180" />
+				<DataGridTextColumn Header="Username" Binding="{Binding Username}" Width="180" />
+				<DataGridTextColumn Header="Password" Binding="{Binding MaskedPassword}" Width="120" />
+				<DataGridTextColumn Header="Note" Binding="{Binding Note}" Width="*" />
+				<DataGridTextColumn Header="Trạng thái" Binding="{Binding Status}" Width="120" />
+			</DataGrid.Columns>
+		</DataGrid>
 
-        <!-- Nút hành động -->
-        <StackPanel Grid.Row="3"
+		<!-- Nút hành động -->
+		<StackPanel Grid.Row="3"
                     Orientation="Horizontal"
                     HorizontalAlignment="Right"
                     Margin="0,15,0,0">
-            <Button Content="Chọn tất cả"
+			<Button Content="Chọn tất cả"
                     Click="BtnSelectAll_Click"
                     Padding="16,8" Margin="0,0,8,0"
                     Style="{StaticResource OutlineButton}" />
-            <Button Content="Bỏ chọn tất cả"
+			<Button Content="Bỏ chọn tất cả"
                     Click="BtnDeselectAll_Click"
                     Padding="16,8" Margin="0,0,8,0"
                     Style="{StaticResource OutlineButton}" />
-            <Button Content="Hủy"
+			<Button Content="Hủy"
                     Click="BtnCancel_Click"
                     Padding="16,8" Margin="0,0,8,0"
                     Style="{StaticResource OutlineButton}" />
-            <Button Content="📥 Import"
+			<Button Content="📥 Import"
                     Click="BtnImport_Click"
                     Padding="20,8"
                     IsDefault="True"
                     Background="#22C55E"
                     Foreground="White"
                     FontWeight="Bold" />
-        </StackPanel>
-    </Grid>
+		</StackPanel>
+	</Grid>
 </Window>

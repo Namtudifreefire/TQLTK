@@ -181,11 +181,18 @@ namespace PersonalInfoManager
 
             try { RegistryService.SetLastUser(user.Username); } catch { }
 
+            // Phải đọc nhật ký TRƯỚC khi ghi dòng LOGIN của lần này, kẻo "lần đăng nhập trước" bị tính là bây giờ
+            string? warning = LoginHistory.BuildWarning(user.Username);
+
             try
             {
                 ActivityLogger.Log(user.Username, "LOGIN", $"Role={user.Role}");
             }
             catch { }
+
+            // Hiện trước khi mở MainWindow (lúc này chưa có đồng hồ tự khóa nào chạy)
+            if (warning != null)
+                MessageBox.Show(this, warning, "Cảnh báo bảo mật", MessageBoxButton.OK, MessageBoxImage.Warning);
 
             var main = new MainWindow();
             Application.Current.MainWindow = main;
