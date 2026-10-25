@@ -14,7 +14,7 @@ namespace PersonalInfoManager
             // Code đăng nhập / đăng xuất / tự khóa luôn gán lại MainWindow cho cửa sổ mới TRƯỚC khi đóng cửa sổ cũ,
             // nên đăng xuất và tự khóa không làm tắt app, còn thoát thật thì tắt hẳn
             // dù vẫn còn cửa sổ nào đó đang bị ẩn (mặc định WPF chờ MỌI cửa sổ, kể cả cửa sổ ẩn, đóng hết).
-            ShutdownMode = ShutdownMode.OnMainWindowClose;
+            // ShutdownMode = ShutdownMode.OnMainWindowClose;
 
             // 1. Load theme từ Registry
             try { ThemeService.Initialize(); } catch { }
