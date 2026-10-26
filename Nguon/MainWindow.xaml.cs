@@ -13,6 +13,7 @@ using PersonalInfoManager.Services;
 
 namespace PersonalInfoManager
 {
+    // Phần khung (điều hướng, ô người dùng, hộp thoại Cài đặt) nằm ở MainWindow.Shell.cs
     public partial class MainWindow : Window
     {
         // ================== SERVICES ==================
@@ -114,12 +115,10 @@ namespace PersonalInfoManager
 
             BuildPages();
 
-            // Mục "Quản trị" ở sidebar chỉ hiện với Admin
+            // Mục "Quản trị" trong Cài đặt chỉ hiện với Admin
             navAdmin.Visibility = SessionService.IsAdmin ? Visibility.Visible : Visibility.Collapsed;
 
-            var u = SessionService.CurrentUser!;
-            string displayName = string.IsNullOrWhiteSpace(u.FullName) ? u.Username : u.FullName;
-            lblUser.Text = $"👤 {displayName} ({u.Role})";
+            UpdateUserChip();
 
             RefreshAccounts();
             RefreshFiles();
@@ -132,46 +131,6 @@ namespace PersonalInfoManager
             StartAutoLock();
 
             navAccounts.IsChecked = true;   // trang mặc định
-        }
-
-        // ================================================================
-        // ================== ĐIỀU HƯỚNG SIDEBAR ==================
-        // ================================================================
-
-        // Tag của RadioButton ở sidebar -> trang tương ứng bên phải
-        private Dictionary<string, FrameworkElement> _pages = new();
-
-        private void BuildPages()
-        {
-            _pages = new Dictionary<string, FrameworkElement>
-            {
-                ["accounts"] = pageAccounts,
-                ["files"] = pageFiles,
-                ["profile"] = pageProfile,
-                ["security"] = pageSecurity,
-                ["appearance"] = pageAppearance,
-                ["backup"] = pageBackup,
-                ["drive"] = pageDrive,
-                ["system"] = pageSystem,
-                ["admin"] = pageAdmin
-            };
-        }
-
-        private void Nav_Checked(object sender, RoutedEventArgs e)
-        {
-            if (_pages.Count == 0) return;   // sự kiện bắn trước khi cửa sổ nạp xong
-            if (sender is RadioButton { Tag: string tag }) ShowPage(tag);
-        }
-
-        private void ShowPage(string tag)
-        {
-            // Trang Admin chỉ dành cho quản trị viên, kể cả khi bị gọi bằng cách khác
-            if (tag == "admin" && !SessionService.IsAdmin) return;
-
-            foreach (var kv in _pages)
-                kv.Value.Visibility = kv.Key == tag ? Visibility.Visible : Visibility.Collapsed;
-
-            if (tag == "files") RefreshFiles();   // danh sách file có thể đã đổi (ví dụ vừa khôi phục)
         }
 
         // ================================================================
@@ -803,9 +762,7 @@ namespace PersonalInfoManager
                 try { ActivityLogger.Log(u.Username, "UPDATE_PROFILE", ""); } catch { }
 
                 LoadProfile();
-                var nu = SessionService.CurrentUser!;
-                string dn = string.IsNullOrWhiteSpace(nu.FullName) ? nu.Username : nu.FullName;
-                lblUser.Text = $"👤 {dn} ({nu.Role})";
+                UpdateUserChip();
 
                 MessageBox.Show("Đã lưu thông tin cá nhân!");
             }
