@@ -241,5 +241,12 @@ namespace PersonalInfoManager.Services
 
         /// <summary>Đếm số tài khoản, không cần tạo bản sao.</summary>
         public int Count(string username) => LoadShared(username).Count;
+
+        /// <summary>Thời điểm (UTC) file vault của người dùng được ghi lần cuối; null nếu chưa có file.</summary>
+        public DateTime? GetLastWriteUtc(string username)
+        {
+            var info = new FileInfo(GetVaultFile(username));
+            return info.Exists ? info.LastWriteTimeUtc : null;
+        }
     }
 }

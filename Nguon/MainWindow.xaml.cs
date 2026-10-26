@@ -1,10 +1,11 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using Microsoft.Win32;
 using PersonalInfoManager.Models;
@@ -36,9 +37,6 @@ namespace PersonalInfoManager
         private DateTime _lastActivity = DateTime.UtcNow;
         private DateTime _lastAuthTime = DateTime.MinValue;
         private bool _isLocked = false;
-
-        // Menu "Tạo lại mã khôi phục 2FA" (tạo bằng code, không cần sửa XAML)
-        private MenuItem? _mnu2FARegen;
 
         // ================== DEBOUNCE TIMER ==================
         private readonly DispatcherTimer _saveStateTimer;
@@ -82,6 +80,16 @@ namespace PersonalInfoManager
                 if (SessionService.IsLoggedIn) RefreshAccounts(updateStatus: false);
             };
 
+            // Ctrl+B: ẩn / hiện thanh bên
+            PreviewKeyDown += (_, e) =>
+            {
+                if (e.Key == Key.B && Keyboard.Modifiers == ModifierKeys.Control)
+                {
+                    ToggleSidebar();
+                    e.Handled = true;
+                }
+            };
+
             Loaded += MainWindow_Loaded;
             Closing += MainWindow_Closing;
             LocationChanged += MainWindow_LocationChanged;
@@ -104,7 +112,10 @@ namespace PersonalInfoManager
                 return;
             }
 
-            mnuAdmin.Visibility = SessionService.IsAdmin ? Visibility.Visible : Visibility.Collapsed;
+            BuildPages();
+
+            // Mục "Quản trị" ở sidebar chỉ hiện với Admin
+            navAdmin.Visibility = SessionService.IsAdmin ? Visibility.Visible : Visibility.Collapsed;
 
             var u = SessionService.CurrentUser!;
             string displayName = string.IsNullOrWhiteSpace(u.FullName) ? u.Username : u.FullName;
@@ -115,13 +126,91 @@ namespace PersonalInfoManager
             UpdateStorageInfo();
             LoadProfile();
 
-            try { mnuAutoTheme.IsChecked = AutoThemeService.IsEnabled; } catch { }
-
+            UpdateAutoThemeCard();
             UpdateThemeIndicator();
-            Setup2FARegenMenu();
             Update2FAMenu();
             StartAutoLock();
+
+            navAccounts.IsChecked = true;   // trang mặc định
         }
+
+        // ================================================================
+        // ================== ĐIỀU HƯỚNG SIDEBAR ==================
+        // ================================================================
+
+        // Tag của RadioButton ở sidebar -> trang tương ứng bên phải
+        private Dictionary<string, FrameworkElement> _pages = new();
+
+        private void BuildPages()
+        {
+            _pages = new Dictionary<string, FrameworkElement>
+            {
+                ["accounts"] = pageAccounts,
+                ["files"] = pageFiles,
+                ["profile"] = pageProfile,
+                ["security"] = pageSecurity,
+                ["appearance"] = pageAppearance,
+                ["backup"] = pageBackup,
+                ["drive"] = pageDrive,
+                ["system"] = pageSystem,
+                ["admin"] = pageAdmin
+            };
+        }
+
+        private void Nav_Checked(object sender, RoutedEventArgs e)
+        {
+            if (_pages.Count == 0) return;   // sự kiện bắn trước khi cửa sổ nạp xong
+            if (sender is RadioButton { Tag: string tag }) ShowPage(tag);
+        }
+
+        private void ShowPage(string tag)
+        {
+            // Trang Admin chỉ dành cho quản trị viên, kể cả khi bị gọi bằng cách khác
+            if (tag == "admin" && !SessionService.IsAdmin) return;
+
+            foreach (var kv in _pages)
+                kv.Value.Visibility = kv.Key == tag ? Visibility.Visible : Visibility.Collapsed;
+
+            if (tag == "files") RefreshFiles();   // danh sách file có thể đã đổi (ví dụ vừa khôi phục)
+        }
+
+        // ================================================================
+        // ================== ẨN / HIỆN SIDEBAR ==================
+        // ================================================================
+
+        private const double SidebarWidth = 250;
+        private bool _sidebarVisible = true;
+
+        private void BtnToggleSidebar_Click(object sender, RoutedEventArgs e) => ToggleSidebar();
+
+        private void ToggleSidebar()
+        {
+            _sidebarVisible = !_sidebarVisible;
+            bool show = _sidebarVisible;
+            double target = show ? SidebarWidth : 0;
+
+            if (show) panelSidebar.Visibility = Visibility.Visible;
+
+            var anim = new DoubleAnimation(target, TimeSpan.FromMilliseconds(180))
+            {
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseInOut }
+            };
+
+            anim.Completed += (_, _) =>
+            {
+                // Bấm liên tiếp: chỉ áp dụng kết quả của lần bấm mới nhất
+                if (_sidebarVisible != show) return;
+
+                panelSidebar.BeginAnimation(WidthProperty, null);
+                panelSidebar.Width = target;
+                if (!show) panelSidebar.Visibility = Visibility.Collapsed;
+            };
+
+            panelSidebar.BeginAnimation(WidthProperty, anim);
+        }
+
+        // Nút "Mở" ở hàng Windows Hello trong trang Bảo mật
+        private void GoProfile_Click(object sender, RoutedEventArgs e) => navProfile.IsChecked = true;
 
         // ================================================================
         // ================== NHỚ VỊ TRÍ + KÍCH THƯỚC ==================
@@ -310,7 +399,7 @@ namespace PersonalInfoManager
                 try { ActivityLogger.Log(username, deniedLogCode, "Windows Hello thất bại, chưa bật 2FA"); } catch { }
                 MessageBox.Show(
                     $"Cần xác thực để {actionText}, nhưng Windows Hello không thành công và bạn chưa bật xác thực 2 bước.\n\n" +
-                    "Vào Tiện ích → Bật xác thực 2 bước (Authenticator) để có cách xác thực dự phòng.",
+                    "Vào Bảo mật → Bật xác thực 2 bước (Authenticator) để có cách xác thực dự phòng.",
                     "Từ chối", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return false;
             }
@@ -557,7 +646,7 @@ namespace PersonalInfoManager
                         try { ActivityLogger.Log(username, "COPY_PASSWORD_DENIED", "Windows Hello thất bại, chưa bật 2FA"); } catch { }
                         MessageBox.Show(
                             "Xác thực Windows Hello không thành công và bạn chưa bật xác thực 2 bước nên không thể copy mật khẩu.\n\n" +
-                            "Vào Tiện ích → Bật xác thực 2 bước (Authenticator) để có cách xác thực dự phòng.",
+                            "Vào Bảo mật → Bật xác thực 2 bước (Authenticator) để có cách xác thực dự phòng.",
                             "Từ chối", MessageBoxButton.OK, MessageBoxImage.Warning);
                         return;
                     }
@@ -781,9 +870,35 @@ namespace PersonalInfoManager
         }
 
         // ================================================================
+        // ================== TRẠNG THÁI TRÊN CÀI ĐẶT ==================
+        // ================================================================
+
+        // Dùng chung cho hàng 2FA và hàng Tự động đổi theme: "● Đang bật" (xanh) / "○ Đang tắt" (xám theo theme)
+        private static void SetCardState(TextBlock label, bool on)
+        {
+            label.Text = on ? "● Đang bật" : "○ Đang tắt";
+
+            if (on)
+            {
+                label.Foreground = new System.Windows.Media.SolidColorBrush(
+                    System.Windows.Media.Color.FromRgb(34, 197, 94));
+            }
+            else
+            {
+                label.SetResourceReference(TextBlock.ForegroundProperty, "TextSecondaryBrush");
+            }
+        }
+
+        private void UpdateAutoThemeCard()
+        {
+            try { SetCardState(lblAutoThemeState, AutoThemeService.IsEnabled); } catch { }
+        }
+
+        // ================================================================
         // ================== XÁC THỰC 2 BƯỚC (AUTHENTICATOR) ==================
         // ================================================================
 
+        // Cập nhật hàng "Bật/Tắt 2FA" và hiện/ẩn hàng "Tạo lại mã khôi phục"
         private void Update2FAMenu()
         {
             try
@@ -791,28 +906,11 @@ namespace PersonalInfoManager
                 string user = SessionService.CurrentUser!.Username;
                 bool enabled = TwoFactorService.IsEnabled(user);
 
-                mnu2FA.Header = enabled
-                    ? "🔑 Tắt xác thực 2 bước (đang bật)"
-                    : "🔑 Bật xác thực 2 bước (Authenticator)";
+                lbl2FATitle.Text = enabled ? "Tắt xác thực 2 bước" : "Bật xác thực 2 bước";
+                SetCardState(lbl2FAState, enabled);
 
                 // Chỉ hiện "Tạo lại mã khôi phục" khi 2FA đang bật
-                if (_mnu2FARegen != null)
-                    _mnu2FARegen.Visibility = enabled ? Visibility.Visible : Visibility.Collapsed;
-            }
-            catch { }
-        }
-
-        // Thêm mục menu ngay dưới "Bật/Tắt xác thực 2 bước"
-        private void Setup2FARegenMenu()
-        {
-            try
-            {
-                if (_mnu2FARegen != null) return;
-                if (mnu2FA.Parent is not ItemsControl parent) return;
-
-                _mnu2FARegen = new MenuItem { Header = "🔁 Tạo lại mã khôi phục 2FA" };
-                _mnu2FARegen.Click += Mnu2FARegen_Click;
-                parent.Items.Insert(parent.Items.IndexOf(mnu2FA) + 1, _mnu2FARegen);
+                card2FARegen.Visibility = enabled ? Visibility.Visible : Visibility.Collapsed;
             }
             catch { }
         }
@@ -1006,7 +1104,7 @@ namespace PersonalInfoManager
         }
 
         // ================================================================
-        // ================== MENU ==================
+        // ================== HỆ THỐNG (thẻ / nút trên thanh tiêu đề) ==================
         // ================================================================
 
         private void MnuAdmin_Click(object? sender, RoutedEventArgs e) => new AdminWindow().ShowDialog();
@@ -1057,12 +1155,13 @@ namespace PersonalInfoManager
         // ================== AUTO THEME ==================
         // ================================================================
 
+        // Thẻ là nút thường (không tự đánh dấu như MenuItem IsCheckable) nên đảo trạng thái từ AutoThemeService.IsEnabled
         private void MnuAutoTheme_Click(object? sender, RoutedEventArgs e)
         {
             try
             {
-                bool isEnabled = mnuAutoTheme.IsChecked;
-                if (isEnabled)
+                bool enable = !AutoThemeService.IsEnabled;
+                if (enable)
                 {
                     AutoThemeService.Start();
                     RegistryService.SetAutoThemeEnabled(true);
@@ -1075,6 +1174,8 @@ namespace PersonalInfoManager
                     RegistryService.SetAutoThemeEnabled(false);
                     MessageBox.Show("Đã tắt tự động đổi theme theo giờ.", "Auto Theme");
                 }
+
+                UpdateAutoThemeCard();
                 UpdateThemeIndicator();
             }
             catch (Exception ex) { MessageBox.Show($"Lỗi: {ex.Message}"); }
@@ -1345,7 +1446,7 @@ namespace PersonalInfoManager
             if (ask == MessageBoxResult.Yes && !BackupCrypto.TryAdoptLegacyPassphrase(username))
             {
                 MessageBox.Show(
-                    "Không đọc được cụm cũ trên máy này. Hãy đặt cụm mới (Tiện ích → Cụm mật khẩu sao lưu).",
+                    "Không đọc được cụm cũ trên máy này. Hãy đặt cụm mới (Google Drive → Cụm mật khẩu sao lưu).",
                     "Lỗi", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
