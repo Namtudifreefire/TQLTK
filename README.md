@@ -1,20 +1,35 @@
 # TQLTK
-Là hàng C# thử nghiệm made by thienthuongthienha_duyngadocton_ (Với mục đích cho vui)
-# Update v3.6.2, Thêm 1 số tính năng mới và fix 1 số bug như:
-- Khôi phục dữ liệu từ Google Drive (Tiện ích → Khôi phục từ Google Drive)
-- Cụm mật khẩu sao lưu: khôi phục được trên máy khác (Tiện ích → Cụm mật khẩu sao lưu)
-- Tách bản sao lưu và đăng nhập Google theo từng người dùng
-- Lần đầu sau khi cập nhật: cần đăng nhập Google lại một lần và chọn nhận cụm mật khẩu cũ
-# Tính năng thuộc diện BETA:
-- Cho phép đăng nhập cũng như sử dụng lớp bảo mật = Windows Hello.
-- Backup vault = Google Drive.
-# Một số bug nguy hiểm đã đc fix ở bản update này:
-- Phụ thuộc file .json để dùng tính năng đồng bộ = Drive
-- Lỗi file.dat cs thể bị mất hoặc bị đổi tên ảnh hưởng đến dữ liệu trong app
-- Fix lỗi khi cài lại win thì backup ko dùng đc (fix = cụm mk)
-# Lưu ý:
-- Tính năng BETA mới chỉ đc test ở máy của Nhà Phát Triển, có thể 1 số máy sẽ gặp lỗi hoặc hoạt động không ổn định (khi kiểm nghiệm hoàn thành thì sẽ tháo BETA)
-# Tải về:
-- Nếu muốn sử dụng thì cứ tải về mà thử: [![Release](https://img.shields.io/badge/Tải_về-v3.6.2-2ea44f?style=for-the-badge&logo=github&logoColor=white)](https://github.com/Namtudifreefire/TQLTK/releases/tag/v3.6.2)
-# Lệnh winget để tải:
-- Hiện vẫn chx PR xng, hãy chờ đi :))
+
+Ứng dụng C# thử nghiệm, được tạo ra cho vui bởi **thienthuongthienha_duyngadocton_**.
+
+## Cập nhật v3.6.4
+
+### Tính năng và cải tiến
+
+- Khôi phục dữ liệu từ Google Drive tại **Tiện ích → Khôi phục từ Google Drive**.
+- Dùng cụm mật khẩu sao lưu để khôi phục dữ liệu trên máy khác.
+- Tách dữ liệu sao lưu và đăng nhập Google theo từng người dùng.
+- Khi nâng cấp từ bản cũ, có thể cần đăng nhập Google lại và chọn nhận cụm mật khẩu cũ.
+
+### Sửa lỗi và tăng cường bảo mật
+
+- Đồng bộ các thao tác quản trị với bước kiểm tra quyền để tránh dùng quyền admin đã bị thu hồi.
+- Tuần tự hóa các thao tác 2FA và mã khôi phục để tránh lỗi khi nhiều thao tác diễn ra đồng thời trong ứng dụng.
+- Tính năng đồng bộ Google Drive không còn phụ thuộc vào file `.json`.
+- Khắc phục lỗi file `.dat` bị mất hoặc đổi tên làm ảnh hưởng đến dữ liệu trong ứng dụng.
+- Có thể khôi phục bản sao lưu sau khi cài lại Windows bằng cụm mật khẩu sao lưu.
+
+### Tính năng Beta
+
+- Đăng nhập và sử dụng Windows Hello làm lớp bảo mật.
+- Sao lưu kho dữ liệu (Backup Vault) lên Google Drive.
+
+> **Lưu ý:** Các tính năng Beta mới được thử nghiệm trên máy của nhà phát triển. Một số máy có thể gặp lỗi hoặc hoạt động chưa ổn định. Nhãn Beta sẽ được gỡ khi quá trình kiểm nghiệm hoàn tất.
+
+## Tải về
+
+Bản phát hành v3.6.4 sẽ được đăng tại trang [GitHub Releases](https://github.com/Namtudifreefire/TQLTK/releases) sau khi được tạo.
+
+## Winget
+
+Hiện chưa có lệnh winget — PR vẫn đang chờ cứ đợi thêm :))
