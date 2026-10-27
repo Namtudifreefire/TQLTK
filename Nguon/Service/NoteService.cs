@@ -8,7 +8,8 @@ namespace PersonalInfoManager.Services
 {
     /// <summary>
     /// Quản lý ghi chú cá nhân.
-    /// Dữ liệu được mã hóa AES trước khi lưu xuống file.
+    /// Dữ liệu được mã hóa AES trước khi lưu xuống file. Ghi chú CBC cũ được tự chuyển
+    /// sang AES-GCM sau lần đọc thành công đầu tiên.
     /// Vị trí: %AppData%\PersonalInfoManager\notes.json
     /// </summary>
     public class NoteService
@@ -24,19 +25,29 @@ namespace PersonalInfoManager.Services
         {
             if (!File.Exists(_dataFile)) return new List<Note>();
 
+            string encrypted;
+            List<Note> notes;
             try
             {
-                string encrypted = File.ReadAllText(_dataFile);
+                encrypted = File.ReadAllText(_dataFile);
                 if (string.IsNullOrWhiteSpace(encrypted)) return new List<Note>();
 
                 string json = AesCrypto.Decrypt(encrypted);
-                return JsonSerializer.Deserialize<List<Note>>(json) ?? new List<Note>();
+                notes = JsonSerializer.Deserialize<List<Note>>(json) ?? new List<Note>();
             }
             catch
             {
                 // File hỏng, sai key, hoặc giải mã thất bại → trả về rỗng
                 return new List<Note>();
             }
+
+            if (AesCrypto.IsLegacyCbcFormat(encrypted))
+            {
+                try { Save(notes); }
+                catch { /* Keep the successfully loaded notes if migration cannot be saved. */ }
+            }
+
+            return notes;
         }
 
         /// <summary>
@@ -50,7 +61,16 @@ namespace PersonalInfoManager.Services
                 new JsonSerializerOptions { WriteIndented = true });
 
             string encrypted = AesCrypto.Encrypt(json);
-            File.WriteAllText(_dataFile, encrypted);
+            string temp = _dataFile + "." + Guid.NewGuid().ToString("N") + ".tmp";
+            try
+            {
+                File.WriteAllText(temp, encrypted);
+                File.Move(temp, _dataFile, overwrite: true);
+            }
+            finally
+            {
+                try { if (File.Exists(temp)) File.Delete(temp); } catch { }
+            }
         }
     }
 }

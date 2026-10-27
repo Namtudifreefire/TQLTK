@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using PersonalInfoManager.Models;
@@ -20,7 +22,8 @@ namespace PersonalInfoManager.Services
 
     /// <summary>
     /// Quản lý tài khoản người dùng.
-    /// Dữ liệu lưu tại: %AppData%\PersonalInfoManager\users.json
+    /// Dữ liệu lưu tại %AppData%\PersonalInfoManager\users.json, được bảo vệ bằng Windows DPAPI CurrentUser.
+    /// File JSON cũ được đọc tương thích và tự mã hóa lại khi nạp.
     ///
     /// Mỗi lần gọi, danh sách được ĐỌC LẠI từ file (nhiều cửa sổ cùng tạo UserService riêng,
     /// nếu giữ danh sách cũ trong bộ nhớ thì lần Save sau sẽ ghi đè mất thay đổi của cửa sổ khác).
@@ -30,6 +33,8 @@ namespace PersonalInfoManager.Services
     {
         private static readonly object Sync = new();
         private static readonly JsonSerializerOptions JsonOpts = new() { WriteIndented = true };
+        private static readonly byte[] UsersEntropy = Encoding.UTF8.GetBytes("TQLTK.Users.v1");
+        private const string ProtectedUsersPrefix = "TQLTK.USERS.v1:";
 
         private readonly string _usersFile = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
@@ -59,6 +64,48 @@ namespace PersonalInfoManager.Services
             return false;
         }
 
+        private bool CanManageProfile(Guid targetUserId, out string message)
+        {
+            var current = SessionService.CurrentUser;
+            if (current != null)
+            {
+                lock (Sync)
+                {
+                    Reload();
+                    var fresh = FindByIdCore(current.Id);
+                    if (fresh is { IsActive: true } &&
+                        (fresh.Id == targetUserId || fresh.Role == UserRole.Admin))
+                    {
+                        message = "";
+                        return true;
+                    }
+                }
+            }
+
+            message = "Từ chối thao tác: chỉ được sửa hồ sơ của chính mình hoặc hồ sơ khác khi là quản trị viên đang hoạt động.";
+            return false;
+        }
+
+        private bool IsCurrentActiveUser(Guid userId, out string message)
+        {
+            var current = SessionService.CurrentUser;
+            if (current != null && current.Id == userId)
+            {
+                lock (Sync)
+                {
+                    Reload();
+                    if (FindByIdCore(userId) is { IsActive: true })
+                    {
+                        message = "";
+                        return true;
+                    }
+                }
+            }
+
+            message = "Từ chối thao tác: chỉ người dùng đang hoạt động mới được thay đổi thiết lập đăng nhập của chính mình.";
+            return false;
+        }
+
         /// <summary>Sai mật khẩu bấy nhiêu lần liên tiếp thì bị khóa tạm.</summary>
         public const int MaxFailedAttempts = 5;
 
@@ -83,7 +130,9 @@ namespace PersonalInfoManager.Services
         {
             lock (Sync)
             {
-                _users = ReadUsers();
+                _users = ReadUsers(out bool needsProtection);
+                if (needsProtection)
+                    Save();
             }
         }
 
@@ -92,15 +141,25 @@ namespace PersonalInfoManager.Services
         /// File chưa tồn tại → danh sách rỗng (lần chạy đầu).
         /// Lỗi I/O (file đang bị khóa...) được ném ra ngoài, không coi là file hỏng.
         /// </summary>
-        private List<User> ReadUsers()
+        private List<User> ReadUsers(out bool needsProtection)
         {
+            needsProtection = false;
             if (!File.Exists(_usersFile)) return new List<User>();
 
-            var main = TryParse(_usersFile, out Exception? mainError);
-            if (main != null) return main;
+            var main = TryParse(_usersFile, out Exception? mainError, out bool mainNeedsProtection);
+            if (main != null)
+            {
+                needsProtection = mainNeedsProtection;
+                return main;
+            }
 
             var bak = TryParse(_usersFile + ".bak", out _);
-            if (bak != null) return bak;
+            if (bak != null)
+            {
+                // Rebuild the main file from the validated backup using the protected format.
+                needsProtection = true;
+                return bak;
+            }
 
             // Giữ lại bản hỏng để có thể cứu bằng tay
             try
@@ -114,19 +173,25 @@ namespace PersonalInfoManager.Services
             throw new UsersFileUnreadableException(
                 "Không đọc được danh sách tài khoản (users.json) và cũng không có bản dự phòng dùng được.\n\n" +
                 "Ứng dụng KHÔNG tự tạo lại tài khoản admin mặc định để tránh ghi đè dữ liệu cũ.\n" +
-                "Hãy đóng ứng dụng, mở thư mục %AppData%\\PersonalInfoManager rồi sửa hoặc khôi phục users.json " +
-                "từ bản users.json.bak hoặc users.json.corrupt-*.\n\n" +
+                "Hãy đóng ứng dụng, mở thư mục %AppData%\\PersonalInfoManager rồi khôi phục users.json " +
+                "từ users.json.bak nếu có. File mới được mã hóa theo tài khoản Windows hiện tại; " +
+                "không chỉnh sửa thủ công nội dung file đã mã hóa.\n\n" +
                 (mainError != null ? "Chi tiết: " + mainError.Message : ""),
                 mainError);
         }
 
         private static List<User>? TryParse(string file, out Exception? error)
+            => TryParse(file, out error, out _);
+
+        private static List<User>? TryParse(
+            string file, out Exception? error, out bool needsProtection)
         {
             error = null;
+            needsProtection = false;
             if (!File.Exists(file)) return null;
 
-            string json = File.ReadAllText(file);
-            if (string.IsNullOrWhiteSpace(json))
+            string stored = File.ReadAllText(file);
+            if (string.IsNullOrWhiteSpace(stored))
             {
                 error = new InvalidDataException("File trống.");
                 return null;
@@ -134,9 +199,30 @@ namespace PersonalInfoManager.Services
 
             try
             {
+                string json;
+                if (stored.StartsWith(ProtectedUsersPrefix, StringComparison.Ordinal))
+                {
+                    byte[] encrypted = Convert.FromBase64String(stored.Substring(ProtectedUsersPrefix.Length));
+                    byte[] plaintext = ProtectedData.Unprotect(
+                        encrypted, UsersEntropy, DataProtectionScope.CurrentUser);
+                    try { json = Encoding.UTF8.GetString(plaintext); }
+                    finally
+                    {
+                        CryptographicOperations.ZeroMemory(encrypted);
+                        CryptographicOperations.ZeroMemory(plaintext);
+                    }
+                }
+                else
+                {
+                    // Existing installations store plain JSON. Load it once, then migrate on Reload.
+                    json = stored;
+                    needsProtection = true;
+                }
+
                 return JsonSerializer.Deserialize<List<User>>(json);
             }
-            catch (JsonException ex)
+            catch (Exception ex) when (
+                ex is JsonException || ex is CryptographicException || ex is FormatException)
             {
                 error = ex;
                 return null;
@@ -149,27 +235,49 @@ namespace PersonalInfoManager.Services
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(_usersFile)!);
 
-                string json = JsonSerializer.Serialize(_users, JsonOpts);
-                string tmp = _usersFile + ".tmp";
-                File.WriteAllText(tmp, json);
-
                 if (File.Exists(_usersFile))
                 {
-                    if (TryParse(_usersFile, out _) != null)
+                    var previous = TryParse(_usersFile, out _);
+                    if (previous != null)
                     {
-                        // File hiện tại đọc được → giữ làm bản dự phòng
-                        File.Copy(_usersFile, _usersFile + ".bak", overwrite: true);
+                        // Keep a protected copy of the previous valid contents, including during migration.
+                        WriteProtectedUsersFile(_usersFile + ".bak", previous);
                     }
                     else
                     {
                         // File hiện tại hỏng → giữ riêng một bản, không đè lên .bak tốt
                         File.Copy(_usersFile,
-                            _usersFile + ".corrupt-" + DateTime.Now.ToString("yyyyMMddHHmmss"),
+                            _usersFile + ".corrupt-" + DateTime.Now.ToString("yyyyMMddHHmmssfff") + "-" + Guid.NewGuid().ToString("N"),
                             overwrite: true);
+                        // The in-memory list came from the validated backup or a deliberate recovery.
+                        WriteProtectedUsersFile(_usersFile + ".bak", _users);
                     }
                 }
 
-                File.Move(tmp, _usersFile, overwrite: true);
+                WriteProtectedUsersFile(_usersFile, _users);
+            }
+        }
+
+        private static void WriteProtectedUsersFile(string path, List<User> users)
+        {
+            string json = JsonSerializer.Serialize(users, JsonOpts);
+            byte[] plaintext = Encoding.UTF8.GetBytes(json);
+            byte[]? encrypted = null;
+            string temp = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+
+            try
+            {
+                encrypted = ProtectedData.Protect(
+                    plaintext, UsersEntropy, DataProtectionScope.CurrentUser);
+                string content = ProtectedUsersPrefix + Convert.ToBase64String(encrypted);
+                File.WriteAllText(temp, content, Encoding.UTF8);
+                File.Move(temp, path, overwrite: true);
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(plaintext);
+                if (encrypted != null) CryptographicOperations.ZeroMemory(encrypted);
+                try { if (File.Exists(temp)) File.Delete(temp); } catch { }
             }
         }
 
@@ -262,8 +370,21 @@ namespace PersonalInfoManager.Services
         private static bool IsValidUsername(string username)
             => !string.IsNullOrWhiteSpace(username) && username.Trim().Length >= 3;
 
-        private static bool IsValidPassword(string password)
-            => !string.IsNullOrWhiteSpace(password) && password.Length >= 6;
+        private static int MinimumPasswordLength(bool twoFactorEnabled)
+            => twoFactorEnabled ? 8 : 15;
+
+        private static bool IsValidPassword(string password, bool twoFactorEnabled)
+            => !string.IsNullOrWhiteSpace(password) &&
+                password.Length >= MinimumPasswordLength(twoFactorEnabled);
+
+        private static string PasswordLengthMessage(bool twoFactorEnabled)
+            => $"Mật khẩu phải từ {MinimumPasswordLength(twoFactorEnabled)} ký tự trở lên.";
+
+        public int GetMinimumPasswordLength(string username)
+        {
+            var user = FindByUsername(username);
+            return MinimumPasswordLength(user?.TwoFactorEnabled == true);
+        }
 
         private static bool IsDefaultPassword(string password)
             => password == LegacyDefaultAdminPassword;
@@ -296,8 +417,8 @@ namespace PersonalInfoManager.Services
 
                 if (!IsValidUsername(username))
                     return (false, "Tên đăng nhập phải từ 3 ký tự trở lên.");
-                if (!IsValidPassword(password))
-                    return (false, "Mật khẩu phải từ 6 ký tự trở lên.");
+                if (!IsValidPassword(password, twoFactorEnabled: false))
+                    return (false, PasswordLengthMessage(twoFactorEnabled: false));
                 if (IsDefaultPassword(password))
                     return (false, DefaultPasswordMessage);
                 if (string.IsNullOrWhiteSpace(fullName))
@@ -341,8 +462,8 @@ namespace PersonalInfoManager.Services
                 if (!IsValidUsername(username))
                     return (false, "Tên đăng nhập phải từ 3 ký tự trở lên.");
 
-                if (!IsValidPassword(password))
-                    return (false, "Mật khẩu phải từ 6 ký tự trở lên.");
+                if (!IsValidPassword(password, twoFactorEnabled: false))
+                    return (false, PasswordLengthMessage(twoFactorEnabled: false));
 
                 if (IsDefaultPassword(password))
                     return (false, DefaultPasswordMessage);
@@ -441,6 +562,14 @@ namespace PersonalInfoManager.Services
                 if (IsDefaultPassword(password))
                     user.MustChangePassword = true;
 
+                // Upgrade legacy hashes at the next successful sign-in without invalidating them.
+                if (PasswordHasher.NeedsRehash(user.PasswordHash))
+                    user.PasswordHash = PasswordHasher.Hash(password);
+
+                // Existing short passwords remain usable once, then must meet the current policy.
+                if (password.Length < MinimumPasswordLength(user.TwoFactorEnabled))
+                    user.MustChangePassword = true;
+
                 user.LastLoginAt = DateTime.Now;
                 Save();
                 return (true, "Đăng nhập thành công.", user);
@@ -465,8 +594,8 @@ namespace PersonalInfoManager.Services
                 if (!PasswordHasher.Verify(oldPwd, user.PasswordHash))
                     return (false, "Mật khẩu cũ không đúng.");
 
-                if (!IsValidPassword(newPwd))
-                    return (false, "Mật khẩu mới phải từ 6 ký tự.");
+                if (!IsValidPassword(newPwd, user.TwoFactorEnabled))
+                    return (false, PasswordLengthMessage(user.TwoFactorEnabled));
 
                 if (IsDefaultPassword(newPwd))
                     return (false, DefaultPasswordMessage);
@@ -498,8 +627,8 @@ namespace PersonalInfoManager.Services
                 if (user == null)
                     return (false, "Không tìm thấy user.");
 
-                if (!IsValidPassword(newPassword))
-                    return (false, "Mật khẩu phải từ 6 ký tự trở lên.");
+                if (!IsValidPassword(newPassword, user.TwoFactorEnabled))
+                    return (false, PasswordLengthMessage(user.TwoFactorEnabled));
 
                 if (IsDefaultPassword(newPassword))
                     return (false, DefaultPasswordMessage);
@@ -522,6 +651,7 @@ namespace PersonalInfoManager.Services
         {
             lock (Sync)
             {
+                if (!CanManageProfile(userId, out string denied)) return (false, denied);
                 Reload();
 
                 var user = FindByIdCore(userId);
@@ -714,6 +844,7 @@ namespace PersonalInfoManager.Services
         {
             lock (Sync)
             {
+                if (!IsCurrentActiveUser(userId, out string denied)) return (false, denied);
                 Reload();
 
                 var user = FindByIdCore(userId);
@@ -722,6 +853,10 @@ namespace PersonalInfoManager.Services
 
                 if (enabled && string.IsNullOrWhiteSpace(sid))
                     return (false, "Không lấy được SID tài khoản Windows.");
+
+                if (enabled && !string.Equals(
+                    sid, WindowsHelloService.GetCurrentWindowsSid(), StringComparison.OrdinalIgnoreCase))
+                    return (false, "Chỉ có thể liên kết Windows Hello với tài khoản Windows hiện tại.");
 
                 user.WindowsHelloEnabled = enabled;
                 user.WindowsHelloSid = enabled ? sid : "";

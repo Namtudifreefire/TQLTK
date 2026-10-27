@@ -9,7 +9,8 @@ namespace PersonalInfoManager.Services
     /// <summary>
     /// Mã hóa / giải mã dữ liệu vault.
     /// - Định dạng mới (v2): AES-256-GCM, có kiểm tra toàn vẹn. Chuỗi bắt đầu bằng "v2:".
-    /// - Định dạng cũ: AES-256-CBC (IV 16 byte + cipher, Base64). Vẫn đọc được để không mất dữ liệu cũ.
+    /// - Định dạng cũ: AES-256-CBC (IV 16 byte + cipher, Base64). Vẫn đọc được để không mất dữ liệu cũ;
+    ///   vault và ghi chú cũ được ghi lại bằng AES-GCM ngay lần đọc thành công đầu tiên.
     /// Key sinh ngẫu nhiên, bảo vệ bằng DPAPI (gắn với tài khoản Windows hiện tại).
     /// Vị trí key: %AppData%\PersonalInfoManager\key.dat
     /// LƯU Ý: không đổi tham số DPAPI (entropy/scope), nếu không key.dat cũ sẽ không đọc được.
@@ -27,6 +28,10 @@ namespace PersonalInfoManager.Services
             "PersonalInfoManager");
 
         private static readonly string KeyFile = Path.Combine(KeyDir, "key.dat");
+
+        /// <summary>True when stored vault data uses the legacy unauthenticated CBC format.</summary>
+        public static bool IsLegacyCbcFormat(string cipherText)
+            => !cipherText.TrimStart().StartsWith(V2Prefix, StringComparison.Ordinal);
 
         /// <summary>
         /// Lấy key AES hiện có, hoặc tạo mới nếu đây là lần chạy đầu tiên.

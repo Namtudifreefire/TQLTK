@@ -118,9 +118,9 @@ namespace PersonalInfoManager
                 return;
             }
 
-            if (string.IsNullOrWhiteSpace(password) || password.Length < 6)
+            if (string.IsNullOrWhiteSpace(password) || password.Length < 15)
             {
-                ShowError("Mật khẩu phải từ 6 ký tự trở lên.");
+                ShowError("Tài khoản mới chưa bật 2FA nên mật khẩu phải từ 15 ký tự trở lên.");
                 txtPassword.Focus();
                 return;
             }

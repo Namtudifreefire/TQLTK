@@ -5,6 +5,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Threading;
 
 namespace PersonalInfoManager.Services
 {
@@ -12,7 +13,8 @@ namespace PersonalInfoManager.Services
     /// Xác thực 2 bước bằng ứng dụng Authenticator (TOTP - RFC 6238).
     /// Tương thích Google Authenticator, Microsoft Authenticator, Authy, 2FAS...
     /// Secret được mã hóa bằng Windows DPAPI (gắn với tài khoản Windows hiện tại)
-    /// và lưu tại %AppData%\PersonalInfoManager\2fa\{username}.2fa
+    /// và lưu tại %AppData%\PersonalInfoManager\2fa\{username}.2fa. Named mutex khóa
+    /// mỗi tài khoản xuyên suốt các tiến trình để tránh dùng lại mã đồng thời.
     /// </summary>
     public static class TwoFactorService
     {
@@ -37,6 +39,50 @@ namespace PersonalInfoManager.Services
             public long LastUsedStep { get; set; } = -1;
         }
 
+        /// <summary>
+        /// Serializes file-backed 2FA operations across app processes. The named mutex is
+        /// keyed by normalized username so distinct users do not block each other.
+        /// </summary>
+        private static IDisposable AcquireCrossProcessLock(string username)
+        {
+            byte[] nameHash = SHA256.HashData(Encoding.UTF8.GetBytes(
+                (username ?? "").Trim().ToUpperInvariant()));
+            string mutexName = @"Local\TQLTK.TwoFactor." + Convert.ToHexString(nameHash);
+            CryptographicOperations.ZeroMemory(nameHash);
+
+            var mutex = new Mutex(initiallyOwned: false, name: mutexName);
+            try
+            {
+                bool acquired = false;
+                try { acquired = mutex.WaitOne(TimeSpan.FromSeconds(15)); }
+                catch (AbandonedMutexException) { acquired = true; /* ownership transfers to this process */ }
+                if (!acquired)
+                    throw new TimeoutException("Hết thời gian chờ khóa dữ liệu 2FA.");
+                return new MutexScope(mutex);
+            }
+            catch
+            {
+                mutex.Dispose();
+                throw;
+            }
+        }
+
+        private sealed class MutexScope : IDisposable
+        {
+            private readonly Mutex _mutex;
+            private bool _disposed;
+
+            public MutexScope(Mutex mutex) => _mutex = mutex;
+
+            public void Dispose()
+            {
+                if (_disposed) return;
+                _disposed = true;
+                try { _mutex.ReleaseMutex(); }
+                finally { _mutex.Dispose(); }
+            }
+        }
+
         // ================================================================
         // ================== TRẠNG THÁI ==================
         // ================================================================
@@ -45,6 +91,7 @@ namespace PersonalInfoManager.Services
         {
             lock (ValidationSync)
             {
+                using var processLock = AcquireCrossProcessLock(username);
                 string path = GetPath(username);
                 bool fileExists = FileExistsOrThrow(path);
                 var userService = new UserService();
@@ -74,7 +121,10 @@ namespace PersonalInfoManager.Services
         public static bool HasUsableConfiguration(string username)
         {
             lock (ValidationSync)
+            {
+                using var processLock = AcquireCrossProcessLock(username);
                 return Load(username) != null;
+            }
         }
 
         public static void MigrateLegacyEnrollmentState()
@@ -119,6 +169,7 @@ namespace PersonalInfoManager.Services
         {
             lock (ValidationSync)
             {
+                using var processLock = AcquireCrossProcessLock(username);
                 string path = GetPath(username);
                 if (FileExistsOrThrow(path))
                     return (false, "Tài khoản đã có cấu hình 2FA hoặc cần khôi phục cấu hình hiện có.", new List<string>());
@@ -172,6 +223,7 @@ namespace PersonalInfoManager.Services
             // Serialize validation so two concurrent requests cannot both consume the same code.
             lock (ValidationSync)
             {
+                using var processLock = AcquireCrossProcessLock(username);
                 var data = Load(username);
                 if (data == null)
                     return (false, "Không đọc được dữ liệu 2FA của tài khoản này.");
@@ -223,6 +275,7 @@ namespace PersonalInfoManager.Services
         {
             lock (ValidationSync)
             {
+                using var processLock = AcquireCrossProcessLock(username);
                 var result = Validate(username, input);
                 if (!result.ok) return result;
 
@@ -250,8 +303,12 @@ namespace PersonalInfoManager.Services
         /// <summary>Số mã khôi phục còn lại (chưa dùng). Trả về -1 nếu không đọc được dữ liệu.</summary>
         public static int GetRecoveryCodeCount(string username)
         {
-            var data = Load(username);
-            return data?.RecoveryHashes.Count ?? -1;
+            lock (ValidationSync)
+            {
+                using var processLock = AcquireCrossProcessLock(username);
+                var data = Load(username);
+                return data?.RecoveryHashes.Count ?? -1;
+            }
         }
 
         /// <summary>
@@ -263,6 +320,7 @@ namespace PersonalInfoManager.Services
         {
             lock (ValidationSync)
             {
+                using var processLock = AcquireCrossProcessLock(username);
                 var data = Load(username);
                 if (data == null)
                     return (false, "Không đọc được dữ liệu 2FA của tài khoản này.", new List<string>());
@@ -293,6 +351,7 @@ namespace PersonalInfoManager.Services
         {
             lock (ValidationSync)
             {
+                using var processLock = AcquireCrossProcessLock(username);
                 if (newCodes == null || newCodes.Count == 0)
                     return (false, "Không có mã khôi phục để lưu.");
 
@@ -471,8 +530,22 @@ namespace PersonalInfoManager.Services
         {
             Directory.CreateDirectory(Folder);
             byte[] json = JsonSerializer.SerializeToUtf8Bytes(data);
-            byte[] encrypted = ProtectedData.Protect(json, Entropy, DataProtectionScope.CurrentUser);
-            File.WriteAllBytes(GetPath(username), encrypted);
+            byte[]? encrypted = null;
+            string path = GetPath(username);
+            string temp = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+
+            try
+            {
+                encrypted = ProtectedData.Protect(json, Entropy, DataProtectionScope.CurrentUser);
+                File.WriteAllBytes(temp, encrypted);
+                File.Move(temp, path, overwrite: true);
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(json);
+                if (encrypted != null) CryptographicOperations.ZeroMemory(encrypted);
+                try { if (File.Exists(temp)) File.Delete(temp); } catch { }
+            }
         }
 
         private static TwoFactorData? Load(string username)

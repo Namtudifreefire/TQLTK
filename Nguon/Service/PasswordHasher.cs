@@ -5,14 +5,14 @@ using System.Security.Cryptography;
 namespace PersonalInfoManager.Services
 {
     /// <summary>
-    /// Hash mật khẩu bằng PBKDF2 (SHA256, 100.000 vòng lặp).
+    /// Hash mật khẩu bằng PBKDF2 (SHA256, 600.000 vòng lặp).
     /// Định dạng lưu: iterations.salt.hash (Base64)
     /// </summary>
     public static class PasswordHasher
     {
         private const int SaltSize = 16;        // 128-bit
         private const int HashSize = 32;        // 256-bit
-        private const int Iterations = 100_000; // cấu hình hiện tại, giữ tương thích hash cũ
+        private const int Iterations = 600_000;
         private const int MinAcceptedIterations = 100_000;
         private const int MaxAcceptedIterations = 1_000_000;
 
@@ -70,6 +70,17 @@ namespace PersonalInfoManager.Services
             {
                 return false;
             }
+        }
+
+        /// <summary>True khi hash hợp lệ đã dùng work factor thấp hơn cấu hình hiện tại.</summary>
+        public static bool NeedsRehash(string stored)
+        {
+            if (string.IsNullOrWhiteSpace(stored)) return false;
+
+            var parts = stored.Split('.');
+            return parts.Length == 3 &&
+                int.TryParse(parts[0], NumberStyles.None, CultureInfo.InvariantCulture, out int iterations) &&
+                iterations < Iterations;
         }
     }
 }
