@@ -18,6 +18,9 @@
 - Tính năng đồng bộ Google Drive không còn phụ thuộc vào file `.json`.
 - Khắc phục lỗi file `.dat` bị mất hoặc đổi tên làm ảnh hưởng đến dữ liệu trong ứng dụng.
 - Có thể khôi phục bản sao lưu sau khi cài lại Windows bằng cụm mật khẩu sao lưu.
+- Cài đặt mới không tạo tài khoản quản trị với thông tin đăng nhập mặc định; người dùng tự tạo quản trị viên đầu tiên. Tài khoản cũ còn dùng mật khẩu mặc định sẽ phải đổi trước khi vào ứng dụng.
+- Trạng thái bật 2FA được lưu trong hồ sơ tài khoản. Nếu file cấu hình bị thiếu hoặc không đọc được, đăng nhập sẽ bị từ chối thay vì bỏ qua lớp bảo mật.
+- File 2FA còn tồn tại từ bản cũ sẽ được tự chuyển trạng thái. Nếu file đã mất trước lần chạy đầu tiên sau cập nhật, ứng dụng không thể tự xác định trạng thái 2FA cũ; cần khôi phục cấu hình hoặc liên hệ quản trị viên.
 
 ### Tính năng Beta
 
@@ -28,8 +31,9 @@
 
 ## Tải về
 
-Bản phát hành v3.6.4 sẽ được đăng tại trang [GitHub Releases](https://github.com/Namtudifreefire/TQLTK/releases) sau khi được tạo.
+- Mã nguồn đã cập nhật lên v3.6.4. Bản phát hành v3.6.4 chưa được tạo; bản cài đặt mới nhất hiện có là [v3.6.3](https://github.com/Namtudifreefire/TQLTK/releases/tag/v3.6.3).
+- Theo dõi [GitHub Releases](https://github.com/Namtudifreefire/TQLTK/releases) để tải các bản mới.
 
 ## Winget
 
-Hiện chưa có lệnh winget — PR vẫn đang chờ cứ đợi thêm :))
+Hiện chưa phát hành gói Winget. Khi có, README sẽ được cập nhật lệnh cài đặt :))
