@@ -23,8 +23,13 @@ namespace PersonalInfoManager.Models
 
         // Bảo mật đăng nhập
         /// <summary>
+        /// Cờ 2FA được lưu cùng hồ sơ người dùng để việc mất file cấu hình không vô hiệu hóa 2FA.
+        /// </summary>
+        public bool TwoFactorEnabled { get; set; } = false;
+
+        /// <summary>
         /// true: phải đổi mật khẩu trước khi vào app
-        /// (admin mặc định, đang dùng mật khẩu mặc định, hoặc vừa được admin reset).
+        /// (tài khoản cũ còn dùng mật khẩu mặc định hoặc vừa được admin reset).
         /// </summary>
         public bool MustChangePassword { get; set; } = false;
 

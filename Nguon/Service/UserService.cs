@@ -10,7 +10,7 @@ namespace PersonalInfoManager.Services
 {
     /// <summary>
     /// Ném ra khi users.json tồn tại nhưng không đọc được và cũng không có bản .bak dùng được.
-    /// App không tự tạo lại admin mặc định trong trường hợp này, để không ghi đè dữ liệu cũ.
+    /// App không tự tạo admin mặc định trong trường hợp này, để không ghi đè dữ liệu cũ.
     /// </summary>
     public class UsersFileUnreadableException : Exception
     {
@@ -35,8 +35,8 @@ namespace PersonalInfoManager.Services
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "PersonalInfoManager", "users.json");
 
-        private const string DefaultAdminUsername = "admin";
-        private const string DefaultAdminPassword = "admin123";
+        // Chỉ giữ để nhận diện tài khoản cũ đã được tạo bằng thông tin mặc định.
+        private const string LegacyDefaultAdminPassword = "admin123";
 
         private bool RequireAdmin(out string message)
         {
@@ -72,7 +72,6 @@ namespace PersonalInfoManager.Services
             lock (Sync)
             {
                 Reload();
-                EnsureDefaultAdmin();
             }
         }
 
@@ -174,28 +173,6 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        /// <summary>
-        /// Chỉ tạo admin mặc định khi chưa có người dùng nào (lần chạy đầu).
-        /// Admin này phải đổi mật khẩu ngay ở lần đăng nhập đầu tiên.
-        /// Gọi trong lock, sau khi đã Reload.
-        /// </summary>
-        private void EnsureDefaultAdmin()
-        {
-            if (_users.Count > 0) return;
-
-            _users.Add(new User
-            {
-                Username = DefaultAdminUsername,
-                PasswordHash = PasswordHasher.Hash(DefaultAdminPassword),
-                Role = UserRole.Admin,
-                FullName = "Quản trị viên",
-                Email = "admin@local",
-                Phone = "",
-                MustChangePassword = true
-            });
-            Save();
-        }
-
         // ================================================================
         // ================== TRUY VẤN ==================
         // ================================================================
@@ -245,6 +222,24 @@ namespace PersonalInfoManager.Services
 
         public bool UsernameExists(string username) => FindByUsername(username) != null;
 
+        public bool HasAnyUsers()
+        {
+            lock (Sync)
+            {
+                Reload();
+                return _users.Count > 0;
+            }
+        }
+
+        internal IReadOnlyList<string> GetUsernamesForSecurityMigration()
+        {
+            lock (Sync)
+            {
+                Reload();
+                return _users.Select(user => user.Username).ToList().AsReadOnly();
+            }
+        }
+
         public bool EmailExists(string email, Guid? excludeUserId = null)
         {
             lock (Sync)
@@ -271,7 +266,7 @@ namespace PersonalInfoManager.Services
             => !string.IsNullOrWhiteSpace(password) && password.Length >= 6;
 
         private static bool IsDefaultPassword(string password)
-            => password == DefaultAdminPassword;
+            => password == LegacyDefaultAdminPassword;
 
         private const string DefaultPasswordMessage =
             "Không được dùng mật khẩu mặc định. Hãy chọn mật khẩu khác.";
@@ -284,6 +279,54 @@ namespace PersonalInfoManager.Services
             string username, string password, UserRole role)
         {
             return CreateUserFull(username, password, role, username, "", "");
+        }
+
+        /// <summary>
+        /// Creates the first account as administrator, using credentials chosen by the user.
+        /// The empty user list check and save are protected by the same process-wide lock.
+        /// </summary>
+        public (bool ok, string message) CreateInitialAdmin(
+            string username, string password, string fullName, string email, string phone)
+        {
+            lock (Sync)
+            {
+                Reload();
+                if (_users.Count != 0)
+                    return (false, "Tài khoản đầu tiên đã được tạo. Hãy đăng ký tài khoản người dùng thông thường.");
+
+                if (!IsValidUsername(username))
+                    return (false, "Tên đăng nhập phải từ 3 ký tự trở lên.");
+                if (!IsValidPassword(password))
+                    return (false, "Mật khẩu phải từ 6 ký tự trở lên.");
+                if (IsDefaultPassword(password))
+                    return (false, DefaultPasswordMessage);
+                if (string.IsNullOrWhiteSpace(fullName))
+                    return (false, "Họ tên không được để trống.");
+                if (!IsValidEmail(email))
+                    return (false, "Email không hợp lệ.");
+
+                var admin = new User
+                {
+                    Username = username.Trim(),
+                    PasswordHash = PasswordHasher.Hash(password),
+                    Role = UserRole.Admin,
+                    FullName = fullName.Trim(),
+                    Email = email.Trim(),
+                    Phone = phone.Trim()
+                };
+
+                _users.Add(admin);
+                try
+                {
+                    Save();
+                    return (true, "Đã tạo tài khoản quản trị viên đầu tiên.");
+                }
+                catch (Exception ex)
+                {
+                    _users.Remove(admin);
+                    return (false, $"Không lưu được tài khoản quản trị viên: {ex.Message}");
+                }
+            }
         }
 
         public (bool ok, string message) CreateUserFull(
@@ -338,7 +381,7 @@ namespace PersonalInfoManager.Services
         /// Kiểm tra tên đăng nhập + mật khẩu.
         /// Sai MaxFailedAttempts lần liên tiếp thì khóa tạm LockoutDuration (lưu trong users.json,
         /// nên tắt mở lại app không xóa được). Đăng nhập đúng thì về 0.
-        /// Nếu mật khẩu đúng nhưng chính là mật khẩu mặc định thì đánh dấu phải đổi.
+        /// Nếu mật khẩu đúng nhưng là mật khẩu mặc định cũ thì đánh dấu phải đổi.
         /// </summary>
         public (bool ok, string message, User? user) Authenticate(
             string username, string password)
@@ -394,7 +437,7 @@ namespace PersonalInfoManager.Services
                 user.FailedLoginCount = 0;
                 user.LockedUntil = null;
 
-                // Mật khẩu mặc định (kể cả bản cài cũ chưa có cờ này) → bắt buộc đổi
+                // Tài khoản từ bản cũ dùng mật khẩu mặc định → bắt buộc đổi.
                 if (IsDefaultPassword(password))
                     user.MustChangePassword = true;
 
@@ -634,6 +677,30 @@ namespace PersonalInfoManager.Services
         public int CountUsers() { lock (Sync) { Reload(); return _users.Count(u => u.Role == UserRole.User); } }
         public int CountActive() { lock (Sync) { Reload(); return _users.Count(u => u.IsActive); } }
         public int CountInactive() { lock (Sync) { Reload(); return _users.Count(u => !u.IsActive); } }
+
+        internal bool SetTwoFactorEnabled(string username, bool enabled)
+        {
+            lock (Sync)
+            {
+                Reload();
+                var user = FindByUsernameCore(username);
+                if (user == null) return false;
+                if (user.TwoFactorEnabled == enabled) return true;
+
+                bool previous = user.TwoFactorEnabled;
+                user.TwoFactorEnabled = enabled;
+                try
+                {
+                    Save();
+                    return true;
+                }
+                catch
+                {
+                    user.TwoFactorEnabled = previous;
+                    throw;
+                }
+            }
+        }
 
         // ================================================================
         // ================== WINDOWS HELLO ==================

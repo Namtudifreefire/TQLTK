@@ -22,6 +22,16 @@ namespace PersonalInfoManager
         {
             try
             {
+                // Record legacy .2fa-file enrollments before a password login can be attempted.
+                TwoFactorService.MigrateLegacyEnrollmentState();
+            }
+            catch (Exception ex)
+            {
+                ShowError("Không thể xác minh trạng thái 2FA cũ. Đăng nhập các tài khoản bị ảnh hưởng sẽ bị từ chối cho đến khi lưu được trạng thái bảo mật. " + ex.Message);
+            }
+
+            try
+            {
                 string lastUser = RegistryService.GetLastUser();
                 if (!string.IsNullOrWhiteSpace(lastUser))
                 {
@@ -155,7 +165,7 @@ namespace PersonalInfoManager
                 }
             }
 
-            // Mật khẩu mặc định (admin lần đầu) hoặc vừa được admin reset: bắt buộc đổi trước khi vào app
+            // Mật khẩu mặc định cũ hoặc vừa được admin reset: bắt buộc đổi trước khi vào app.
             if (user.MustChangePassword)
             {
                 SessionService.Login(user);   // ChangePasswordWindow lấy tên người dùng từ SessionService
@@ -208,7 +218,8 @@ namespace PersonalInfoManager
 
         private void BtnRegister_Click(object? sender, RoutedEventArgs e)
         {
-            var reg = new RegisterWindow { Owner = this };
+            bool isInitialAdmin = !_userService.HasAnyUsers();
+            var reg = new RegisterWindow(isInitialAdmin) { Owner = this };
             bool? result = reg.ShowDialog();
 
             if (result == true && !string.IsNullOrWhiteSpace(reg.RegisteredUsername))

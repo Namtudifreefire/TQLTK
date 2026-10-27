@@ -37,7 +37,24 @@ namespace PersonalInfoManager
         /// </summary>
         public static bool AskIfEnabled(Window? owner, string username)
         {
-            if (!TwoFactorService.IsEnabled(username)) return true;
+            try
+            {
+                if (!TwoFactorService.IsEnabled(username)) return true;
+                if (!TwoFactorService.HasUsableConfiguration(username))
+                {
+                    MessageBox.Show(owner,
+                        "Tài khoản đang bật xác thực 2 bước nhưng file cấu hình bị thiếu hoặc không đọc được. Đăng nhập đã bị từ chối. Hãy khôi phục cấu hình 2FA từ bản sao lưu hoặc liên hệ quản trị viên.",
+                        "Không thể xác thực 2 bước", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(owner,
+                    $"Không thể xác định trạng thái xác thực 2 bước. Đăng nhập đã bị từ chối để bảo vệ tài khoản.\n\nChi tiết: {ex.Message}",
+                    "Không thể xác thực 2 bước", MessageBoxButton.OK, MessageBoxImage.Error);
+                return false;
+            }
 
             var dlg = new TwoFactorPromptWindow(
                 "Xác thực 2 bước",
