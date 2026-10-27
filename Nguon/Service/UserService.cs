@@ -38,6 +38,18 @@ namespace PersonalInfoManager.Services
         private const string DefaultAdminUsername = "admin";
         private const string DefaultAdminPassword = "admin123";
 
+        private static bool RequireAdmin(out string message)
+        {
+            if (SessionService.IsAdmin)
+            {
+                message = "";
+                return true;
+            }
+
+            message = "Từ chối thao tác: chỉ quản trị viên mới được phép thực hiện.";
+            return false;
+        }
+
         /// <summary>Sai mật khẩu bấy nhiêu lần liên tiếp thì bị khóa tạm.</summary>
         public const int MaxFailedAttempts = 5;
 
@@ -196,6 +208,7 @@ namespace PersonalInfoManager.Services
 
         public IReadOnlyList<User> GetAll()
         {
+            if (!SessionService.IsAdmin) return Array.Empty<User>();
             lock (Sync)
             {
                 Reload();
@@ -268,6 +281,7 @@ namespace PersonalInfoManager.Services
             string username, string password, UserRole role,
             string fullName, string email, string phone)
         {
+            if (!RequireAdmin(out string denied)) return (false, denied);
             lock (Sync)
             {
                 Reload();
@@ -423,6 +437,7 @@ namespace PersonalInfoManager.Services
         /// </summary>
         public (bool ok, string message) ResetPassword(Guid userId, string newPassword)
         {
+            if (!RequireAdmin(out string denied)) return (false, denied);
             lock (Sync)
             {
                 Reload();
@@ -482,6 +497,7 @@ namespace PersonalInfoManager.Services
             Guid userId, string fullName, string email, string phone,
             UserRole role, bool isActive)
         {
+            if (!RequireAdmin(out string denied)) return (false, denied);
             lock (Sync)
             {
                 Reload();
@@ -521,6 +537,7 @@ namespace PersonalInfoManager.Services
         /// <summary>Mở tài khoản (active = true) cũng xóa luôn khóa tạm do nhập sai mật khẩu.</summary>
         public void SetActive(Guid userId, bool active)
         {
+            if (!RequireAdmin(out string denied)) throw new UnauthorizedAccessException(denied);
             lock (Sync)
             {
                 Reload();
@@ -548,6 +565,7 @@ namespace PersonalInfoManager.Services
         /// </summary>
         public (bool ok, string message) DeleteUser(Guid userId, Guid currentUserId)
         {
+            if (!RequireAdmin(out string denied)) return (false, denied);
             lock (Sync)
             {
                 Reload();
@@ -579,6 +597,7 @@ namespace PersonalInfoManager.Services
         /// </summary>
         public (bool ok, string message) SetRole(Guid userId, UserRole role)
         {
+            if (!RequireAdmin(out string denied)) return (false, denied);
             lock (Sync)
             {
                 Reload();
