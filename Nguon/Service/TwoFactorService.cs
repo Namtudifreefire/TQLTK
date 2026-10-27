@@ -41,7 +41,48 @@ namespace PersonalInfoManager.Services
         // ================== TRẠNG THÁI ==================
         // ================================================================
 
-        public static bool IsEnabled(string username) => File.Exists(GetPath(username));
+        public static bool IsEnabled(string username)
+        {
+            lock (ValidationSync)
+            {
+                string path = GetPath(username);
+                bool fileExists = FileExistsOrThrow(path);
+                var userService = new UserService();
+                var user = userService.FindByUsername(username);
+
+                // Orphaned legacy files still require 2FA; never let them silently disable it.
+                if (user == null) return fileExists;
+                if (user.TwoFactorEnabled) return true;
+                if (!fileExists) return false;
+
+                // Migrate existing installations that only had a .2fa file as their state.
+                try
+                {
+                    if (!userService.SetTwoFactorEnabled(username, true))
+                        throw new InvalidOperationException("Không tìm thấy tài khoản để lưu trạng thái 2FA.");
+                }
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException(
+                        "Không thể lưu trạng thái 2FA cũ. Đăng nhập bị từ chối để bảo vệ tài khoản.", ex);
+                }
+
+                return true;
+            }
+        }
+
+        public static bool HasUsableConfiguration(string username)
+        {
+            lock (ValidationSync)
+                return Load(username) != null;
+        }
+
+        public static void MigrateLegacyEnrollmentState()
+        {
+            var userService = new UserService();
+            foreach (string username in userService.GetUsernamesForSecurityMigration())
+                _ = IsEnabled(username);
+        }
 
         // ================================================================
         // ================== BẬT 2FA ==================
@@ -78,6 +119,10 @@ namespace PersonalInfoManager.Services
         {
             lock (ValidationSync)
             {
+                string path = GetPath(username);
+                if (FileExistsOrThrow(path))
+                    return (false, "Tài khoản đã có cấu hình 2FA hoặc cần khôi phục cấu hình hiện có.", new List<string>());
+
                 string normalized = NormalizeCode(code);
                 if (normalized.Length != 6 || !normalized.All(char.IsDigit))
                     return (false, "Mã phải gồm đúng 6 chữ số.", new List<string>());
@@ -93,8 +138,22 @@ namespace PersonalInfoManager.Services
                     LastUsedStep = matchedStep
                 };
 
-                try { Save(username, data); }
-                catch (Exception ex) { return (false, $"Không lưu được cấu hình 2FA: {ex.Message}", new List<string>()); }
+                var userService = new UserService();
+                try
+                {
+                    if (!userService.SetTwoFactorEnabled(username, true))
+                        return (false, "Không tìm thấy tài khoản để bật 2FA.", new List<string>());
+
+                    Save(username, data);
+                }
+                catch (Exception ex)
+                {
+                    // Try to roll back a partial enrollment. If either operation fails, the
+                    // persisted enabled flag or the remaining file keeps authentication closed.
+                    try { File.Delete(path); } catch { }
+                    try { userService.SetTwoFactorEnabled(username, false); } catch { }
+                    return (false, $"Không lưu được cấu hình 2FA: {ex.Message}", new List<string>());
+                }
 
                 return (true, "Đã bật xác thực 2 bước.", recoveryCodes);
             }
@@ -169,6 +228,16 @@ namespace PersonalInfoManager.Services
 
                 try { File.Delete(GetPath(username)); }
                 catch (Exception ex) { return (false, $"Không xóa được cấu hình 2FA: {ex.Message}"); }
+
+                try
+                {
+                    if (!new UserService().SetTwoFactorEnabled(username, false))
+                        return (false, "Không tìm thấy tài khoản để lưu trạng thái tắt 2FA.");
+                }
+                catch (Exception ex)
+                {
+                    return (false, $"Không lưu được trạng thái tắt 2FA; đăng nhập vẫn bị khóa để bảo vệ tài khoản: {ex.Message}");
+                }
 
                 return (true, "");
             }
@@ -381,6 +450,21 @@ namespace PersonalInfoManager.Services
             // Làm sạch tên user để làm tên file an toàn
             string safe = string.Concat(username.Select(c => Path.GetInvalidFileNameChars().Contains(c) ? '_' : c));
             return Path.Combine(Folder, safe + ".2fa");
+        }
+
+        private static bool FileExistsOrThrow(string path)
+        {
+            try
+            {
+                File.GetAttributes(path);
+                return true;
+            }
+            catch (FileNotFoundException) { return false; }
+            catch (DirectoryNotFoundException) { return false; }
+            catch (Exception ex)
+            {
+                throw new IOException("Không thể xác định trạng thái file cấu hình 2FA.", ex);
+            }
         }
 
         private static void Save(string username, TwoFactorData data)

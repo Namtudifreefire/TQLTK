@@ -10,15 +10,28 @@ namespace PersonalInfoManager
     public partial class RegisterWindow : Window
     {
         private readonly UserService _userService = new();
+        private readonly bool _isInitialAdmin;
 
         /// <summary>
         /// Username sau khi đăng ký thành công — LoginWindow sẽ đọc để tự điền.
         /// </summary>
         public string RegisteredUsername { get; private set; } = "";
 
-        public RegisterWindow()
+        public RegisterWindow() : this(false) { }
+
+        public RegisterWindow(bool isInitialAdmin)
         {
             InitializeComponent();
+            _isInitialAdmin = isInitialAdmin;
+
+            if (_isInitialAdmin)
+            {
+                Title = "Tạo quản trị viên đầu tiên - TQLTK";
+                lblFormTitle.Text = "🛡 Tạo quản trị viên đầu tiên";
+                lblFormDescription.Text = "Hãy chọn mật khẩu riêng, mạnh để bảo vệ tài khoản quản trị.";
+                lblRegisterButton.Text = "✓ Tạo quản trị viên";
+            }
+
             Loaded += (_, _) => txtUsername.Focus();
         }
 
@@ -128,13 +141,15 @@ namespace PersonalInfoManager
             }
 
             // ===== TẠO TÀI KHOẢN =====
-            var result = _userService.CreateUserFull(
-                username,
-                password,
-                UserRole.User,   // ⚠️ User tự đăng ký → chỉ có role User
-                fullName,
-                email,
-                phone);
+            var result = _isInitialAdmin
+                ? _userService.CreateInitialAdmin(username, password, fullName, email, phone)
+                : _userService.CreateUserFull(
+                    username,
+                    password,
+                    UserRole.User,
+                    fullName,
+                    email,
+                    phone);
 
             if (!result.ok)
             {
@@ -145,7 +160,7 @@ namespace PersonalInfoManager
             // ===== THÀNH CÔNG =====
             try
             {
-                ActivityLogger.Log(username, "REGISTER",
+                ActivityLogger.Log(username, _isInitialAdmin ? "INITIAL_ADMIN_CREATED" : "REGISTER",
                     $"Họ tên: {fullName}, Email: {email}");
             }
             catch { }
@@ -156,6 +171,7 @@ namespace PersonalInfoManager
                 $"Đăng ký thành công!\n\n" +
                 $"Tên đăng nhập: {username}\n" +
                 $"Họ tên: {fullName}\n\n" +
+                $"Vai trò: {(_isInitialAdmin ? "Quản trị viên" : "Người dùng")}\n\n" +
                 $"Vui lòng đăng nhập để sử dụng.",
                 "Thành công",
                 MessageBoxButton.OK,

@@ -28,7 +28,8 @@
             </Grid.RowDefinitions>
 
             <!-- Tiêu đề -->
-            <TextBlock Grid.Row="0"
+            <TextBlock x:Name="lblFormTitle"
+                       Grid.Row="0"
                        Text="📝 Đăng ký tài khoản"
                        FontSize="24"
                        FontWeight="Bold"
@@ -36,7 +37,8 @@
                        HorizontalAlignment="Center"
                        Margin="0,0,0,6" />
 
-            <TextBlock Grid.Row="1"
+            <TextBlock x:Name="lblFormDescription"
+                       Grid.Row="1"
                        Text="Tạo tài khoản mới để sử dụng TQLTK"
                        FontSize="12"
                        Foreground="{DynamicResource TextSecondaryBrush}"
@@ -169,7 +171,8 @@
                         Height="46"
                         Margin="6,0,0,0"
                         Click="BtnRegister_Click">
-                    <TextBlock Text="✓ Đăng ký"
+                    <TextBlock x:Name="lblRegisterButton"
+                               Text="✓ Đăng ký"
                                FontSize="14"
                                FontWeight="Bold"
                                Foreground="White"
