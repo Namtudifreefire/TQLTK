@@ -15,7 +15,31 @@ namespace PersonalInfoManager
         public AdminWindow()
         {
             InitializeComponent();
-            Loaded += (_, _) => Refresh();
+
+            if (!SessionService.IsAdmin)
+            {
+                Loaded += (_, _) =>
+                {
+                    MessageBox.Show(
+                        "Bạn không có quyền truy cập chức năng quản trị.",
+                        "Từ chối truy cập",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                    Close();
+                };
+                return;
+            }
+
+            Loaded += (_, _) =>
+            {
+                if (!SessionService.IsAdmin)
+                {
+                    Close();
+                    return;
+                }
+
+                Refresh();
+            };
         }
 
         private void Refresh()
