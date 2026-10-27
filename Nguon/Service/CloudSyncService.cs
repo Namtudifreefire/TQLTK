@@ -395,7 +395,7 @@ namespace PersonalInfoManager.Services
             var secrets = GoogleClientSecrets.FromStream(secretStream).Secrets;
 
             UserCredential credential = await GoogleWebAuthorizationBroker.AuthorizeAsync(
-                secrets, Scopes, "user", ct, new FileDataStore(_tokenDir, true));
+                secrets, Scopes, "user", ct, new DpapiDataStore(_tokenDir));
 
             return new DriveService(new BaseClientService.Initializer
             {
