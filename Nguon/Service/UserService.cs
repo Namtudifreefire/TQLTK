@@ -38,15 +38,24 @@ namespace PersonalInfoManager.Services
         private const string DefaultAdminUsername = "admin";
         private const string DefaultAdminPassword = "admin123";
 
-        private static bool RequireAdmin(out string message)
+        private bool RequireAdmin(out string message)
         {
-            if (SessionService.IsAdmin)
+            var current = SessionService.CurrentUser;
+            if (current != null)
             {
-                message = "";
-                return true;
+                lock (Sync)
+                {
+                    Reload();
+                    var fresh = FindByIdCore(current.Id);
+                    if (fresh is { IsActive: true, Role: UserRole.Admin })
+                    {
+                        message = "";
+                        return true;
+                    }
+                }
             }
 
-            message = "Từ chối thao tác: chỉ quản trị viên mới được phép thực hiện.";
+            message = "Từ chối thao tác: chỉ quản trị viên đang hoạt động mới được phép thực hiện.";
             return false;
         }
 
@@ -208,7 +217,7 @@ namespace PersonalInfoManager.Services
 
         public IReadOnlyList<User> GetAll()
         {
-            if (!SessionService.IsAdmin) return Array.Empty<User>();
+            if (!RequireAdmin(out _)) return Array.Empty<User>();
             lock (Sync)
             {
                 Reload();
