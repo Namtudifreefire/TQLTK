@@ -76,25 +76,28 @@ namespace PersonalInfoManager.Services
         /// </summary>
         public static (bool ok, string message, List<string> recoveryCodes) Enable(string username, string secret, string code)
         {
-            string normalized = NormalizeCode(code);
-            if (normalized.Length != 6 || !normalized.All(char.IsDigit))
-                return (false, "Mã phải gồm đúng 6 chữ số.", new List<string>());
-
-            if (!TryMatch(secret, normalized, -1, out long matchedStep))
-                return (false, "Mã không đúng hoặc đã hết hạn. Kiểm tra giờ trên điện thoại và máy tính rồi thử lại.", new List<string>());
-
-            var recoveryCodes = GenerateRecoveryCodes();
-            var data = new TwoFactorData
+            lock (ValidationSync)
             {
-                Secret = secret,
-                RecoveryHashes = recoveryCodes.Select(HashRecoveryCode).ToList(),
-                LastUsedStep = matchedStep
-            };
+                string normalized = NormalizeCode(code);
+                if (normalized.Length != 6 || !normalized.All(char.IsDigit))
+                    return (false, "Mã phải gồm đúng 6 chữ số.", new List<string>());
 
-            try { Save(username, data); }
-            catch (Exception ex) { return (false, $"Không lưu được cấu hình 2FA: {ex.Message}", new List<string>()); }
+                if (!TryMatch(secret, normalized, -1, out long matchedStep))
+                    return (false, "Mã không đúng hoặc đã hết hạn. Kiểm tra giờ trên điện thoại và máy tính rồi thử lại.", new List<string>());
 
-            return (true, "Đã bật xác thực 2 bước.", recoveryCodes);
+                var recoveryCodes = GenerateRecoveryCodes();
+                var data = new TwoFactorData
+                {
+                    Secret = secret,
+                    RecoveryHashes = recoveryCodes.Select(HashRecoveryCode).ToList(),
+                    LastUsedStep = matchedStep
+                };
+
+                try { Save(username, data); }
+                catch (Exception ex) { return (false, $"Không lưu được cấu hình 2FA: {ex.Message}", new List<string>()); }
+
+                return (true, "Đã bật xác thực 2 bước.", recoveryCodes);
+            }
         }
 
         // ================================================================
@@ -159,13 +162,16 @@ namespace PersonalInfoManager.Services
         /// <summary>Tắt 2FA — bắt buộc nhập đúng mã hiện tại (hoặc mã khôi phục).</summary>
         public static (bool ok, string message) Disable(string username, string input)
         {
-            var result = Validate(username, input);
-            if (!result.ok) return result;
+            lock (ValidationSync)
+            {
+                var result = Validate(username, input);
+                if (!result.ok) return result;
 
-            try { File.Delete(GetPath(username)); }
-            catch (Exception ex) { return (false, $"Không xóa được cấu hình 2FA: {ex.Message}"); }
+                try { File.Delete(GetPath(username)); }
+                catch (Exception ex) { return (false, $"Không xóa được cấu hình 2FA: {ex.Message}"); }
 
-            return (true, "");
+                return (true, "");
+            }
         }
 
         // ================================================================
@@ -186,26 +192,29 @@ namespace PersonalInfoManager.Services
         /// </summary>
         public static (bool ok, string message, List<string> recoveryCodes) PrepareRecoveryCodes(string username, string input)
         {
-            var data = Load(username);
-            if (data == null)
-                return (false, "Không đọc được dữ liệu 2FA của tài khoản này.", new List<string>());
-
-            string code = NormalizeCode(input);
-            if (code.Length != 6 || !code.All(char.IsDigit))
-                return (false, "Nhập mã 6 số hiện tại từ Authenticator (không dùng mã khôi phục).", new List<string>());
-
-            if (!TryMatch(data.Secret, code, data.LastUsedStep, out long matchedStep))
-                return (false, "Mã không đúng hoặc đã được dùng. Hãy đợi mã mới (tối đa 30 giây) rồi nhập lại.", new List<string>());
-
-            // Ghi nhận mã TOTP đã dùng (chống dùng lại). Không tiếp tục nếu không lưu được.
-            data.LastUsedStep = matchedStep;
-            try { Save(username, data); }
-            catch (Exception ex)
+            lock (ValidationSync)
             {
-                return (false, $"Không thể lưu trạng thái 2FA; hãy thử lại. Chi tiết: {ex.Message}", new List<string>());
-            }
+                var data = Load(username);
+                if (data == null)
+                    return (false, "Không đọc được dữ liệu 2FA của tài khoản này.", new List<string>());
 
-            return (true, "", GenerateRecoveryCodes());
+                string code = NormalizeCode(input);
+                if (code.Length != 6 || !code.All(char.IsDigit))
+                    return (false, "Nhập mã 6 số hiện tại từ Authenticator (không dùng mã khôi phục).", new List<string>());
+
+                if (!TryMatch(data.Secret, code, data.LastUsedStep, out long matchedStep))
+                    return (false, "Mã không đúng hoặc đã được dùng. Hãy đợi mã mới (tối đa 30 giây) rồi nhập lại.", new List<string>());
+
+                // Ghi nhận mã TOTP đã dùng (chống dùng lại). Không tiếp tục nếu không lưu được.
+                data.LastUsedStep = matchedStep;
+                try { Save(username, data); }
+                catch (Exception ex)
+                {
+                    return (false, $"Không thể lưu trạng thái 2FA; hãy thử lại. Chi tiết: {ex.Message}", new List<string>());
+                }
+
+                return (true, "", GenerateRecoveryCodes());
+            }
         }
 
         /// <summary>
@@ -213,19 +222,22 @@ namespace PersonalInfoManager.Services
         /// </summary>
         public static (bool ok, string message) CommitRecoveryCodes(string username, List<string> newCodes)
         {
-            if (newCodes == null || newCodes.Count == 0)
-                return (false, "Không có mã khôi phục để lưu.");
+            lock (ValidationSync)
+            {
+                if (newCodes == null || newCodes.Count == 0)
+                    return (false, "Không có mã khôi phục để lưu.");
 
-            var data = Load(username);
-            if (data == null)
-                return (false, "Không đọc được dữ liệu 2FA của tài khoản này.");
+                var data = Load(username);
+                if (data == null)
+                    return (false, "Không đọc được dữ liệu 2FA của tài khoản này.");
 
-            data.RecoveryHashes = newCodes.Select(HashRecoveryCode).ToList();
+                data.RecoveryHashes = newCodes.Select(HashRecoveryCode).ToList();
 
-            try { Save(username, data); }
-            catch (Exception ex) { return (false, $"Không lưu được mã khôi phục mới: {ex.Message}"); }
+                try { Save(username, data); }
+                catch (Exception ex) { return (false, $"Không lưu được mã khôi phục mới: {ex.Message}"); }
 
-            return (true, "");
+                return (true, "");
+            }
         }
 
         // ================================================================
