@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Security.Cryptography;
 
 namespace PersonalInfoManager.Services
@@ -11,7 +12,9 @@ namespace PersonalInfoManager.Services
     {
         private const int SaltSize = 16;        // 128-bit
         private const int HashSize = 32;        // 256-bit
-        private const int Iterations = 100_000; // càng cao càng khó brute-force
+        private const int Iterations = 100_000; // cấu hình hiện tại, giữ tương thích hash cũ
+        private const int MinAcceptedIterations = 100_000;
+        private const int MaxAcceptedIterations = 1_000_000;
 
         /// <summary>
         /// Tạo hash từ mật khẩu plain text.
@@ -36,19 +39,29 @@ namespace PersonalInfoManager.Services
         {
             try
             {
+                if (string.IsNullOrEmpty(stored)) return false;
+
                 var parts = stored.Split('.');
                 if (parts.Length != 3) return false;
 
-                int iter = int.Parse(parts[0]);
+                if (!int.TryParse(parts[0], NumberStyles.None, CultureInfo.InvariantCulture, out int iter))
+                    return false;
+
+                // Reject corrupted/tampered parameters before running an expensive KDF.
+                if (iter < MinAcceptedIterations || iter > MaxAcceptedIterations)
+                    return false;
+
                 byte[] salt = Convert.FromBase64String(parts[1]);
                 byte[] expected = Convert.FromBase64String(parts[2]);
+                if (salt.Length != SaltSize || expected.Length != HashSize)
+                    return false;
 
                 byte[] actual = Rfc2898DeriveBytes.Pbkdf2(
                     password: password,
                     salt: salt,
                     iterations: iter,
                     hashAlgorithm: HashAlgorithmName.SHA256,
-                    outputLength: expected.Length);
+                    outputLength: HashSize);
 
                 // So sánh an toàn (chống timing attack)
                 return CryptographicOperations.FixedTimeEquals(actual, expected);
