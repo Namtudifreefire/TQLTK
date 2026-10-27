@@ -122,14 +122,22 @@ namespace PersonalInfoManager
                 return;
             }
 
-            if (newPwd.Length < 6)
+            var currentUser = SessionService.CurrentUser;
+            if (currentUser == null)
             {
-                lblStatus.Text = "Mật khẩu mới phải từ 6 ký tự trở lên.";
+                lblStatus.Text = "Phiên đăng nhập không còn hợp lệ.";
+                return;
+            }
+
+            string username = currentUser.Username;
+            int minimumLength = _userService.GetMinimumPasswordLength(username);
+            if (newPwd.Length < minimumLength)
+            {
+                lblStatus.Text = $"Mật khẩu mới phải từ {minimumLength} ký tự trở lên.";
                 return;
             }
 
             // Gọi service
-            string username = SessionService.CurrentUser!.Username;
             var result = _userService.ChangePassword(username, oldPwd, newPwd);
 
             if (result.ok)

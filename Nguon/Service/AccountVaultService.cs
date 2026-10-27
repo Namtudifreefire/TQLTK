@@ -20,7 +20,8 @@ namespace PersonalInfoManager.Services
     }
 
     /// <summary>
-    /// Đọc / ghi vault tài khoản (mã hóa AES).
+    /// Đọc / ghi vault tài khoản (mã hóa AES). Vault CBC cũ được tự chuyển sang GCM
+    /// sau lần đọc/khôi phục thành công đầu tiên; bản .bak cũng được mã hóa lại.
     ///
     /// CACHE: danh sách đã giải mã được giữ trong bộ nhớ (dùng chung cho mọi instance, theo từng file vault)
     /// để Search / Count / Load không phải đọc file và giải mã lại mỗi lần.
@@ -98,13 +99,19 @@ namespace PersonalInfoManager.Services
         /// Hàm này KHÔNG dùng cache (Save dựa vào nó để kiểm tra file hiện tại còn đọc được không).
         /// </summary>
         private static List<SavedAccount>? TryRead(string file, out Exception? error)
+            => TryRead(file, out error, out _);
+
+        private static List<SavedAccount>? TryRead(
+            string file, out Exception? error, out bool isLegacyFormat)
         {
             error = null;
+            isLegacyFormat = false;
 
             if (!File.Exists(file)) return null;
 
             string encrypted = File.ReadAllText(file);
             if (string.IsNullOrWhiteSpace(encrypted)) return new List<SavedAccount>();
+            isLegacyFormat = AesCrypto.IsLegacyCbcFormat(encrypted);
 
             try
             {
@@ -148,17 +155,29 @@ namespace PersonalInfoManager.Services
                     return hit.Accounts;
             }
 
-            var accounts = TryRead(file, out Exception? mainError);
+            var accounts = TryRead(file, out Exception? mainError, out bool legacyMain);
             if (accounts != null)
             {
+                if (legacyMain)
+                {
+                    // Migrate readable CBC data to authenticated AES-GCM on first access.
+                    Save(username, accounts);
+                    return accounts;
+                }
+
                 StoreCache(file, info, accounts);
                 return accounts;
             }
 
             // File chính hỏng → thử bản dự phòng gần nhất (không nạp cache, trường hợp hiếm)
             DropCache(file);
-            var fromBackup = TryRead(file + ".bak", out _);
-            if (fromBackup != null) return fromBackup;
+            var fromBackup = TryRead(file + ".bak", out _, out _);
+            if (fromBackup != null)
+            {
+                // Restore the last valid backup and write it in the authenticated format.
+                Save(username, fromBackup);
+                return fromBackup;
+            }
 
             throw new VaultUnreadableException(
                 "Không đọc được dữ liệu đã lưu. Dữ liệu cũ vẫn được giữ nguyên, " +
@@ -196,30 +215,45 @@ namespace PersonalInfoManager.Services
                 throw new CryptographicException(
                     "Kiểm tra sau mã hóa thất bại, dữ liệu chưa được ghi.");
 
-            string tmp = file + ".tmp";
-            File.WriteAllText(tmp, encrypted);
-
             if (File.Exists(file))
             {
-                if (TryRead(file, out _) != null)
+                var previous = TryRead(file, out _, out _);
+                if (previous != null)
                 {
-                    // File hiện tại đọc được → lưu làm bản dự phòng
-                    File.Copy(file, file + ".bak", overwrite: true);
+                    // Re-encrypt the previous snapshot so a migrated CBC file is not retained as .bak.
+                    string previousJson = JsonSerializer.Serialize(previous, JsonOpts);
+                    WriteAtomically(file + ".bak", AesCrypto.Encrypt(previousJson));
                 }
                 else
                 {
                     // File hiện tại không đọc được → giữ lại một bản, không để mất hẳn
                     File.Copy(file,
-                        file + ".corrupt-" + DateTime.Now.ToString("yyyyMMddHHmmss"),
+                        file + ".corrupt-" + DateTime.Now.ToString("yyyyMMddHHmmssfff") + "-" + Guid.NewGuid().ToString("N"),
                         overwrite: true);
+                    // Preserve a protected recovery copy of the validated in-memory data.
+                    WriteAtomically(file + ".bak", encrypted);
                 }
             }
 
-            File.Move(tmp, file, overwrite: true);
+            WriteAtomically(file, encrypted);
 
             // Cache giữ BẢN SAO của danh sách vừa ghi (nơi gọi có thể còn sửa danh sách của họ)
             try { StoreCache(file, new FileInfo(file), CloneAll(accounts)); }
             catch { DropCache(file); }
+        }
+
+        private static void WriteAtomically(string path, string contents)
+        {
+            string temp = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+            try
+            {
+                File.WriteAllText(temp, contents);
+                File.Move(temp, path, overwrite: true);
+            }
+            finally
+            {
+                try { if (File.Exists(temp)) File.Delete(temp); } catch { }
+            }
         }
 
         // ================================================================
