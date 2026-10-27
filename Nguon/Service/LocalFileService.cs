@@ -7,7 +7,7 @@ namespace PersonalInfoManager.Services
 {
     /// <summary>
     /// Quản lý kho file local của từng user.
-    /// Mỗi user có thư mục riêng: %AppData%\PersonalInfoManager\Storage\&lt;username&gt;\
+    /// Mỗi user có thư mục riêng: %AppData%\PersonalInfoManager\Storage\&lt;user-id&gt;\
     /// </summary>
     public class LocalFileService
     {
@@ -27,7 +27,32 @@ namespace PersonalInfoManager.Services
         /// </summary>
         public string GetUserFolder(string username)
         {
-            string folder = Path.Combine(_storageRoot, SanitizeName(username));
+            var userService = new UserService();
+            var user = userService.FindByUsername(username)
+                ?? throw new InvalidOperationException("Không tìm thấy tài khoản để xác định kho file riêng.");
+
+            string folder = Path.Combine(
+                _storageRoot, UserStorageIdentity.GetDirectoryName(user.Id));
+            string legacyFolder = UserStorageIdentity.GetLegacyPath(
+                Path.GetDirectoryName(_storageRoot)!, user.Username,
+                LegacyUserStorageKind.LocalFiles);
+
+            if (!string.Equals(folder, legacyFolder, StringComparison.OrdinalIgnoreCase) &&
+                Directory.Exists(legacyFolder))
+            {
+                using var migrationLock = UserStorageIdentity.AcquireMigrationLock(user.Id);
+                if (Directory.Exists(legacyFolder))
+                {
+                    if (userService.HasLegacyStoragePathCollision(
+                        user.Id, user.Username, LegacyUserStorageKind.LocalFiles))
+                        throw new AmbiguousLegacyUserStorageException(
+                            "Thư mục file cũ trùng đường dẫn với tài khoản khác. Thư mục vẫn được giữ nguyên; " +
+                            "không thể tự chọn chủ sở hữu an toàn.");
+
+                    UserStorageIdentity.MoveLegacyDirectory(legacyFolder, folder, user.Id);
+                }
+            }
+
             Directory.CreateDirectory(folder);
             return folder;
         }
@@ -103,16 +128,6 @@ namespace PersonalInfoManager.Services
         }
 
         // ================== HELPERS ==================
-
-        /// <summary>
-        /// Loại bỏ ký tự không hợp lệ trong tên thư mục.
-        /// </summary>
-        private static string SanitizeName(string name)
-        {
-            foreach (char c in Path.GetInvalidFileNameChars())
-                name = name.Replace(c, '_');
-            return name;
-        }
 
         /// <summary>
         /// Nếu file đã tồn tại → thêm hậu tố (1), (2), ... để tránh ghi đè.

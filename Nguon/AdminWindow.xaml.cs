@@ -221,9 +221,8 @@ namespace PersonalInfoManager
                     MessageBoxImage.Warning) != MessageBoxResult.Yes)
                 return;
 
-            // Dữ liệu của user này vẫn nằm trên máy sau khi xóa dòng tài khoản:
-            // hỏi luôn có xóa không, kẻo user mới tạo trùng tên sẽ thừa hưởng dữ liệu cũ.
-            var leftovers = UserDataCleaner.Describe(u.Username);
+            // Hỏi riêng việc xóa dữ liệu gắn với tài khoản trước khi xóa dòng người dùng.
+            var leftovers = UserDataCleaner.Describe(u.Id, u.Username);
             bool wipeData = false;
 
             if (leftovers.Count > 0)
@@ -233,7 +232,8 @@ namespace PersonalInfoManager
                     string.Join("\n", leftovers) + "\n\n" +
                     "Xóa vĩnh viễn luôn các dữ liệu này?\n\n" +
                     "• Có: xóa hết, không thể khôi phục.\n" +
-                    $"• Không: giữ lại. Người dùng mới tạo trùng tên '{u.Username}' sẽ thấy lại dữ liệu này.\n" +
+                    "• Không: giữ lại. Cụm sao lưu và phiên Google được lưu theo tên đăng nhập có thể dùng lại nếu tạo tài khoản trùng tên.\n" +
+                    "Kho vault, 2FA và file cục bộ được lưu theo ID tài khoản.\n" +
                     "• Hủy: không xóa gì cả.\n\n" +
                     "Bản sao lưu trên Google Drive (nếu có) không bị ảnh hưởng.",
                     "Xóa dữ liệu của người dùng",
@@ -256,7 +256,7 @@ namespace PersonalInfoManager
 
             if (wipeData)
             {
-                var (removed, errors) = UserDataCleaner.Delete(u.Username);
+                var (removed, errors) = UserDataCleaner.Delete(u.Id, u.Username);
 
                 if (removed.Count > 0)
                     message += "\n\nĐã xóa dữ liệu:\n" + string.Join("\n", removed.Select(r => "• " + r));

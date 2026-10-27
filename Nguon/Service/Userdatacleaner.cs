@@ -34,16 +34,24 @@ namespace PersonalInfoManager.Services
         // ================================================================
 
         /// <summary>Các mục dữ liệu còn tồn tại của người dùng (để hiện cho quản trị viên xem trước khi xóa).</summary>
-        public static List<string> Describe(string username)
-            => BuildItems(username).Select(i => $"• {i.Label} — {FormatSize(i)}").ToList();
+        public static List<string> Describe(Guid userId, string username)
+        {
+            var warnings = new List<string>();
+            var descriptions = BuildItems(userId, username, warnings)
+                .Select(i => $"• {i.Label} — {FormatSize(i)}")
+                .ToList();
+            descriptions.AddRange(warnings.Select(w => "⚠ " + w));
+            return descriptions;
+        }
 
         /// <summary>Xóa các mục trên. Trả về danh sách đã xóa và danh sách lỗi (nếu có).</summary>
-        public static (List<string> removed, List<string> errors) Delete(string username)
+        public static (List<string> removed, List<string> errors) Delete(Guid userId, string username)
         {
             var removed = new List<string>();
             var errors = new List<string>();
+            var warnings = new List<string>();
 
-            foreach (var item in BuildItems(username))
+            foreach (var item in BuildItems(userId, username, warnings))
             {
                 try
                 {
@@ -60,6 +68,8 @@ namespace PersonalInfoManager.Services
                 }
             }
 
+            errors.AddRange(warnings);
+
             // Ô "tên đăng nhập" ở màn hình đăng nhập không nên điền sẵn tên đã xóa
             try
             {
@@ -75,39 +85,49 @@ namespace PersonalInfoManager.Services
         // ================== NỘI BỘ ==================
         // ================================================================
 
-        private static List<Item> BuildItems(string username)
+        private static List<Item> BuildItems(Guid userId, string username, List<string> warnings)
         {
             var items = new List<Item>();
-
-            string safe = SafeName(username);
-            // Tên rỗng hoặc chỉ gồm dấu chấm/khoảng trắng: có thể trỏ ra chính thư mục cha → không đụng vào gì
-            if (string.IsNullOrWhiteSpace(safe) || safe.All(c => c == '.' || c == ' '))
-                return items;
+            var userService = new UserService();
+            string isolatedName = UserStorageIdentity.GetDirectoryName(userId);
 
             string tag = BackupCrypto.UserTag(username);
 
             // 1. Vault và các bản dự phòng
             var vault = new Item { Label = "Kho tài khoản đã lưu (vault) và bản dự phòng" };
-            string vaultFile = Path.Combine(Root, $"vault_{safe}.dat");
+            string vaultFile = Path.Combine(Root, $"vault_{isolatedName}.dat");
             AddFile(vault, vaultFile);
             AddFile(vault, vaultFile + ".bak");
             AddFile(vault, vaultFile + ".tmp");
-            if (Directory.Exists(Root))
+            AddCorruptVaultFiles(vault, vaultFile);
+
+            string legacyVault = UserStorageIdentity.GetLegacyPath(
+                Root, username, LegacyUserStorageKind.Vault);
+            if (!userService.HasLegacyStoragePathCollision(
+                userId, username, LegacyUserStorageKind.Vault))
             {
-                string corruptPrefix = $"vault_{safe}.dat.corrupt-";
-                foreach (var f in Directory.GetFiles(Root, corruptPrefix + "*"))
-                {
-                    // Chỉ nhận đúng hậu tố thời gian 14 chữ số, tránh nhặt nhầm file của người dùng khác
-                    string suffix = Path.GetFileName(f).Substring(corruptPrefix.Length);
-                    if (suffix.Length == 14 && suffix.All(char.IsDigit))
-                        AddFile(vault, f);
-                }
+                AddFile(vault, legacyVault);
+                AddFile(vault, legacyVault + ".bak");
+                AddFile(vault, legacyVault + ".tmp");
+                AddCorruptVaultFiles(vault, legacyVault);
             }
+            else if (UserStorageIdentity.HasLegacyData(
+                Root, username, LegacyUserStorageKind.Vault))
+                warnings.Add("Vault cũ có đường dẫn trùng với tài khoản khác nên được giữ nguyên.");
             AddIfAny(items, vault);
 
             // 2. Xác thực 2 bước
             var twoFa = new Item { Label = "Cấu hình xác thực 2 bước (2FA)" };
-            AddFile(twoFa, Path.Combine(Root, "2fa", safe + ".2fa"));
+            AddFile(twoFa, Path.Combine(
+                Root, "2fa", UserStorageIdentity.GetDirectoryName(userId) + ".2fa"));
+            string legacyTwoFa = UserStorageIdentity.GetLegacyPath(
+                Root, username, LegacyUserStorageKind.TwoFactor);
+            if (!userService.HasLegacyStoragePathCollision(
+                userId, username, LegacyUserStorageKind.TwoFactor))
+                AddFile(twoFa, legacyTwoFa);
+            else if (UserStorageIdentity.HasLegacyData(
+                Root, username, LegacyUserStorageKind.TwoFactor))
+                warnings.Add("File 2FA cũ có đường dẫn trùng với tài khoản khác nên được giữ nguyên.");
             AddIfAny(items, twoFa);
 
             // 3. Cụm mật khẩu sao lưu
@@ -119,13 +139,17 @@ namespace PersonalInfoManager.Services
 
             // 4. File cá nhân
             string storageRoot = Path.Combine(Root, "Storage");
-            string storageDir = Path.Combine(storageRoot, safe);
-            if (Directory.Exists(storageDir) && IsDirectChild(storageRoot, storageDir))
-            {
-                var storage = new Item { Label = "File cá nhân", Dir = storageDir };
-                AddDirStats(storage, storageDir);
-                AddIfAny(items, storage);
-            }
+            string storageDir = Path.Combine(storageRoot, isolatedName);
+            AddStorageDirectory(items, storageDir);
+
+            string legacyStorageDir = UserStorageIdentity.GetLegacyPath(
+                Root, username, LegacyUserStorageKind.LocalFiles);
+            if (!userService.HasLegacyStoragePathCollision(
+                userId, username, LegacyUserStorageKind.LocalFiles))
+                AddStorageDirectory(items, legacyStorageDir);
+            else if (UserStorageIdentity.HasLegacyData(
+                Root, username, LegacyUserStorageKind.LocalFiles))
+                warnings.Add("Thư mục file cũ có đường dẫn trùng với tài khoản khác nên được giữ nguyên.");
 
             // 5. Đăng nhập Google (token)
             string tokenRoot = Path.Combine(Root, "GoogleTokens");
@@ -140,11 +164,22 @@ namespace PersonalInfoManager.Services
             return items;
         }
 
-        /// <summary>Thay ký tự không hợp lệ trong tên file bằng '_' (khớp cách các service khác đặt tên).</summary>
-        private static string SafeName(string username)
+        private static void AddCorruptVaultFiles(Item item, string vaultFile)
         {
-            var invalid = Path.GetInvalidFileNameChars();
-            return string.Concat((username ?? "").Select(c => invalid.Contains(c) ? '_' : c));
+            if (!Directory.Exists(Root)) return;
+            string corruptPrefix = Path.GetFileName(vaultFile) + ".corrupt-";
+            foreach (var file in Directory.GetFiles(Root, corruptPrefix + "*"))
+                AddFile(item, file);
+        }
+
+        private static void AddStorageDirectory(List<Item> items, string storageDir)
+        {
+            string storageRoot = Path.Combine(Root, "Storage");
+            if (!Directory.Exists(storageDir) || !IsDirectChild(storageRoot, storageDir)) return;
+
+            var storage = new Item { Label = "File cá nhân", Dir = storageDir };
+            AddDirStats(storage, storageDir);
+            AddIfAny(items, storage);
         }
 
         /// <summary>child phải là thư mục con TRỰC TIẾP của parent (chặn tên kiểu "..." trỏ ra ngoài).</summary>
