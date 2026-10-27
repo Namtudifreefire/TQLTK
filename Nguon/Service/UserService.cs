@@ -6,6 +6,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Threading;
 using PersonalInfoManager.Models;
 
 namespace PersonalInfoManager.Services
@@ -348,6 +349,21 @@ namespace PersonalInfoManager.Services
             }
         }
 
+        internal bool HasLegacyStoragePathCollision(
+            Guid userId, string username, LegacyUserStorageKind storageKind)
+        {
+            lock (Sync)
+            {
+                Reload();
+                var user = FindByIdCore(userId) ?? new User
+                {
+                    Id = userId,
+                    Username = username
+                };
+                return UserStorageIdentity.HasLegacyPathCollision(user, _users, storageKind);
+            }
+        }
+
         public bool EmailExists(string email, Guid? excludeUserId = null)
         {
             lock (Sync)
@@ -368,7 +384,10 @@ namespace PersonalInfoManager.Services
         }
 
         private static bool IsValidUsername(string username)
-            => !string.IsNullOrWhiteSpace(username) && username.Trim().Length >= 3;
+            => !string.IsNullOrWhiteSpace(username) &&
+                username == username.Trim() &&
+                username.Length is >= 3 and <= 64 &&
+                !username.Any(char.IsControl);
 
         private static int MinimumPasswordLength(bool twoFactorEnabled)
             => twoFactorEnabled ? 8 : 15;
@@ -391,6 +410,55 @@ namespace PersonalInfoManager.Services
 
         private const string DefaultPasswordMessage =
             "Không được dùng mật khẩu mặc định. Hãy chọn mật khẩu khác.";
+
+        private const string LegacyStorageMessage =
+            "Tên đăng nhập này còn dữ liệu cũ chưa thể gắn an toàn với tài khoản. " +
+            "Dữ liệu cũ được giữ nguyên; hãy dùng tên khác hoặc khôi phục dữ liệu sau khi xác định đúng chủ sở hữu.";
+
+        private IDisposable AcquireCrossProcessAuthenticationLock()
+        {
+            string identity = Path.GetFullPath(_usersFile)
+                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                .ToUpperInvariant();
+            byte[] identityHash = SHA256.HashData(Encoding.UTF8.GetBytes(identity));
+            var mutex = new Mutex(
+                initiallyOwned: false,
+                name: @"Local\TQLTK.UserAuthentication." + Convert.ToHexString(identityHash));
+            CryptographicOperations.ZeroMemory(identityHash);
+
+            try
+            {
+                bool acquired = false;
+                try { acquired = mutex.WaitOne(TimeSpan.FromSeconds(30)); }
+                catch (AbandonedMutexException) { acquired = true; }
+
+                if (!acquired)
+                    throw new TimeoutException("Hết thời gian chờ khóa dữ liệu đăng nhập.");
+
+                return new AuthenticationMutexLease(mutex);
+            }
+            catch
+            {
+                mutex.Dispose();
+                throw;
+            }
+        }
+
+        private sealed class AuthenticationMutexLease : IDisposable
+        {
+            private readonly Mutex _mutex;
+            private bool _disposed;
+
+            public AuthenticationMutexLease(Mutex mutex) => _mutex = mutex;
+
+            public void Dispose()
+            {
+                if (_disposed) return;
+                _disposed = true;
+                try { _mutex.ReleaseMutex(); }
+                finally { _mutex.Dispose(); }
+            }
+        }
 
         // ================================================================
         // ================== TẠO TÀI KHOẢN ==================
@@ -416,11 +484,14 @@ namespace PersonalInfoManager.Services
                     return (false, "Tài khoản đầu tiên đã được tạo. Hãy đăng ký tài khoản người dùng thông thường.");
 
                 if (!IsValidUsername(username))
-                    return (false, "Tên đăng nhập phải từ 3 ký tự trở lên.");
+                    return (false, "Tên đăng nhập phải dài từ 3 đến 64 ký tự và không chứa ký tự điều khiển.");
                 if (!IsValidPassword(password, twoFactorEnabled: false))
                     return (false, PasswordLengthMessage(twoFactorEnabled: false));
                 if (IsDefaultPassword(password))
                     return (false, DefaultPasswordMessage);
+                if (UserStorageIdentity.HasLegacyDataForUsername(
+                    Path.GetDirectoryName(_usersFile)!, username))
+                    return (false, LegacyStorageMessage);
                 if (string.IsNullOrWhiteSpace(fullName))
                     return (false, "Họ tên không được để trống.");
                 if (!IsValidEmail(email))
@@ -460,7 +531,7 @@ namespace PersonalInfoManager.Services
                 Reload();
 
                 if (!IsValidUsername(username))
-                    return (false, "Tên đăng nhập phải từ 3 ký tự trở lên.");
+                    return (false, "Tên đăng nhập phải dài từ 3 đến 64 ký tự và không chứa ký tự điều khiển.");
 
                 if (!IsValidPassword(password, twoFactorEnabled: false))
                     return (false, PasswordLengthMessage(twoFactorEnabled: false));
@@ -473,6 +544,10 @@ namespace PersonalInfoManager.Services
 
                 if (FindByUsernameCore(username) != null)
                     return (false, "Tên đăng nhập đã tồn tại.");
+
+                if (UserStorageIdentity.HasLegacyDataForUsername(
+                    Path.GetDirectoryName(_usersFile)!, username))
+                    return (false, LegacyStorageMessage);
 
                 if (!IsValidEmail(email))
                     return (false, "Email không hợp lệ.");
@@ -501,14 +576,28 @@ namespace PersonalInfoManager.Services
         /// <summary>
         /// Kiểm tra tên đăng nhập + mật khẩu.
         /// Sai MaxFailedAttempts lần liên tiếp thì khóa tạm LockoutDuration (lưu trong users.json,
-        /// nên tắt mở lại app không xóa được). Đăng nhập đúng thì về 0.
-        /// Nếu mật khẩu đúng nhưng là mật khẩu mặc định cũ thì đánh dấu phải đổi.
+        /// nên tắt mở lại app không xóa được). Bộ đếm được tuần tự hóa giữa các tiến trình.
+        /// Mật khẩu mặc định đã phát hành trong bản cũ bị từ chối để không thể chiếm tài khoản.
         /// </summary>
         public (bool ok, string message, User? user) Authenticate(
             string username, string password)
         {
             lock (Sync)
             {
+                IDisposable processLock;
+                try { processLock = AcquireCrossProcessAuthenticationLock(); }
+                catch (Exception ex) when (
+                    ex is TimeoutException ||
+                    ex is UnauthorizedAccessException ||
+                    ex is IOException ||
+                    ex is WaitHandleCannotBeOpenedException)
+                {
+                    return (false,
+                        "Không thể khóa dữ liệu đăng nhập giữa các tiến trình; yêu cầu đăng nhập bị từ chối để bảo vệ tài khoản.",
+                        null);
+                }
+
+                using var processLockScope = processLock;
                 Reload();
 
                 var user = FindByUsernameCore(username);
@@ -555,12 +644,23 @@ namespace PersonalInfoManager.Services
                         null);
                 }
 
+                // This credential was shipped in older builds and is public knowledge.
+                // Do not let it authenticate an old account and then replace its password.
+                if (IsDefaultPassword(password))
+                    return (false,
+                        "Mật khẩu mặc định cũ đã bị vô hiệu hóa. Hãy dùng Windows Hello nếu đã bật " +
+                        "hoặc nhờ một quản trị viên khác đặt lại mật khẩu.",
+                        null);
+
+                if (UserStorageIdentity.HasAmbiguousLegacyData(
+                    user, _users, Path.GetDirectoryName(_usersFile)!))
+                    return (false,
+                        "Dữ liệu cũ của tài khoản trùng đường dẫn với tài khoản khác nên đăng nhập bị từ chối. " +
+                        "Các file vẫn được giữ nguyên để có thể khôi phục an toàn.",
+                        null);
+
                 user.FailedLoginCount = 0;
                 user.LockedUntil = null;
-
-                // Tài khoản từ bản cũ dùng mật khẩu mặc định → bắt buộc đổi.
-                if (IsDefaultPassword(password))
-                    user.MustChangePassword = true;
 
                 // Upgrade legacy hashes at the next successful sign-in without invalidating them.
                 if (PasswordHasher.NeedsRehash(user.PasswordHash))
@@ -590,6 +690,9 @@ namespace PersonalInfoManager.Services
                 var user = FindByUsernameCore(username);
                 if (user == null)
                     return (false, "Không tìm thấy user.");
+
+                if (!IsCurrentActiveUser(user.Id, out string denied))
+                    return (false, denied);
 
                 if (!PasswordHasher.Verify(oldPwd, user.PasswordHash))
                     return (false, "Mật khẩu cũ không đúng.");

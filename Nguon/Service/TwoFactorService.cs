@@ -13,7 +13,7 @@ namespace PersonalInfoManager.Services
     /// Xác thực 2 bước bằng ứng dụng Authenticator (TOTP - RFC 6238).
     /// Tương thích Google Authenticator, Microsoft Authenticator, Authy, 2FAS...
     /// Secret được mã hóa bằng Windows DPAPI (gắn với tài khoản Windows hiện tại)
-    /// và lưu tại %AppData%\PersonalInfoManager\2fa\{username}.2fa. Named mutex khóa
+    /// và lưu tại %AppData%\PersonalInfoManager\2fa\{user-id}.2fa. Named mutex khóa
     /// mỗi tài khoản xuyên suốt các tiến trình để tránh dùng lại mã đồng thời.
     /// </summary>
     public static class TwoFactorService
@@ -506,9 +506,31 @@ namespace PersonalInfoManager.Services
 
         private static string GetPath(string username)
         {
-            // Làm sạch tên user để làm tên file an toàn
-            string safe = string.Concat(username.Select(c => Path.GetInvalidFileNameChars().Contains(c) ? '_' : c));
-            return Path.Combine(Folder, safe + ".2fa");
+            var userService = new UserService();
+            var user = userService.FindByUsername(username)
+                ?? throw new InvalidOperationException("Không tìm thấy tài khoản để xác định cấu hình 2FA riêng.");
+
+            string isolatedPath = Path.Combine(
+                Folder, UserStorageIdentity.GetDirectoryName(user.Id) + ".2fa");
+            string legacyPath = UserStorageIdentity.GetLegacyPath(
+                Path.GetDirectoryName(Folder)!, user.Username,
+                LegacyUserStorageKind.TwoFactor);
+
+            if (string.Equals(isolatedPath, legacyPath, StringComparison.OrdinalIgnoreCase) ||
+                !File.Exists(legacyPath))
+                return isolatedPath;
+
+            using var migrationLock = UserStorageIdentity.AcquireMigrationLock(user.Id);
+            if (!File.Exists(legacyPath)) return isolatedPath;
+
+            if (userService.HasLegacyStoragePathCollision(
+                user.Id, user.Username, LegacyUserStorageKind.TwoFactor))
+                throw new AmbiguousLegacyUserStorageException(
+                    "File xác thực 2 bước cũ trùng đường dẫn với tài khoản khác. File cũ được giữ nguyên; " +
+                    "không thể tự chọn chủ sở hữu an toàn.");
+
+            UserStorageIdentity.MoveLegacyFile(legacyPath, isolatedPath, user.Id);
+            return isolatedPath;
         }
 
         private static bool FileExistsOrThrow(string path)

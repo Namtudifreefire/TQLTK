@@ -53,9 +53,33 @@ namespace PersonalInfoManager.Services
 
         private string GetVaultFile(string username)
         {
-            string safe = string.Join("_",
-                username.Split(Path.GetInvalidFileNameChars()));
-            return Path.Combine(_root, $"vault_{safe}.dat");
+            var userService = new UserService();
+            var user = userService.FindByUsername(username)
+                ?? throw new InvalidOperationException("Không tìm thấy tài khoản để xác định kho dữ liệu riêng.");
+
+            string isolatedPath = Path.Combine(
+                _root, $"vault_{UserStorageIdentity.GetDirectoryName(user.Id)}.dat");
+            string legacyPath = UserStorageIdentity.GetLegacyPath(
+                _root, user.Username, LegacyUserStorageKind.Vault);
+
+            if (string.Equals(isolatedPath, legacyPath, StringComparison.OrdinalIgnoreCase) ||
+                (!File.Exists(legacyPath) && !File.Exists(legacyPath + ".bak")))
+                return isolatedPath;
+
+            using var migrationLock = UserStorageIdentity.AcquireMigrationLock(user.Id);
+            if (!File.Exists(legacyPath) && !File.Exists(legacyPath + ".bak"))
+                return isolatedPath;
+
+            if (userService.HasLegacyStoragePathCollision(
+                user.Id, user.Username, LegacyUserStorageKind.Vault))
+                throw new VaultUnreadableException(
+                    "File vault cũ trùng đường dẫn với tài khoản khác. File cũ được giữ nguyên; " +
+                    "không thể tự chọn chủ sở hữu an toàn.");
+
+            UserStorageIdentity.MoveLegacyFile(legacyPath, isolatedPath, user.Id);
+            UserStorageIdentity.MoveLegacyFile(
+                legacyPath + ".bak", isolatedPath + ".bak", user.Id);
+            return isolatedPath;
         }
 
         // ================================================================

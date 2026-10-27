@@ -10,7 +10,7 @@ using System.Text.RegularExpressions;
 namespace PersonalInfoManager.Services
 {
     /// <summary>
-    /// Sao lưu / khôi phục kho "File cá nhân" của một người dùng (thư mục Storage\{username}).
+    /// Sao lưu / khôi phục kho "File cá nhân" của một người dùng (thư mục Storage\{user-id}).
     ///
     /// File cá nhân được lưu KHÔNG mã hóa trên máy, nên bản sao lưu luôn được nén rồi mã hóa bằng cụm mật khẩu sao lưu
     /// của người dùng (BackupCrypto.EncryptBytes, định dạng "TQFB") trước khi đưa lên Google Drive.
