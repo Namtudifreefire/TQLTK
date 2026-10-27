@@ -24,6 +24,7 @@ namespace PersonalInfoManager.Services
         private const int RecoveryCodeCount = 8;
         private const string Base32Alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
         private static readonly byte[] Entropy = Encoding.UTF8.GetBytes("TQLTK.2FA.v1");
+        private static readonly object ValidationSync = new();
 
         private static readonly string Folder = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
@@ -106,41 +107,49 @@ namespace PersonalInfoManager.Services
         /// </summary>
         public static (bool ok, string message) Validate(string username, string input)
         {
-            var data = Load(username);
-            if (data == null)
-                return (false, "Không đọc được dữ liệu 2FA của tài khoản này.");
-
-            string code = NormalizeCode(input);
-            if (code.Length == 0)
-                return (false, "Vui lòng nhập mã.");
-
-            // ---- Mã TOTP 6 số ----
-            if (code.Length == 6 && code.All(char.IsDigit))
+            // Serialize validation so two concurrent requests cannot both consume the same code.
+            lock (ValidationSync)
             {
-                if (!TryMatch(data.Secret, code, data.LastUsedStep, out long matchedStep))
-                    return (false, "Mã không đúng hoặc đã được dùng.");
+                var data = Load(username);
+                if (data == null)
+                    return (false, "Không đọc được dữ liệu 2FA của tài khoản này.");
 
-                data.LastUsedStep = matchedStep;
-                try { Save(username, data); } catch { }
-                return (true, "");
+                string code = NormalizeCode(input);
+                if (code.Length == 0)
+                    return (false, "Vui lòng nhập mã.");
+
+                // ---- Mã TOTP 6 số ----
+                if (code.Length == 6 && code.All(char.IsDigit))
+                {
+                    if (!TryMatch(data.Secret, code, data.LastUsedStep, out long matchedStep))
+                        return (false, "Mã không đúng hoặc đã được dùng.");
+
+                    data.LastUsedStep = matchedStep;
+                    try { Save(username, data); }
+                    catch (Exception ex)
+                    {
+                        return (false, $"Không thể lưu trạng thái 2FA; hãy thử lại. Chi tiết: {ex.Message}");
+                    }
+                    return (true, "");
+                }
+
+                // ---- Mã khôi phục (10 ký tự) ----
+                if (code.Length == 10)
+                {
+                    string hash = HashRecoveryCode(code);
+                    string? found = data.RecoveryHashes.FirstOrDefault(h => FixedTimeEquals(h, hash));
+                    if (found == null)
+                        return (false, "Mã khôi phục không đúng hoặc đã được dùng.");
+
+                    data.RecoveryHashes.Remove(found);
+                    try { Save(username, data); }
+                    catch (Exception ex) { return (false, $"Lỗi lưu dữ liệu 2FA: {ex.Message}"); }
+
+                    return (true, $"Bạn vừa dùng 1 mã khôi phục. Còn lại {data.RecoveryHashes.Count} mã.\nHãy tắt rồi bật lại 2FA nếu bạn đã mất điện thoại.");
+                }
+
+                return (false, "Nhập mã 6 số từ Authenticator hoặc mã khôi phục (10 ký tự).");
             }
-
-            // ---- Mã khôi phục (10 ký tự) ----
-            if (code.Length == 10)
-            {
-                string hash = HashRecoveryCode(code);
-                string? found = data.RecoveryHashes.FirstOrDefault(h => FixedTimeEquals(h, hash));
-                if (found == null)
-                    return (false, "Mã khôi phục không đúng hoặc đã được dùng.");
-
-                data.RecoveryHashes.Remove(found);
-                try { Save(username, data); }
-                catch (Exception ex) { return (false, $"Lỗi lưu dữ liệu 2FA: {ex.Message}"); }
-
-                return (true, $"Bạn vừa dùng 1 mã khôi phục. Còn lại {data.RecoveryHashes.Count} mã.\nHãy tắt rồi bật lại 2FA nếu bạn đã mất điện thoại.");
-            }
-
-            return (false, "Nhập mã 6 số từ Authenticator hoặc mã khôi phục (10 ký tự).");
         }
 
         // ================================================================
@@ -188,9 +197,13 @@ namespace PersonalInfoManager.Services
             if (!TryMatch(data.Secret, code, data.LastUsedStep, out long matchedStep))
                 return (false, "Mã không đúng hoặc đã được dùng. Hãy đợi mã mới (tối đa 30 giây) rồi nhập lại.", new List<string>());
 
-            // Ghi nhận mã TOTP đã dùng (chống dùng lại)
+            // Ghi nhận mã TOTP đã dùng (chống dùng lại). Không tiếp tục nếu không lưu được.
             data.LastUsedStep = matchedStep;
-            try { Save(username, data); } catch { }
+            try { Save(username, data); }
+            catch (Exception ex)
+            {
+                return (false, $"Không thể lưu trạng thái 2FA; hãy thử lại. Chi tiết: {ex.Message}", new List<string>());
+            }
 
             return (true, "", GenerateRecoveryCodes());
         }
