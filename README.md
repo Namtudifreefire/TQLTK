@@ -87,5 +87,3 @@ See the [Releases page](https://github.com/Namtudifreefire/TQLTK/releases) for t
 - Tính năng BETA (Windows Hello, Google Drive) mới được thử trên số ít máy, có thể gặp lỗi.
 
 **Tự build:** cài .NET 10 SDK, chạy `dotnet build` trong thư mục `Nguon`. Tính năng Google Drive cần file `credentials.json` do bạn tự tạo (OAuth client kiểu Desktop app, đặt cạnh file `.csproj`); file này không nằm trong repo.
-
-**Giấy phép:** [MIT](LICENSE).
