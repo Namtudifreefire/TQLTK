@@ -15,7 +15,7 @@
 			<RowDefinition Height="Auto" />
 		</Grid.RowDefinitions>
 
-		<!-- Tiêu đề -->
+
 		<StackPanel Grid.Row="0" Margin="0,0,0,15">
 			<TextBlock Text="📥 Import tài khoản từ CSV"
                        FontSize="20" FontWeight="Bold"
@@ -27,7 +27,7 @@
                        TextWrapping="Wrap" />
 		</StackPanel>
 
-		<!-- Thống kê -->
+
 		<Border Grid.Row="1"
                 Background="{DynamicResource SurfaceBrush}"
                 BorderBrush="{DynamicResource BorderBrush}"
@@ -47,7 +47,7 @@
 			</StackPanel>
 		</Border>
 
-		<!-- DataGrid preview -->
+
 		<DataGrid Grid.Row="2"
                   x:Name="dgPreview"
                   AutoGenerateColumns="False"
@@ -58,7 +58,7 @@
                   GridLinesVisibility="Horizontal"
                   RowHeight="32">
 			<DataGrid.Columns>
-				<!-- Dùng template thay vì DataGridCheckBoxColumn: DataGrid đang IsReadOnly nên cột tick mặc định không bấm được -->
+
 				<DataGridTemplateColumn Header="✓" Width="50">
 					<DataGridTemplateColumn.CellTemplate>
 						<DataTemplate>
@@ -75,7 +75,7 @@
 			</DataGrid.Columns>
 		</DataGrid>
 
-		<!-- Nút hành động -->
+
 		<StackPanel Grid.Row="3"
                     Orientation="Horizontal"
                     HorizontalAlignment="Right"

@@ -5,20 +5,20 @@ using System.Text;
 
 namespace PersonalInfoManager.Services
 {
-    /// <summary>
-    /// Cung cấp thông tin về hệ thống và tiến trình hiện tại.
-    /// Dùng cho nút "Thông tin hệ thống" trong MainWindow.
-    /// </summary>
+
+
+
+
     public static class SystemInfoService
     {
-        /// <summary>
-        /// Trả về báo cáo đầy đủ dạng text về OS, máy, user, .NET, process, quyền.
-        /// </summary>
+
+
+
         public static string GetSystemReport()
         {
             var sb = new StringBuilder();
 
-            // ================== THÔNG TIN HỆ THỐNG ==================
+
             sb.AppendLine("=== THÔNG TIN HỆ THỐNG ===");
             sb.AppendLine($"OS          : {Environment.OSVersion}");
             sb.AppendLine($"Máy tính    : {Environment.MachineName}");
@@ -31,7 +31,7 @@ namespace PersonalInfoManager.Services
             sb.AppendLine($"System Dir  : {Environment.SystemDirectory}");
             sb.AppendLine();
 
-            // ================== THÔNG TIN TIẾN TRÌNH ==================
+
             sb.AppendLine("=== TIẾN TRÌNH HIỆN TẠI ===");
             using (var me = Process.GetCurrentProcess())
             {
@@ -45,7 +45,7 @@ namespace PersonalInfoManager.Services
             }
             sb.AppendLine();
 
-            // ================== QUYỀN ==================
+
             sb.AppendLine("=== QUYỀN ===");
             sb.AppendLine($"Admin       : {(IsAdmin() ? "CÓ (Administrator)" : "KHÔNG (User thường)")}");
             sb.AppendLine($"Interactive : {Environment.UserInteractive}");
@@ -53,9 +53,9 @@ namespace PersonalInfoManager.Services
             return sb.ToString();
         }
 
-        /// <summary>
-        /// Kiểm tra app đang chạy với quyền Administrator hay không.
-        /// </summary>
+
+
+
         public static bool IsAdmin()
         {
             try
@@ -70,9 +70,9 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        /// <summary>
-        /// Báo cáo ngắn gọn (1 dòng) để hiển thị trên status bar.
-        /// </summary>
+
+
+
         public static string GetShortInfo()
         {
             return $".NET {Environment.Version} | " +

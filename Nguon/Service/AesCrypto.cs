@@ -6,20 +6,20 @@ using System.Text;
 
 namespace PersonalInfoManager.Services
 {
-    /// <summary>
-    /// Mã hóa / giải mã dữ liệu vault.
-    /// - Định dạng mới (v2): AES-256-GCM, có kiểm tra toàn vẹn. Chuỗi bắt đầu bằng "v2:".
-    /// - Định dạng AES-CBC cũ không có kiểm tra toàn vẹn nên bị từ chối; file cũ được giữ nguyên.
-    /// Key sinh ngẫu nhiên, bảo vệ bằng DPAPI (gắn với tài khoản Windows hiện tại).
-    /// Vị trí key: %AppData%\PersonalInfoManager\key.dat
-    /// LƯU Ý: không đổi tham số DPAPI (entropy/scope), nếu không key.dat cũ sẽ không đọc được.
-    /// </summary>
+
+
+
+
+
+
+
+
     public static class AesCrypto
     {
         private const string V2Prefix = "v2:";
-        private const int KeySize = 32;        // AES-256
-        private const int NonceSize = 12;      // GCM
-        private const int TagSize = 16;        // GCM
+        private const int KeySize = 32;
+        private const int NonceSize = 12;
+        private const int TagSize = 16;
 
         private static readonly string KeyDir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
@@ -27,15 +27,15 @@ namespace PersonalInfoManager.Services
 
         private static readonly string KeyFile = Path.Combine(KeyDir, "key.dat");
 
-        /// <summary>True when data uses the authenticated AES-GCM v2 format.</summary>
+
         public static bool IsAuthenticatedV2Format(string cipherText)
             => cipherText.TrimStart().StartsWith(V2Prefix, StringComparison.Ordinal);
 
-        /// <summary>
-        /// Lấy key AES hiện có, hoặc tạo mới nếu đây là lần chạy đầu tiên.
-        /// Nếu key.dat mất nhưng vẫn còn file vault_*.dat thì KHÔNG tạo key mới
-        /// (key mới sẽ không giải mã được dữ liệu cũ và dữ liệu có thể bị ghi đè).
-        /// </summary>
+
+
+
+
+
         private static byte[] GetOrCreateKey()
         {
             Directory.CreateDirectory(KeyDir);
@@ -65,7 +65,7 @@ namespace PersonalInfoManager.Services
             byte[] protectedNew = ProtectedData.Protect(newKey, null,
                 DataProtectionScope.CurrentUser);
 
-            // Ghi qua file tạm rồi đổi tên, tránh để lại key.dat ghi dở
+
             string tmp = KeyFile + ".tmp";
             File.WriteAllBytes(tmp, protectedNew);
             File.Move(tmp, KeyFile, overwrite: true);
@@ -73,9 +73,9 @@ namespace PersonalInfoManager.Services
             return newKey;
         }
 
-        /// <summary>
-        /// Mã hóa chuỗi plain text → "v2:" + Base64(nonce 12 + tag 16 + cipher).
-        /// </summary>
+
+
+
         public static string Encrypt(string plainText)
         {
             byte[] key = GetOrCreateKey();
@@ -106,10 +106,10 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        /// <summary>
-        /// Chỉ giải mã định dạng AES-GCM v2 do Encrypt tạo ra.
-        /// Định dạng CBC cũ và các định dạng không hỗ trợ bị từ chối.
-        /// </summary>
+
+
+
+
         public static string Decrypt(string cipherText)
         {
             string text = cipherText.Trim();
@@ -150,7 +150,7 @@ namespace PersonalInfoManager.Services
             {
                 using (var gcm = new AesGcm(key, TagSize))
                 {
-                    gcm.Decrypt(nonce, cipher, tag, plain); // sai key / bị sửa → ném lỗi
+                    gcm.Decrypt(nonce, cipher, tag, plain);
                 }
 
                 return Encoding.UTF8.GetString(plain);

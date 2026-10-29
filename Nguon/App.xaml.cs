@@ -12,10 +12,10 @@ namespace PersonalInfoManager
 
             ShutdownMode = ShutdownMode.OnMainWindowClose;
 
-            // 1. Load theme từ Registry
+
             try { ThemeService.Initialize(); } catch { }
 
-            // 2. Khởi động Auto Theme nếu đã bật
+
             try
             {
                 if (RegistryService.GetAutoThemeEnabled())
@@ -25,10 +25,10 @@ namespace PersonalInfoManager
             }
             catch { }
 
-            // 3. Dọn log cũ
+
             try { ActivityLogger.CleanupOldLogs(30); } catch { }
 
-            // 4. Bắt lỗi toàn cục
+
             DispatcherUnhandledException += (_, args) =>
             {
                 try
@@ -53,7 +53,7 @@ namespace PersonalInfoManager
                 args.Handled = true;
             };
 
-            // 5. Bắt lỗi Task
+
             System.Threading.Tasks.TaskScheduler.UnobservedTaskException += (_, args) =>
             {
                 try
@@ -67,7 +67,7 @@ namespace PersonalInfoManager
                 args.SetObserved();
             };
 
-            // 6. Mở LoginWindow
+
             try
             {
                 var login = new LoginWindow();
@@ -85,16 +85,16 @@ namespace PersonalInfoManager
             }
         }
 
-        /// <summary>
-        /// Khi app tắt → dừng auto theme timer.
-        /// </summary>
+
+
+
         protected override void OnExit(ExitEventArgs e)
         {
             try { AutoThemeService.Stop(); } catch { }
 
-            // Chẩn đoán lỗi "thoát rồi mà vẫn còn trong Task Manager":
-            // - Log có dòng EXIT_APP (menu Thoát) nhưng KHÔNG có APP_EXIT → WPF chưa hề tắt app (còn cửa sổ giữ lại).
-            // - Log có cả APP_EXIT mà tiến trình vẫn còn → còn một luồng nền giữ tiến trình.
+
+
+
             try
             {
                 ActivityLogger.Log(

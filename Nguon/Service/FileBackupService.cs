@@ -9,28 +9,28 @@ using System.Text.RegularExpressions;
 
 namespace PersonalInfoManager.Services
 {
-    /// <summary>
-    /// Sao lưu / khôi phục kho "File cá nhân" của một người dùng (thư mục Storage\{user-id}).
-    ///
-    /// File cá nhân được lưu KHÔNG mã hóa trên máy, nên bản sao lưu luôn được nén rồi mã hóa bằng cụm mật khẩu sao lưu
-    /// của người dùng (BackupCrypto.EncryptBytes, định dạng "TQFB") trước khi đưa lên Google Drive.
-    ///
-    /// Bên trong bản sao lưu là một file zip phẳng (mỗi file cá nhân một mục, không có thư mục) cùng một mục
-    /// "__tqltk__/manifest.json" ghi người xuất, thời điểm xuất, số file và tổng dung lượng.
-    ///
-    /// Giới hạn: tổng dung lượng kho không quá MaxTotalBytes, vì việc nén và mã hóa làm trong bộ nhớ.
-    /// Khôi phục không bao giờ ghi đè: file trùng tên và trùng nội dung thì bỏ qua,
-    /// trùng tên nhưng khác nội dung thì lưu thêm với hậu tố (1), (2)... như khi nhập file thủ công.
-    /// </summary>
+
+
+
+
+
+
+
+
+
+
+
+
+
     public static class FileBackupService
     {
-        /// <summary>Tổng dung lượng tối đa của kho file được sao lưu (100 MB).</summary>
+
         public const long MaxTotalBytes = 100L * 1024 * 1024;
 
         private const int CurrentFormatVersion = 1;
         private const string ManifestEntryName = "__tqltk__/manifest.json";
 
-        // Tên thiết bị đặc biệt của Windows (CON, NUL, COM1...) không được dùng làm tên file
+
         private static readonly Regex ReservedName =
             new(@"^(CON|PRN|AUX|NUL|COM[0-9]|LPT[0-9])(\..*)?$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
@@ -43,11 +43,11 @@ namespace PersonalInfoManager.Services
             public long TotalBytes { get; set; }
         }
 
-        // ============================================================
-        //  SAO LƯU
-        // ============================================================
 
-        /// <summary>Đếm số file và tổng dung lượng kho File cá nhân của người dùng.</summary>
+
+
+
+
         public static (int count, long bytes) Summarize(string username)
         {
             var files = new LocalFileService().ListFiles(username);
@@ -57,10 +57,10 @@ namespace PersonalInfoManager.Services
         public static string FormatSize(long bytes) =>
             bytes < 1024 * 1024 ? $"{bytes / 1024.0:0.#} KB" : $"{bytes / 1048576.0:0.#} MB";
 
-        /// <summary>
-        /// Nén toàn bộ kho File cá nhân của người dùng, mã hóa bằng cụm mật khẩu và ghi ra destPath.
-        /// Nặng về CPU và bộ nhớ, nên gọi từ luồng nền (Task.Run).
-        /// </summary>
+
+
+
+
         public static (bool ok, string message, int count, long bytes) CreateArchive(
             string username, string destPath, string passphrase)
         {
@@ -101,7 +101,7 @@ namespace PersonalInfoManager.Services
                             var entry = zip.CreateEntry(f.Name, CompressionLevel.Optimal);
                             if (f.LastWriteTime.Year is >= 1980 and <= 2107) entry.LastWriteTime = f.LastWriteTime;
 
-                            // FileShare.ReadWrite|Delete để không lỗi nếu file đang được app khác mở
+
                             using var src = new FileStream(
                                 f.FullName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
                             using var dst = entry.Open();
@@ -116,7 +116,7 @@ namespace PersonalInfoManager.Services
                     }
                     finally
                     {
-                        CryptographicOperations.ZeroMemory(buffer);   // xóa bản nén chưa mã hóa khỏi bộ nhớ (tốt nhất có thể)
+                        CryptographicOperations.ZeroMemory(buffer);
                     }
                 }
 
@@ -129,23 +129,23 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        // ============================================================
-        //  KHÔI PHỤC
-        // ============================================================
 
-        /// <summary>
-        /// Khôi phục các file trong một bản sao lưu vào kho File cá nhân của người dùng, không ghi đè file nào.
-        /// Nặng về CPU và đĩa, nên gọi từ luồng nền (Task.Run); các hàm gọi lại có thể được gọi từ luồng đó.
-        /// </summary>
-        /// <param name="passphrase">Cụm mật khẩu để thử trước. Bỏ trống thì dùng cụm đã lưu của người dùng.</param>
-        /// <param name="askPassphrase">
-        /// Gọi khi cụm hiện có không mở được file (tối đa 3 lần). Nhận thông báo lỗi của lần trước (hoặc null),
-        /// trả về cụm người dùng nhập, hoặc null nếu họ hủy.
-        /// </param>
-        /// <param name="confirmForeignOwner">
-        /// Gọi khi bản sao lưu ghi người xuất khác người dùng hiện tại. Trả true để vẫn khôi phục.
-        /// Bỏ trống thì từ chối bản sao lưu của người dùng khác.
-        /// </param>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         public static (bool ok, string message, int added, int skipped) RestoreFromFile(
             string username, string sourcePath, string? passphrase = null,
             Func<string?, string?>? askPassphrase = null,
@@ -160,7 +160,7 @@ namespace PersonalInfoManager.Services
                 if (!File.Exists(sourcePath))
                     return (false, "File không tồn tại.", 0, 0);
 
-                // Bản sao lưu hợp lệ không thể lớn hơn giới hạn cộng phần nén và mã hóa; chặn file lạ quá lớn
+
                 if (new FileInfo(sourcePath).Length > MaxTotalBytes + 16L * 1024 * 1024)
                     return (false, "File quá lớn so với một bản sao lưu File cá nhân của TQLTK.", 0, 0);
 
@@ -175,7 +175,7 @@ namespace PersonalInfoManager.Services
                 using var ms = new MemoryStream(zipBytes, writable: false);
                 using var zip = new ZipArchive(ms, ZipArchiveMode.Read);
 
-                // Bản sao lưu ghi người xuất khác người dùng hiện tại: chỉ khôi phục khi được xác nhận rõ ràng
+
                 string owner = ReadOwner(zip);
                 bool foreignOwner = owner.Length > 0 &&
                                     !string.Equals(owner, username, StringComparison.OrdinalIgnoreCase);
@@ -191,7 +191,7 @@ namespace PersonalInfoManager.Services
                 if (entries.Count == 0)
                     return (false, "Bản sao lưu không chứa file nào để khôi phục.", 0, 0);
 
-                // Chặn bản nén có dung lượng khai báo quá lớn (zip bomb)
+
                 if (entries.Sum(e => e.Length) > MaxTotalBytes)
                     return (false, "Bản sao lưu có dung lượng lớn bất thường nên bị từ chối.", 0, 0);
 
@@ -205,7 +205,7 @@ namespace PersonalInfoManager.Services
 
                 foreach (var entry in entries)
                 {
-                    // Mỗi mục có thư mục tạm riêng để tên file không bao giờ đụng nhau
+
                     string entryDir = Path.Combine(tempDir, (index++).ToString());
                     Directory.CreateDirectory(entryDir);
                     string tmp = Path.Combine(entryDir, entry.Name);
@@ -214,7 +214,7 @@ namespace PersonalInfoManager.Services
                     using (var dst = new FileStream(tmp, FileMode.CreateNew, FileAccess.Write, FileShare.None))
                         CopyBounded(src, dst, entry.Length);
 
-                    try { File.SetLastWriteTime(tmp, entry.LastWriteTime.LocalDateTime); } catch { /* không quan trọng */ }
+                    try { File.SetLastWriteTime(tmp, entry.LastWriteTime.LocalDateTime); } catch {   }
 
                     string existing = Path.Combine(userFolder, entry.Name);
                     if (File.Exists(existing) && SameContent(existing, tmp))
@@ -223,7 +223,7 @@ namespace PersonalInfoManager.Services
                         continue;
                     }
 
-                    // ImportFile tự thêm (1), (2)... nếu trùng tên nhưng khác nội dung, không ghi đè
+
                     fileService.ImportFile(username, tmp);
                     added++;
                 }
@@ -247,16 +247,16 @@ namespace PersonalInfoManager.Services
 
                 if (tempDir != null)
                 {
-                    try { Directory.Delete(tempDir, recursive: true); } catch { /* bỏ qua */ }
+                    try { Directory.Delete(tempDir, recursive: true); } catch {   }
                 }
             }
         }
 
-        // ============================================================
-        //  HÀM TRỢ GIÚP
-        // ============================================================
 
-        /// <summary>Thử cụm đã có, rồi hỏi người dùng tối đa 3 lần. Trả về null nếu không mở được.</summary>
+
+
+
+
         private static byte[]? DecryptWithPrompts(
             byte[] data, string username, string? passphrase, Func<string?, string?>? askPassphrase)
         {
@@ -313,10 +313,10 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        /// <summary>
-        /// Chỉ nhận mục là một file có tên phẳng hợp lệ (không thư mục, không đường dẫn, không ký tự cấm,
-        /// không tên thiết bị Windows). Mục manifest và mọi mục lạ đều bị loại, chống path traversal.
-        /// </summary>
+
+
+
+
         private static bool IsUserFileEntry(ZipArchiveEntry e)
         {
             string name = e.Name;

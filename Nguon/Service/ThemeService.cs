@@ -6,12 +6,12 @@ using System.Windows.Media;
 
 namespace PersonalInfoManager.Services
 {
-    /// <summary>
-    /// Quản lý theme Sáng/Tối cho toàn bộ ứng dụng.
-    /// - Tự động load theme đã lưu từ Registry khi khởi động.
-    /// - Tự động lưu theme vào Registry khi user thay đổi.
-    /// - Force refresh mọi Window đang mở khi đổi theme.
-    /// </summary>
+
+
+
+
+
+
     public static class ThemeService
     {
         private const string LightThemePath = "Themes/LightTheme.xaml";
@@ -19,7 +19,7 @@ namespace PersonalInfoManager.Services
 
         public static bool IsDarkMode { get; private set; } = false;
 
-        // ================== KHỞI TẠO ==================
+
 
         public static void Initialize()
         {
@@ -31,7 +31,7 @@ namespace PersonalInfoManager.Services
                 ApplyLight(save: false);
         }
 
-        // ================== CHUYỂN ĐỔI ==================
+
 
         public static void Toggle()
         {
@@ -55,7 +55,7 @@ namespace PersonalInfoManager.Services
             RefreshAllWindows();
         }
 
-        // ================== HÀM NỘI BỘ ==================
+
 
         private static void SwapTheme(string newThemePath)
         {
@@ -83,9 +83,9 @@ namespace PersonalInfoManager.Services
             dicts.Insert(0, newDict);
         }
 
-        /// <summary>
-        /// Force refresh TOÀN BỘ Window đang mở + tất cả control con.
-        /// </summary>
+
+
+
         private static void RefreshAllWindows()
         {
             try
@@ -98,30 +98,30 @@ namespace PersonalInfoManager.Services
             catch { }
         }
 
-        /// <summary>
-        /// Refresh 1 Window + tất cả control con.
-        /// </summary>
+
+
+
         private static void RefreshWindow(Window w)
         {
             try
             {
-                // Force re-apply DynamicResource
+
                 if (w is FrameworkElement fe)
                 {
-                    // Invalidate visual tree
+
                     fe.InvalidateVisual();
                     fe.UpdateLayout();
                 }
 
-                // Force redraw tất cả control con
+
                 foreach (var child in FindVisualChildren<FrameworkElement>(w))
                 {
                     try
                     {
-                        // Trigger resource change
+
                         child.InvalidateVisual();
 
-                        // Force update property trigger
+
                         if (child is System.Windows.Controls.Control ctrl)
                         {
                             ctrl.InvalidateProperty(System.Windows.Controls.Control.BackgroundProperty);
@@ -134,9 +134,9 @@ namespace PersonalInfoManager.Services
             catch { }
         }
 
-        /// <summary>
-        /// Tìm tất cả control con theo loại T trong visual tree.
-        /// </summary>
+
+
+
         private static IEnumerable<T> FindVisualChildren<T>(DependencyObject depObj)
             where T : DependencyObject
         {

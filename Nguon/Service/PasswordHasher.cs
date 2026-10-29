@@ -4,21 +4,21 @@ using System.Security.Cryptography;
 
 namespace PersonalInfoManager.Services
 {
-    /// <summary>
-    /// Hash mật khẩu bằng PBKDF2 (SHA256, 600.000 vòng lặp).
-    /// Định dạng lưu: iterations.salt.hash (Base64)
-    /// </summary>
+
+
+
+
     public static class PasswordHasher
     {
-        private const int SaltSize = 16;        // 128-bit
-        private const int HashSize = 32;        // 256-bit
+        private const int SaltSize = 16;
+        private const int HashSize = 32;
         private const int Iterations = 600_000;
         private const int MinAcceptedIterations = 100_000;
         private const int MaxAcceptedIterations = 1_000_000;
 
-        /// <summary>
-        /// Tạo hash từ mật khẩu plain text.
-        /// </summary>
+
+
+
         public static string Hash(string password)
         {
             byte[] salt = RandomNumberGenerator.GetBytes(SaltSize);
@@ -32,9 +32,9 @@ namespace PersonalInfoManager.Services
             return $"{Iterations}.{Convert.ToBase64String(salt)}.{Convert.ToBase64String(hash)}";
         }
 
-        /// <summary>
-        /// Kiểm tra mật khẩu có khớp với hash đã lưu không.
-        /// </summary>
+
+
+
         public static bool Verify(string password, string stored)
         {
             try
@@ -47,7 +47,7 @@ namespace PersonalInfoManager.Services
                 if (!int.TryParse(parts[0], NumberStyles.None, CultureInfo.InvariantCulture, out int iter))
                     return false;
 
-                // Reject corrupted/tampered parameters before running an expensive KDF.
+
                 if (iter < MinAcceptedIterations || iter > MaxAcceptedIterations)
                     return false;
 
@@ -63,7 +63,7 @@ namespace PersonalInfoManager.Services
                     hashAlgorithm: HashAlgorithmName.SHA256,
                     outputLength: HashSize);
 
-                // So sánh an toàn (chống timing attack)
+
                 return CryptographicOperations.FixedTimeEquals(actual, expected);
             }
             catch
@@ -72,7 +72,7 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        /// <summary>True khi hash hợp lệ đã dùng work factor thấp hơn cấu hình hiện tại.</summary>
+
         public static bool NeedsRehash(string stored)
         {
             if (string.IsNullOrWhiteSpace(stored)) return false;

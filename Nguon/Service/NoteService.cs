@@ -7,21 +7,21 @@ using PersonalInfoManager.Models;
 
 namespace PersonalInfoManager.Services
 {
-    /// <summary>
-    /// Quản lý ghi chú cá nhân.
-    /// Dữ liệu được mã hóa AES-GCM trước khi lưu xuống file. Ghi chú CBC cũ không được mở;
-    /// file gốc được giữ nguyên để không âm thầm chấp nhận dữ liệu chưa xác thực.
-    /// Vị trí: %AppData%\PersonalInfoManager\notes.json
-    /// </summary>
+
+
+
+
+
+
     public class NoteService
     {
         private readonly string _dataFile = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "PersonalInfoManager", "notes.json");
 
-        /// <summary>
-        /// Đọc danh sách ghi chú từ file (giải mã AES → JSON → List).
-        /// </summary>
+
+
+
         public List<Note> Load()
         {
             if (!File.Exists(_dataFile)) return new List<Note>();
@@ -60,9 +60,9 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        /// <summary>
-        /// Lưu danh sách ghi chú (JSON → mã hóa AES → file).
-        /// </summary>
+
+
+
         public void Save(List<Note> notes)
         {
             if (File.Exists(_dataFile))

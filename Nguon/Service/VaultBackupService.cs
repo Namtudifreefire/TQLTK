@@ -6,18 +6,18 @@ using PersonalInfoManager.Models;
 
 namespace PersonalInfoManager.Services
 {
-    /// <summary>
-    /// Xuất / Nhập toàn bộ vault (tài khoản đã lưu) của user.
-    /// File backup được mã hóa AES:
-    /// - Đã đặt cụm mật khẩu sao lưu của người dùng này: mã hóa bằng cụm đó (BackupCrypto, "v3p:"), mở được trên máy khác.
-    /// - Chưa đặt: mã hóa bằng khóa của máy (AesCrypto), chỉ mở được trên máy này.
-    /// Khi nhập, định dạng được nhận biết từ phần đầu file nên file cũ vẫn đọc được.
-    /// </summary>
+
+
+
+
+
+
+
     public static class VaultBackupService
     {
-        /// <summary>
-        /// Xuất vault ra file backup (đã mã hóa).
-        /// </summary>
+
+
+
         public static (bool ok, string message) ExportToFile(string username, string destPath)
         {
             try
@@ -67,19 +67,19 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        /// <summary>
-        /// true nếu file cần cụm mật khẩu để mở (định dạng "v3p:").
-        /// </summary>
+
+
+
         public static bool IsPassphraseProtected(string sourcePath)
         {
             try { return BackupCrypto.IsPassphraseFormat(File.ReadAllText(sourcePath)); }
             catch { return false; }
         }
 
-        /// <summary>
-        /// Kiểm tra file mở được bằng cụm mật khẩu này không (passphrase = null thì dùng cụm đã lưu của người dùng này).
-        /// File kiểu cũ không cần cụm nên trả về true.
-        /// </summary>
+
+
+
+
         public static bool PassphraseWorks(string username, string sourcePath, string? passphrase = null)
         {
             try
@@ -99,17 +99,17 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        /// <summary>
-        /// Nhập vault từ file backup.
-        /// </summary>
-        /// <param name="passphrase">
-        /// Cụm mật khẩu để mở file định dạng "v3p:". Bỏ trống thì dùng cụm đã lưu của người dùng này.
-        /// File kiểu cũ (khóa của máy) không dùng tham số này.
-        /// </param>
-        /// <param name="confirmForeignOwner">
-        /// Gọi khi file ghi người xuất (ExportedBy) khác người dùng hiện tại, nhận tên người xuất.
-        /// Trả true để vẫn nhập. Bỏ trống thì từ chối nhập file của người dùng khác.
-        /// </param>
+
+
+
+
+
+
+
+
+
+
+
         public static (bool ok, string message, int importedCount) ImportFromFile(
             string username, string sourcePath, string? passphrase = null,
             Func<string, bool>? confirmForeignOwner = null)
@@ -168,7 +168,7 @@ namespace PersonalInfoManager.Services
                 if (package?.Accounts == null || package.Accounts.Count == 0)
                     return (false, "File không chứa tài khoản nào.", 0);
 
-                // File ghi người xuất khác người dùng hiện tại: chỉ nhập khi được xác nhận rõ ràng
+
                 string owner = (package.ExportedBy ?? "").Trim();
                 bool foreignOwner = owner.Length > 0 &&
                                     !string.Equals(owner, username, StringComparison.OrdinalIgnoreCase);
@@ -225,9 +225,9 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        /// <summary>
-        /// Package dùng để đóng gói khi xuất/nhập.
-        /// </summary>
+
+
+
         private class VaultPackage
         {
             public DateTime ExportedAt { get; set; }

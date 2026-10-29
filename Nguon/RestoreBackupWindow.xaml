@@ -11,7 +11,7 @@
         Style="{StaticResource SlideInWindow}">
 
     <Window.Resources>
-        <!-- Nút chính của app, thêm trạng thái mờ khi bị khóa (RoundedButton chưa có) -->
+
         <Style x:Key="PrimaryButton" TargetType="Button"
                BasedOn="{StaticResource RoundedButton}">
             <Style.Triggers>

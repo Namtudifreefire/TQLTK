@@ -7,19 +7,19 @@ using PersonalInfoManager.Models;
 
 namespace PersonalInfoManager.Services
 {
-    /// <summary>
-    /// Dịch vụ Import/Export CSV cho tài khoản.
-    /// Hỗ trợ định dạng: TQLTK, Chrome, Bitwarden, LastPass, Generic.
-    /// </summary>
+
+
+
+
     public static class CsvService
     {
-        // ================================================================
-        // ================== EXPORT ==================
-        // ================================================================
 
-        /// <summary>
-        /// Xuất danh sách tài khoản ra file CSV.
-        /// </summary>
+
+
+
+
+
+
         public static (bool ok, string message) ExportToFile(
             List<SavedAccount> accounts, string filePath)
         {
@@ -27,10 +27,10 @@ namespace PersonalInfoManager.Services
             {
                 var sb = new StringBuilder();
 
-                // Header
+
                 sb.AppendLine("ServiceName,Username,Password,Note,CreatedAt,UpdatedAt");
 
-                // Rows
+
                 foreach (var acc in accounts)
                 {
                     sb.AppendLine(string.Join(",",
@@ -43,7 +43,7 @@ namespace PersonalInfoManager.Services
                     ));
                 }
 
-                // Ghi file với UTF-8 BOM (để Excel đọc đúng tiếng Việt)
+
                 File.WriteAllText(filePath, sb.ToString(), new UTF8Encoding(true));
 
                 return (true, $"Đã xuất {accounts.Count} tài khoản ra:\n{filePath}");
@@ -54,14 +54,14 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        /// <summary>
-        /// Escape 1 trường CSV theo chuẩn RFC 4180.
-        /// </summary>
+
+
+
         private static string EscapeCsv(string? value)
         {
             if (string.IsNullOrEmpty(value)) return "\"\"";
 
-            // Nếu có dấu phẩy, xuống dòng, hoặc dấu ngoặc kép → bọc trong ""
+
             if (value.Contains(',') || value.Contains('"') ||
                 value.Contains('\n') || value.Contains('\r'))
             {
@@ -71,14 +71,14 @@ namespace PersonalInfoManager.Services
             return value;
         }
 
-        // ================================================================
-        // ================== IMPORT ==================
-        // ================================================================
 
-        /// <summary>
-        /// Đọc file CSV và parse thành danh sách tài khoản.
-        /// Tự động phát hiện format: TQLTK, Chrome, Bitwarden, LastPass.
-        /// </summary>
+
+
+
+
+
+
+
         public static (bool ok, string message, List<SavedAccount> accounts)
             ImportFromFile(string filePath)
         {
@@ -87,21 +87,21 @@ namespace PersonalInfoManager.Services
                 if (!File.Exists(filePath))
                     return (false, "File không tồn tại.", new List<SavedAccount>());
 
-                // Đọc toàn bộ file
+
                 string content = File.ReadAllText(filePath, Encoding.UTF8);
                 var lines = ParseCsvLines(content);
 
                 if (lines.Count < 2)
                     return (false, "File CSV rỗng hoặc không có dữ liệu.", new List<SavedAccount>());
 
-                // Parse header
+
                 var header = lines[0].Select(h => h.Trim().ToLowerInvariant()).ToList();
                 var accounts = new List<SavedAccount>();
 
-                // Phát hiện format
+
                 string format = DetectFormat(header);
 
-                // Parse từng dòng
+
                 for (int i = 1; i < lines.Count; i++)
                 {
                     var row = lines[i];
@@ -114,7 +114,7 @@ namespace PersonalInfoManager.Services
                     }
                     catch
                     {
-                        // Bỏ qua dòng lỗi
+
                     }
                 }
 
@@ -129,35 +129,35 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        /// <summary>
-        /// Phát hiện format dựa trên header.
-        /// </summary>
+
+
+
         private static string DetectFormat(List<string> header)
         {
             var h = header.Select(x => x.Trim().ToLowerInvariant()).ToList();
 
-            // Bitwarden: folder, favorite, type, name, notes, fields, reprompt, login_uri, login_username, login_password, login_totp
+
             if (h.Contains("login_username") || h.Contains("login_password"))
                 return "Bitwarden";
 
-            // LastPass: url, username, password, extra, name, grouping, fav
+
             if (h.Contains("url") && h.Contains("grouping"))
                 return "LastPass";
 
-            // Chrome: name, url, username, password, note
+
             if (h.Contains("url") && h.Contains("name") && h.Contains("username") && h.Contains("password"))
                 return "Chrome";
 
-            // TQLTK: servicename, username, password, note, createdat, updatedat
+
             if (h.Contains("servicename"))
                 return "TQLTK";
 
             return "Generic";
         }
 
-        /// <summary>
-        /// Parse 1 dòng CSV thành SavedAccount.
-        /// </summary>
+
+
+
         private static SavedAccount? ParseRow(
             List<string> row, List<string> header, string format)
         {
@@ -205,8 +205,8 @@ namespace PersonalInfoManager.Services
                     note = Get("note");
                     break;
 
-                default: // Generic
-                    // Tự đoán: cột 1 = service, cột 2 = username, cột 3 = password
+                default:
+
                     serviceName = row.Count > 0 ? row[0].Trim() : "";
                     username = row.Count > 1 ? row[1].Trim() : "";
                     password = row.Count > 2 ? row[2].Trim() : "";
@@ -214,7 +214,7 @@ namespace PersonalInfoManager.Services
                     break;
             }
 
-            // Nếu không có gì → bỏ
+
             if (string.IsNullOrWhiteSpace(serviceName) &&
                 string.IsNullOrWhiteSpace(username) &&
                 string.IsNullOrWhiteSpace(password))
@@ -222,7 +222,7 @@ namespace PersonalInfoManager.Services
 
             return new SavedAccount
             {
-                Id = Guid.NewGuid(),              // ✅ Sửa: Guid, không phải string
+                Id = Guid.NewGuid(),
                 ServiceName = serviceName,
                 Username = username,
                 Password = password,
@@ -232,10 +232,10 @@ namespace PersonalInfoManager.Services
             };
         }
 
-        /// <summary>
-        /// Parse nội dung CSV thành danh sách các dòng, mỗi dòng là list các cột.
-        /// Hỗ trợ field có dấu ngoặc kép và xuống dòng bên trong.
-        /// </summary>
+
+
+
+
         private static List<List<string>> ParseCsvLines(string content)
         {
             var result = new List<List<string>>();
@@ -251,7 +251,7 @@ namespace PersonalInfoManager.Services
                 {
                     if (c == '"')
                     {
-                        // Kiểm tra nếu là "" (escape) thì thêm 1 dấu "
+
                         if (i + 1 < content.Length && content[i + 1] == '"')
                         {
                             currentField.Append('"');
@@ -280,9 +280,9 @@ namespace PersonalInfoManager.Services
                     }
                     else if (c == '\n' || c == '\r')
                     {
-                        // Kết thúc dòng
+
                         if (c == '\r' && i + 1 < content.Length && content[i + 1] == '\n')
-                            i++; // skip \n
+                            i++;
 
                         currentRow.Add(currentField.ToString());
                         currentField.Clear();
@@ -298,7 +298,7 @@ namespace PersonalInfoManager.Services
                 }
             }
 
-            // Dòng cuối cùng (nếu không kết thúc bằng \n)
+
             if (currentField.Length > 0 || currentRow.Count > 0)
             {
                 currentRow.Add(currentField.ToString());
@@ -309,13 +309,13 @@ namespace PersonalInfoManager.Services
             return result;
         }
 
-        // ================================================================
-        // ================== PREVIEW / MERGE ==================
-        // ================================================================
 
-        /// <summary>
-        /// Loại bỏ tài khoản trùng lặp (theo ServiceName + Username).
-        /// </summary>
+
+
+
+
+
+
         public static List<SavedAccount> RemoveDuplicates(
             List<SavedAccount> imported, List<SavedAccount> existing)
         {

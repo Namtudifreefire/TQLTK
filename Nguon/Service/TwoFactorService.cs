@@ -9,20 +9,20 @@ using System.Threading;
 
 namespace PersonalInfoManager.Services
 {
-    /// <summary>
-    /// Xác thực 2 bước bằng ứng dụng Authenticator (TOTP - RFC 6238).
-    /// Tương thích Google Authenticator, Microsoft Authenticator, Authy, 2FAS...
-    /// Secret được mã hóa bằng Windows DPAPI (gắn với tài khoản Windows hiện tại)
-    /// và lưu tại %AppData%\PersonalInfoManager\2fa\{user-id}.2fa. Named mutex khóa
-    /// mỗi tài khoản xuyên suốt các tiến trình để tránh dùng lại mã đồng thời.
-    /// </summary>
+
+
+
+
+
+
+
     public static class TwoFactorService
     {
         public const string Issuer = "TQLTK";
 
         private const int StepSeconds = 30;
-        private const int CodeModulus = 1_000_000;   // 6 chữ số
-        private const int AllowedDrift = 1;          // chấp nhận lệch ±1 bước (±30 giây)
+        private const int CodeModulus = 1_000_000;
+        private const int AllowedDrift = 1;
         private const int RecoveryCodeCount = 8;
         private const int MaxFailedVerificationAttempts = 5;
         private static readonly TimeSpan VerificationLockoutDuration = TimeSpan.FromMinutes(5);
@@ -43,11 +43,11 @@ namespace PersonalInfoManager.Services
             public long LockedUntilUnixSeconds { get; set; }
         }
 
-        /// <summary>
-        /// Serializes file-backed 2FA operations across processes and Windows sessions.
-        /// The exclusive lock file is keyed by the stable user ID and stored beside the
-        /// per-user 2FA file, so concurrent sessions sharing the same profile coordinate.
-        /// </summary>
+
+
+
+
+
         private static IDisposable AcquireCrossProcessLock(string username)
         {
             var user = new UserService().FindByUsername(username)
@@ -187,9 +187,9 @@ namespace PersonalInfoManager.Services
                 username, data, "Nhập mã 6 số từ Authenticator hoặc mã khôi phục (10 ký tự).");
         }
 
-        // ================================================================
-        // ================== TRẠNG THÁI ==================
-        // ================================================================
+
+
+
 
         public static bool IsEnabled(string username)
         {
@@ -201,12 +201,12 @@ namespace PersonalInfoManager.Services
                 var userService = new UserService();
                 var user = userService.FindByUsername(username);
 
-                // Orphaned legacy files still require 2FA; never let them silently disable it.
+
                 if (user == null) return fileExists;
                 if (user.TwoFactorEnabled) return true;
                 if (!fileExists) return false;
 
-                // Migrate existing installations that only had a .2fa file as their state.
+
                 try
                 {
                     if (!userService.SetTwoFactorEnabled(username, true))
@@ -238,14 +238,14 @@ namespace PersonalInfoManager.Services
                 _ = IsEnabled(username);
         }
 
-        // ================================================================
-        // ================== BẬT 2FA ==================
-        // ================================================================
 
-        /// <summary>Tạo secret ngẫu nhiên 160-bit, trả về dạng Base32.</summary>
+
+
+
+
         public static string GenerateSecret() => Base32Encode(RandomNumberGenerator.GetBytes(20));
 
-        /// <summary>Chuỗi otpauth:// để tạo mã QR cho app Authenticator.</summary>
+
         public static string BuildOtpAuthUri(string username, string secret)
         {
             string label = Uri.EscapeDataString($"{Issuer}:{username}");
@@ -253,7 +253,7 @@ namespace PersonalInfoManager.Services
             return $"otpauth://totp/{label}?secret={secret}&issuer={issuer}&algorithm=SHA1&digits=6&period={StepSeconds}";
         }
 
-        /// <summary>Hiển thị secret theo nhóm 4 ký tự cho dễ nhập tay.</summary>
+
         public static string FormatSecret(string secret)
         {
             var sb = new StringBuilder();
@@ -265,10 +265,10 @@ namespace PersonalInfoManager.Services
             return sb.ToString();
         }
 
-        /// <summary>
-        /// Kiểm tra mã người dùng nhập khớp với secret vừa tạo, nếu đúng thì lưu lại
-        /// và sinh mã khôi phục (chỉ trả về MỘT LẦN, trong file chỉ lưu bản băm).
-        /// </summary>
+
+
+
+
         public static (bool ok, string message, List<string> recoveryCodes) Enable(string username, string secret, string code)
         {
             lock (ValidationSync)
@@ -303,8 +303,8 @@ namespace PersonalInfoManager.Services
                 }
                 catch (Exception ex)
                 {
-                    // Try to roll back a partial enrollment. If either operation fails, the
-                    // persisted enabled flag or the remaining file keeps authentication closed.
+
+
                     try { File.Delete(path); } catch { }
                     try { userService.SetTwoFactorEnabled(username, false); } catch { }
                     return (false, $"Không lưu được cấu hình 2FA: {ex.Message}", new List<string>());
@@ -314,17 +314,17 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        // ================================================================
-        // ================== XÁC THỰC (ĐĂNG NHẬP) ==================
-        // ================================================================
 
-        /// <summary>
-        /// Chấp nhận mã 6 số từ Authenticator HOẶC một mã khôi phục (dùng 1 lần).
-        /// Mỗi mã TOTP chỉ dùng được 1 lần (chống dùng lại).
-        /// </summary>
+
+
+
+
+
+
+
         public static (bool ok, string message) Validate(string username, string input)
         {
-            // Serialize validation so two concurrent requests cannot both consume the same code.
+
             lock (ValidationSync)
             {
                 using var processLock = AcquireCrossProcessLock(username);
@@ -332,11 +332,11 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        // ================================================================
-        // ================== TẮT 2FA ==================
-        // ================================================================
 
-        /// <summary>Tắt 2FA — bắt buộc nhập đúng mã hiện tại (hoặc mã khôi phục).</summary>
+
+
+
+
         public static (bool ok, string message) Disable(string username, string input)
         {
             lock (ValidationSync)
@@ -362,11 +362,11 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        // ================================================================
-        // ================== TẠO LẠI MÃ KHÔI PHỤC ==================
-        // ================================================================
 
-        /// <summary>Số mã khôi phục còn lại (chưa dùng). Trả về -1 nếu không đọc được dữ liệu.</summary>
+
+
+
+
         public static int GetRecoveryCodeCount(string username)
         {
             lock (ValidationSync)
@@ -377,11 +377,11 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        /// <summary>
-        /// Bước 1: kiểm tra mã 6 số HIỆN TẠI từ Authenticator (KHÔNG nhận mã khôi phục),
-        /// rồi sinh 8 mã mới. CHƯA lưu và CHƯA vô hiệu hóa mã cũ: chỉ khi người dùng
-        /// xác nhận đã lưu mã mới thì mới gọi CommitRecoveryCodes.
-        /// </summary>
+
+
+
+
+
         public static (bool ok, string message, List<string> recoveryCodes) PrepareRecoveryCodes(string username, string input)
         {
             lock (ValidationSync)
@@ -405,7 +405,7 @@ namespace PersonalInfoManager.Services
                         username, data, "Mã không đúng hoặc đã được dùng. Hãy đợi mã mới (tối đa 30 giây) rồi nhập lại.").message,
                         new List<string>());
 
-                // Ghi nhận mã TOTP đã dùng (chống dùng lại). Không tiếp tục nếu không lưu được.
+
                 data.LastUsedStep = matchedStep;
                 ResetFailedVerificationState(data);
                 try { Save(username, data); }
@@ -418,9 +418,9 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        /// <summary>
-        /// Bước 2: lưu bộ mã mới (trong file chỉ lưu bản băm) và vô hiệu hóa TOÀN BỘ mã cũ.
-        /// </summary>
+
+
+
         public static (bool ok, string message) CommitRecoveryCodes(string username, List<string> newCodes)
         {
             lock (ValidationSync)
@@ -442,9 +442,9 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        // ================================================================
-        // ================== TOTP / HOTP ==================
-        // ================================================================
+
+
+
 
         private static long CurrentStep() => DateTimeOffset.UtcNow.ToUnixTimeSeconds() / StepSeconds;
 
@@ -492,9 +492,9 @@ namespace PersonalInfoManager.Services
             return (binary % CodeModulus).ToString("D6");
         }
 
-        // ================================================================
-        // ================== MÃ KHÔI PHỤC ==================
-        // ================================================================
+
+
+
 
         private static List<string> GenerateRecoveryCodes()
         {
@@ -506,7 +506,7 @@ namespace PersonalInfoManager.Services
                     chars[j] = Base32Alphabet[RandomNumberGenerator.GetInt32(Base32Alphabet.Length)];
 
                 string raw = new string(chars);
-                list.Add($"{raw.Substring(0, 5)}-{raw.Substring(5)}"); // dạng XXXXX-XXXXX
+                list.Add($"{raw.Substring(0, 5)}-{raw.Substring(5)}");
             }
             return list;
         }
@@ -524,9 +524,9 @@ namespace PersonalInfoManager.Services
         private static string NormalizeCode(string? input) =>
             (input ?? "").Replace(" ", "").Replace("-", "").Trim().ToUpperInvariant();
 
-        // ================================================================
-        // ================== BASE32 ==================
-        // ================================================================
+
+
+
 
         private static string Base32Encode(byte[] data)
         {
@@ -574,9 +574,9 @@ namespace PersonalInfoManager.Services
             return bytes.ToArray();
         }
 
-        // ================================================================
-        // ================== LƯU TRỮ (DPAPI) ==================
-        // ================================================================
+
+
+
 
         private static string GetPath(string username)
         {

@@ -8,11 +8,11 @@ using Google.Apis.Util.Store;
 
 namespace PersonalInfoManager.Services
 {
-    /// <summary>
-    /// IDataStore that encrypts OAuth token files with Windows DPAPI for the current Windows user.
-    /// This protects tokens at rest from simple file disclosure to other Windows accounts.
-    /// It does not protect against malware running as the same Windows user.
-    /// </summary>
+
+
+
+
+
     public sealed class DpapiDataStore : IDataStore
     {
         private static readonly byte[] Entropy = Encoding.UTF8.GetBytes("TQLTK.GoogleTokens.v1");

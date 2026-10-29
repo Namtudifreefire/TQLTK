@@ -13,8 +13,8 @@ namespace PersonalInfoManager
         private readonly string _username;
         private readonly string _secret;
 
-        private bool _enabled;   // đã lưu 2FA thành công
-        private bool _finished;  // đã bấm "hoàn tất" ở bước mã khôi phục
+        private bool _enabled;
+        private bool _finished;
 
         public TwoFactorSetupWindow(string username)
         {
@@ -29,9 +29,9 @@ namespace PersonalInfoManager
             Loaded += (_, _) => txtCode.Focus();
         }
 
-        // ================================================================
-        // ================== QR CODE ==================
-        // ================================================================
+
+
+
 
         private static BitmapImage BuildQr(string content)
         {
@@ -51,9 +51,9 @@ namespace PersonalInfoManager
             return bmp;
         }
 
-        // ================================================================
-        // ================== BƯỚC 1 ==================
-        // ================================================================
+
+
+
 
         private void BtnCopySecret_Click(object sender, RoutedEventArgs e)
         {
@@ -83,9 +83,9 @@ namespace PersonalInfoManager
             pnlStep2.Visibility = Visibility.Visible;
         }
 
-        // ================================================================
-        // ================== BƯỚC 2 ==================
-        // ================================================================
+
+
+
 
         private void BtnCopyRecovery_Click(object sender, RoutedEventArgs e)
         {
@@ -101,7 +101,7 @@ namespace PersonalInfoManager
             DialogResult = true;
         }
 
-        // Chặn đóng nhầm khi chưa lưu mã khôi phục
+
         protected override void OnClosing(CancelEventArgs e)
         {
             if (_enabled && !_finished)

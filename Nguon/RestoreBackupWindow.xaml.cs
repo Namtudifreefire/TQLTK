@@ -5,20 +5,20 @@ using PersonalInfoManager.Services;
 
 namespace PersonalInfoManager
 {
-    /// <summary>
-    /// Cửa sổ liệt kê các bản sao lưu trên Google Drive và cho người dùng chọn một bản.
-    /// Mặc định chỉ hiện bản của người dùng đang đăng nhập (và bản cũ chưa có nhãn, với loại Vault);
-    /// tick ô dưới danh sách để hiện thêm bản của người dùng khác.
-    /// Cửa sổ này chỉ CHỌN, không tự khôi phục: sau ShowDialog() == true, đọc thuộc tính Selected,
-    /// tải về bằng CloudSyncService.DownloadBackupAsync rồi đưa vào app bằng VaultBackupService.ImportFromFile
-    /// (loại Vault) hoặc FileBackupService.RestoreFromFile (loại Files).
-    /// </summary>
+
+
+
+
+
+
+
+
     public partial class RestoreBackupWindow : Window
     {
         private readonly CloudSyncService _cloud;
         private readonly BackupKind _kind;
 
-        /// <summary>Bản sao lưu người dùng đã chọn (null nếu hủy).</summary>
+
         public BackupInfo? Selected { get; private set; }
 
         public RestoreBackupWindow(CloudSyncService cloud, BackupKind kind = BackupKind.Vault)
@@ -107,7 +107,7 @@ namespace PersonalInfoManager
 
         private void DgBackups_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
-            // Chỉ nhận nhấp đúp trên một dòng, không nhận khi nhấp đúp vào tiêu đề cột
+
             if (e.OriginalSource is DependencyObject source &&
                 ItemsControl.ContainerFromElement(dgBackups, source) is DataGridRow)
             {

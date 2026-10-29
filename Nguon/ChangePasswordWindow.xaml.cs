@@ -11,15 +11,15 @@ namespace PersonalInfoManager
         private readonly UserService _userService = new();
         private readonly bool _forced;
 
-        /// <summary>true nếu người dùng đã đổi mật khẩu thành công trong cửa sổ này.</summary>
+
         public bool Changed { get; private set; }
 
         public ChangePasswordWindow() : this(false) { }
 
-        /// <param name="forced">
-        /// true: mở khi đăng nhập vì tài khoản đang dùng mật khẩu mặc định / vừa được admin reset.
-        /// Người gọi (LoginWindow) kiểm tra thuộc tính Changed sau ShowDialog() để quyết định có cho vào app không.
-        /// </param>
+
+
+
+
         public ChangePasswordWindow(bool forced)
         {
             InitializeComponent();
@@ -36,7 +36,7 @@ namespace PersonalInfoManager
             Loaded += (_, _) => txtOldPwd.Focus();
         }
 
-        // ================== ĐÁNH GIÁ ĐỘ MẠNH ==================
+
 
         private void TxtNewPwd_PasswordChanged(object sender, RoutedEventArgs e)
         {
@@ -92,7 +92,7 @@ namespace PersonalInfoManager
             return score;
         }
 
-        // ================== XÁC NHẬN ĐỔI ==================
+
 
         private void BtnOk_Click(object sender, RoutedEventArgs e)
         {
@@ -102,7 +102,7 @@ namespace PersonalInfoManager
 
             lblStatus.Text = "";
 
-            // Validate
+
             if (string.IsNullOrWhiteSpace(oldPwd) ||
                 string.IsNullOrWhiteSpace(newPwd))
             {
@@ -137,7 +137,7 @@ namespace PersonalInfoManager
                 return;
             }
 
-            // Gọi service
+
             var result = _userService.ChangePassword(username, oldPwd, newPwd);
 
             if (result.ok)

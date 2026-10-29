@@ -12,9 +12,9 @@ namespace PersonalInfoManager
         private readonly SavedAccount? _existing;
         private bool _showPwd = false;
 
-        /// <summary>
-        /// Kết quả sau khi user bấm Lưu.
-        /// </summary>
+
+
+
         public SavedAccount Result { get; private set; } = new();
 
         public EditAccountWindow(SavedAccount? existing)
@@ -35,7 +35,7 @@ namespace PersonalInfoManager
             Loaded += (_, _) => txtService.Focus();
         }
 
-        // ================== TOGGLE HIỆN MẬT KHẨU ==================
+
 
         private void BtnTogglePwd_Click(object sender, RoutedEventArgs e)
         {
@@ -56,7 +56,7 @@ namespace PersonalInfoManager
             }
         }
 
-        // ================== SINH MẬT KHẨU MẠNH ==================
+
 
         private void BtnGeneratePwd_Click(object sender, RoutedEventArgs e)
         {
@@ -71,10 +71,10 @@ namespace PersonalInfoManager
             lblPwdStrength.Foreground = Brushes.Green;
         }
 
-        /// <summary>
-        /// Sinh mật khẩu bằng bộ sinh số ngẫu nhiên mật mã học (RandomNumberGenerator),
-        /// không dùng System.Random vì có thể đoán được. Trộn bằng Fisher–Yates.
-        /// </summary>
+
+
+
+
         private static string GenerateStrongPassword(int length)
         {
             const string upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
@@ -85,7 +85,7 @@ namespace PersonalInfoManager
             string all = upper + lower + digits + special;
             var chars = new List<char>(length);
 
-            // Đảm bảo có ít nhất 1 ký tự mỗi loại
+
             chars.Add(Pick(upper));
             chars.Add(Pick(lower));
             chars.Add(Pick(digits));
@@ -94,7 +94,7 @@ namespace PersonalInfoManager
             for (int i = 4; i < length; i++)
                 chars.Add(Pick(all));
 
-            // Trộn (Fisher–Yates) để 4 ký tự bắt buộc không luôn nằm đầu chuỗi
+
             for (int i = chars.Count - 1; i > 0; i--)
             {
                 int j = RandomNumberGenerator.GetInt32(i + 1);
@@ -106,7 +106,7 @@ namespace PersonalInfoManager
 
         private static char Pick(string set) => set[RandomNumberGenerator.GetInt32(set.Length)];
 
-        // ================== LƯU ==================
+
 
         private void BtnSave_Click(object sender, RoutedEventArgs e)
         {
@@ -139,7 +139,7 @@ namespace PersonalInfoManager
 
             if (_existing != null)
             {
-                // Sửa
+
                 Result = new SavedAccount
                 {
                     Id = _existing.Id,
@@ -153,7 +153,7 @@ namespace PersonalInfoManager
             }
             else
             {
-                // Thêm mới
+
                 Result = new SavedAccount
                 {
                     ServiceName = service,

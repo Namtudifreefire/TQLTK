@@ -11,25 +11,25 @@ using PersonalInfoManager.Models;
 
 namespace PersonalInfoManager.Services
 {
-    /// <summary>
-    /// Ném ra khi users.json tồn tại nhưng không đọc được và cũng không có bản .bak dùng được.
-    /// App không tự tạo admin mặc định trong trường hợp này, để không ghi đè dữ liệu cũ.
-    /// </summary>
+
+
+
+
     public class UsersFileUnreadableException : Exception
     {
         public UsersFileUnreadableException(string message, Exception? inner = null)
             : base(message, inner) { }
     }
 
-    /// <summary>
-    /// Quản lý tài khoản người dùng.
-    /// Dữ liệu lưu tại %AppData%\PersonalInfoManager\users.json, được bảo vệ bằng Windows DPAPI CurrentUser.
-    /// File JSON cũ được đọc tương thích và tự mã hóa lại khi nạp.
-    ///
-    /// Mỗi lần gọi, danh sách được ĐỌC LẠI từ file (nhiều cửa sổ cùng tạo UserService riêng,
-    /// nếu giữ danh sách cũ trong bộ nhớ thì lần Save sau sẽ ghi đè mất thay đổi của cửa sổ khác).
-    /// Ghi file qua file tạm, có bản .bak của lần ghi trước.
-    /// </summary>
+
+
+
+
+
+
+
+
+
     public class UserService
     {
         private static readonly object Sync = new();
@@ -41,7 +41,7 @@ namespace PersonalInfoManager.Services
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "PersonalInfoManager", "users.json");
 
-        // Chỉ giữ để nhận diện tài khoản cũ đã được tạo bằng thông tin mặc định.
+
         private const string LegacyDefaultAdminPassword = "admin123";
 
         private bool RequireAdmin(out string message)
@@ -107,10 +107,10 @@ namespace PersonalInfoManager.Services
             return false;
         }
 
-        /// <summary>Sai mật khẩu bấy nhiêu lần liên tiếp thì bị khóa tạm.</summary>
+
         public const int MaxFailedAttempts = 5;
 
-        /// <summary>Thời gian khóa tạm.</summary>
+
         public static readonly TimeSpan LockoutDuration = TimeSpan.FromMinutes(5);
 
         private List<User> _users = new();
@@ -123,9 +123,9 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        // ================================================================
-        // ================== NẠP / LƯU FILE ==================
-        // ================================================================
+
+
+
 
         private void Reload()
         {
@@ -137,11 +137,11 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        /// <summary>
-        /// Đọc file chính; hỏng thì thử .bak; cả hai đều hỏng thì ném lỗi (không trả danh sách rỗng).
-        /// File chưa tồn tại → danh sách rỗng (lần chạy đầu).
-        /// Lỗi I/O (file đang bị khóa...) được ném ra ngoài, không coi là file hỏng.
-        /// </summary>
+
+
+
+
+
         private List<User> ReadUsers(out bool needsProtection)
         {
             needsProtection = false;
@@ -157,12 +157,12 @@ namespace PersonalInfoManager.Services
             var bak = TryParse(_usersFile + ".bak", out _);
             if (bak != null)
             {
-                // Rebuild the main file from the validated backup using the protected format.
+
                 needsProtection = true;
                 return bak;
             }
 
-            // Giữ lại bản hỏng để có thể cứu bằng tay
+
             try
             {
                 File.Copy(_usersFile,
@@ -215,7 +215,7 @@ namespace PersonalInfoManager.Services
                 }
                 else
                 {
-                    // Existing installations store plain JSON. Load it once, then migrate on Reload.
+
                     json = stored;
                     needsProtection = true;
                 }
@@ -241,16 +241,16 @@ namespace PersonalInfoManager.Services
                     var previous = TryParse(_usersFile, out _);
                     if (previous != null)
                     {
-                        // Keep a protected copy of the previous valid contents, including during migration.
+
                         WriteProtectedUsersFile(_usersFile + ".bak", previous);
                     }
                     else
                     {
-                        // File hiện tại hỏng → giữ riêng một bản, không đè lên .bak tốt
+
                         File.Copy(_usersFile,
                             _usersFile + ".corrupt-" + DateTime.Now.ToString("yyyyMMddHHmmssfff") + "-" + Guid.NewGuid().ToString("N"),
                             overwrite: true);
-                        // The in-memory list came from the validated backup or a deliberate recovery.
+
                         WriteProtectedUsersFile(_usersFile + ".bak", _users);
                     }
                 }
@@ -282,9 +282,9 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        // ================================================================
-        // ================== TRUY VẤN ==================
-        // ================================================================
+
+
+
 
         private User? FindByUsernameCore(string username)
             => _users.FirstOrDefault(u =>
@@ -384,9 +384,9 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        // ================================================================
-        // ================== VALIDATE ==================
-        // ================================================================
+
+
+
 
         private static bool IsValidEmail(string email)
         {
@@ -471,9 +471,9 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        // ================================================================
-        // ================== TẠO TÀI KHOẢN ==================
-        // ================================================================
+
+
+
 
         public (bool ok, string message) CreateUser(
             string username, string password, UserRole role)
@@ -481,10 +481,10 @@ namespace PersonalInfoManager.Services
             return CreateUserFull(username, password, role, username, "", "");
         }
 
-        /// <summary>
-        /// Creates the first account as administrator, using credentials chosen by the user.
-        /// The empty user list check and save are protected by the same process-wide lock.
-        /// </summary>
+
+
+
+
         public (bool ok, string message) CreateInitialAdmin(
             string username, string password, string fullName, string email, string phone)
         {
@@ -580,16 +580,16 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        // ================================================================
-        // ================== ĐĂNG NHẬP ==================
-        // ================================================================
 
-        /// <summary>
-        /// Kiểm tra tên đăng nhập + mật khẩu.
-        /// Sai MaxFailedAttempts lần liên tiếp thì khóa tạm LockoutDuration (lưu trong users.json,
-        /// nên tắt mở lại app không xóa được). Bộ đếm được tuần tự hóa giữa các tiến trình.
-        /// Mật khẩu mặc định đã phát hành trong bản cũ bị từ chối để không thể chiếm tài khoản.
-        /// </summary>
+
+
+
+
+
+
+
+
+
         public (bool ok, string message, User? user) Authenticate(
             string username, string password)
         {
@@ -618,7 +618,7 @@ namespace PersonalInfoManager.Services
                 if (!user.IsActive)
                     return (false, "Tài khoản đã bị khóa.", null);
 
-                // Còn trong thời gian khóa tạm
+
                 if (user.LockedUntil is { } until)
                 {
                     if (until > DateTime.Now)
@@ -629,7 +629,7 @@ namespace PersonalInfoManager.Services
                             null);
                     }
 
-                    // Hết hạn khóa → cho thử lại từ đầu
+
                     user.LockedUntil = null;
                     user.FailedLoginCount = 0;
                 }
@@ -655,8 +655,8 @@ namespace PersonalInfoManager.Services
                         null);
                 }
 
-                // This credential was shipped in older builds and is public knowledge.
-                // Do not let it authenticate an old account and then replace its password.
+
+
                 if (IsDefaultPassword(password))
                     return (false,
                         "Mật khẩu mặc định cũ đã bị vô hiệu hóa. Hãy dùng Windows Hello nếu đã bật " +
@@ -673,11 +673,11 @@ namespace PersonalInfoManager.Services
                 user.FailedLoginCount = 0;
                 user.LockedUntil = null;
 
-                // Upgrade legacy hashes at the next successful sign-in without invalidating them.
+
                 if (PasswordHasher.NeedsRehash(user.PasswordHash))
                     user.PasswordHash = PasswordHasher.Hash(password);
 
-                // Existing short passwords remain usable once, then must meet the current policy.
+
                 if (password.Length < MinimumPasswordLength(user.TwoFactorEnabled))
                     user.MustChangePassword = true;
 
@@ -687,9 +687,9 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        // ================================================================
-        // ================== ĐỔI MẬT KHẨU ==================
-        // ================================================================
+
+
+
 
         public (bool ok, string message) ChangePassword(
             string username, string oldPwd, string newPwd)
@@ -726,10 +726,10 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        /// <summary>
-        /// Admin đặt lại mật khẩu cho user. Người dùng phải đổi lại ở lần đăng nhập tới
-        /// (vì admin đã biết mật khẩu này). Muốn bỏ ràng buộc, xóa dòng MustChangePassword = true.
-        /// </summary>
+
+
+
+
         public (bool ok, string message) ResetPassword(Guid userId, string newPassword)
         {
             lock (Sync)
@@ -756,9 +756,9 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        // ================================================================
-        // ================== CẬP NHẬT PROFILE ==================
-        // ================================================================
+
+
+
 
         public (bool ok, string message) UpdateProfile(
             Guid userId, string fullName, string email, string phone)
@@ -826,11 +826,11 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        // ================================================================
-        // ================== KHÓA / MỞ ==================
-        // ================================================================
 
-        /// <summary>Mở tài khoản (active = true) cũng xóa luôn khóa tạm do nhập sai mật khẩu.</summary>
+
+
+
+
         public void SetActive(Guid userId, bool active)
         {
             lock (Sync)
@@ -851,14 +851,14 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        // ================================================================
-        // ================== XÓA ==================
-        // ================================================================
 
-        /// <summary>
-        /// Chỉ xóa dòng người dùng. Dữ liệu của họ (vault, file cá nhân, 2FA...) do
-        /// UserDataCleaner xử lý riêng, sau khi quản trị viên đồng ý.
-        /// </summary>
+
+
+
+
+
+
+
         public (bool ok, string message) DeleteUser(Guid userId, Guid currentUserId)
         {
             lock (Sync)
@@ -883,14 +883,14 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        // ================================================================
-        // ================== PHÂN QUYỀN ==================
-        // ================================================================
 
-        /// <summary>
-        /// Đổi vai trò. Không thu quyền được admin cuối cùng (trả về ok = false kèm lý do,
-        /// để giao diện báo cho người dùng và không ghi nhật ký "đã đổi").
-        /// </summary>
+
+
+
+
+
+
+
         public (bool ok, string message) SetRole(Guid userId, UserRole role)
         {
             lock (Sync)
@@ -913,9 +913,9 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        // ================================================================
-        // ================== THỐNG KÊ ==================
-        // ================================================================
+
+
+
 
         public int CountAdmins() { lock (Sync) { Reload(); return _users.Count(u => u.Role == UserRole.Admin); } }
         public int CountUsers() { lock (Sync) { Reload(); return _users.Count(u => u.Role == UserRole.User); } }
@@ -946,13 +946,13 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        // ================================================================
-        // ================== WINDOWS HELLO ==================
-        // ================================================================
 
-        /// <summary>
-        /// Bật/tắt tính năng đăng nhập bằng Windows Hello cho user.
-        /// </summary>
+
+
+
+
+
+
         public (bool ok, string message) SetWindowsHello(
             Guid userId, bool enabled, string sid)
         {
@@ -982,9 +982,9 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        /// <summary>
-        /// Tìm user đã bật Windows Hello và khớp SID tài khoản Windows hiện tại.
-        /// </summary>
+
+
+
         public User? FindByWindowsHelloSid(string sid)
         {
             if (string.IsNullOrWhiteSpace(sid)) return null;
@@ -1002,9 +1002,9 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        /// <summary>
-        /// Lấy danh sách user đã bật Windows Hello.
-        /// </summary>
+
+
+
         public List<User> GetWindowsHelloUsers()
         {
             lock (Sync)

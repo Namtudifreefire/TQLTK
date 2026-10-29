@@ -11,7 +11,7 @@
 
     <Grid Margin="24">
 
-        <!-- ================== BƯỚC 1: QUÉT QR + XÁC NHẬN ================== -->
+
         <StackPanel x:Name="pnlStep1">
 
             <TextBlock Text="🔑 Bật xác thực 2 bước"
@@ -98,7 +98,7 @@
             </StackPanel>
         </StackPanel>
 
-        <!-- ================== BƯỚC 2: MÃ KHÔI PHỤC ================== -->
+
         <StackPanel x:Name="pnlStep2" Visibility="Collapsed">
 
             <TextBlock Text="✅ Đã bật xác thực 2 bước"

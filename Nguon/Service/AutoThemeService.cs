@@ -4,23 +4,23 @@ using System.Windows.Threading;
 
 namespace PersonalInfoManager.Services
 {
-    /// <summary>
-    /// Tự động đổi theme Sáng/Tối theo giờ.
-    /// Đồng bộ trên TẤT CẢ window: Main, Admin, Login, Register, ChangePassword, EditAccount.
-    /// </summary>
+
+
+
+
     public static class AutoThemeService
     {
         public static bool IsEnabled { get; private set; } = false;
 
         private static DispatcherTimer? _timer;
 
-        /// <summary>Giờ bắt đầu dùng Light theme (mặc định 6h).</summary>
+
         public static int LightStartHour { get; set; } = 6;
 
-        /// <summary>Giờ bắt đầu dùng Dark theme (mặc định 18h).</summary>
+
         public static int DarkStartHour { get; set; } = 18;
 
-        // ================== KHỞI ĐỘNG / DỪNG ==================
+
 
         public static void Start()
         {
@@ -44,7 +44,7 @@ namespace PersonalInfoManager.Services
             _timer = null;
         }
 
-        // ================== ÁP DỤNG THEO GIỜ ==================
+
 
         private static void ApplyCurrentThemeByTime()
         {
@@ -53,7 +53,7 @@ namespace PersonalInfoManager.Services
             int hour = DateTime.Now.Hour;
             bool shouldBeLight = hour >= LightStartHour && hour < DarkStartHour;
 
-            // Chỉ áp dụng khi theme thay đổi → tránh refresh liên tục
+
             if (shouldBeLight && ThemeService.IsDarkMode)
             {
                 ThemeService.ApplyLight(save: false);
@@ -66,9 +66,9 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        /// <summary>
-        /// Ghi log khi auto theme đổi.
-        /// </summary>
+
+
+
         private static void LogAutoSwitch(string themeName)
         {
             try

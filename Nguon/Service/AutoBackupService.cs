@@ -6,45 +6,45 @@ using Microsoft.Win32;
 
 namespace PersonalInfoManager.Services
 {
-    /// <summary>
-    /// Sao lưu vault tự động ra một thư mục trên máy (mặc định Documents\TQLTK Backup), và theo dõi
-    /// "lần sao lưu gần nhất" để hiện trên thanh trạng thái và nhắc khi quá lâu chưa sao lưu.
-    ///
-    /// - Bản sao lưu chính là file xuất của VaultBackupService.ExportToFile (mã hóa bằng cụm mật khẩu sao lưu
-    ///   nếu người dùng đã đặt, nếu chưa thì bằng khóa của máy và chỉ mở được trên máy này).
-    ///   Khôi phục: Tiện ích → Nhập vault (Restore) rồi chọn file trong thư mục sao lưu.
-    /// - Tên file: vault_auto_{nhãn người dùng}_{yyyyMMdd_HHmmss}.vault; mỗi người dùng chỉ giữ KeepCount bản gần nhất.
-    /// - Ghi qua file .tmp rồi đổi tên, nên tiến trình bị tắt giữa chừng không để lại file sao lưu hỏng.
-    /// - "Cần sao lưu" = file vault được ghi SAU lần sao lưu gần nhất.
-    /// - "Lần sao lưu gần nhất" = mốc mới hơn giữa (bản trong thư mục) và (mốc ghi nhận qua RecordBackup,
-    ///   dùng cho xuất vault thủ công và đồng bộ Drive).
-    /// - Cài đặt và mốc thời gian lưu ở Registry (HKCU\Software\TQLTK), riêng từng người dùng.
-    ///   "Reset cài đặt" xóa luôn các giá trị này: lúc đó quay về mặc định (bật, thư mục mặc định).
-    /// </summary>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     public static class AutoBackupService
     {
-        private const string AppKey = @"Software\TQLTK";   // phải khớp RegistryService.AppKey
+        private const string AppKey = @"Software\TQLTK";
         private const string FilePrefix = "vault_auto_";
         private const string FileExt = ".vault";
 
-        /// <summary>Số bản sao lưu tự động gần nhất được giữ lại cho mỗi người dùng.</summary>
+
         public const int KeepCount = 7;
 
-        /// <summary>Quá bấy nhiêu ngày chưa sao lưu (mà dữ liệu đã đổi) thì nhắc khi đăng nhập.</summary>
+
         public const int RemindAfterDays = 7;
 
-        // ================================================================
-        // ================== CÀI ĐẶT ==================
-        // ================================================================
 
-        /// <summary>Tự sao lưu khi thoát. Mặc định: bật.</summary>
+
+
+
+
         public static bool IsEnabled(string username) =>
             ReadValue("AutoBackupEnabled_" + Tag(username)) != "0";
 
         public static void SetEnabled(string username, bool enabled) =>
             WriteValue("AutoBackupEnabled_" + Tag(username), enabled ? "1" : "0");
 
-        /// <summary>Thư mục sao lưu của người dùng (mặc định: Documents\TQLTK Backup).</summary>
+
         public static string GetFolder(string username)
         {
             string? saved = ReadValue("AutoBackupFolder_" + Tag(username));
@@ -59,10 +59,10 @@ namespace PersonalInfoManager.Services
             return Path.Combine(docs, "TQLTK Backup");
         }
 
-        /// <summary>
-        /// Đặt thư mục sao lưu sau khi thử tạo thư mục và ghi thử một file.
-        /// Trả về null nếu thành công, hoặc thông báo lỗi (khi đó không đổi gì).
-        /// </summary>
+
+
+
+
         public static string? TrySetFolder(string username, string folder)
         {
             try
@@ -84,14 +84,14 @@ namespace PersonalInfoManager.Services
             return null;
         }
 
-        // ================================================================
-        // ================== SAO LƯU ==================
-        // ================================================================
 
-        /// <summary>
-        /// Sao lưu vault của người dùng ngay bây giờ (không kiểm tra có thay đổi hay không).
-        /// Nặng về CPU một chút (mã hóa bằng cụm mật khẩu), nên gọi từ luồng nền nếu có thể.
-        /// </summary>
+
+
+
+
+
+
+
         public static (bool ok, string message, string? path) BackupNow(string username, string reason = "Thủ công")
         {
             try
@@ -101,7 +101,7 @@ namespace PersonalInfoManager.Services
 
                 string prefix = $"{FilePrefix}{Tag(username)}_";
 
-                // File .tmp sót lại từ lần bị tắt giữa chừng
+
                 foreach (var stray in Directory.GetFiles(folder, prefix + "*" + FileExt + ".tmp"))
                 {
                     try { File.Delete(stray); } catch { }
@@ -119,7 +119,7 @@ namespace PersonalInfoManager.Services
 
                 File.Move(tmpPath, finalPath, overwrite: true);
 
-                // Chỉ giữ KeepCount bản gần nhất của người dùng này (tên có dấu thời gian nên xếp theo tên là xếp theo ngày)
+
                 var old = Directory.GetFiles(folder, prefix + "*" + FileExt)
                     .OrderByDescending(f => Path.GetFileName(f), StringComparer.Ordinal)
                     .Skip(KeepCount);
@@ -141,10 +141,10 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        /// <summary>
-        /// Chạy khi thoát / đăng xuất / tự khóa: sao lưu nếu đang bật, có tài khoản và dữ liệu đã đổi
-        /// kể từ lần sao lưu gần nhất. Không bao giờ ném lỗi (lỗi chỉ được ghi vào nhật ký).
-        /// </summary>
+
+
+
+
         public static void RunOnExit(string username)
         {
             try
@@ -165,25 +165,25 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        /// <summary>
-        /// Ghi nhận vừa có một bản sao lưu ở nơi khác (xuất vault thủ công, đồng bộ Drive)
-        /// để thanh trạng thái và lời nhắc tính cả các bản đó.
-        /// </summary>
+
+
+
+
         public static void RecordBackup(string username) =>
             WriteValue("LastBackupUtc_" + Tag(username), DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture));
 
-        // ================================================================
-        // ================== TRẠNG THÁI / NHẮC ==================
-        // ================================================================
 
-        /// <summary>Thời điểm (UTC) của lần sao lưu gần nhất, null nếu chưa từng.</summary>
+
+
+
+
         public static DateTime? GetLastBackupUtc(string username)
         {
             DateTime? recorded = ParseUtc(ReadValue("LastBackupUtc_" + Tag(username)));
             return Max(recorded, NewestBackupFileUtc(username));
         }
 
-        /// <summary>true nếu file vault được ghi sau lần sao lưu gần nhất (hoặc chưa từng sao lưu).</summary>
+
         public static bool NeedsBackup(string username)
         {
             DateTime? vault = new AccountVaultService().GetLastWriteUtc(username);
@@ -193,7 +193,7 @@ namespace PersonalInfoManager.Services
             return last == null || vault.Value > last.Value;
         }
 
-        /// <summary>Dòng hiển thị trên thanh trạng thái, và có nên tô màu cảnh báo không.</summary>
+
         public static (string text, bool warn) GetStatusLine(string username)
         {
             try
@@ -225,10 +225,10 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        /// <summary>
-        /// Nội dung nhắc sao lưu, hoặc null nếu chưa cần nhắc. Chỉ nhắc khi dữ liệu đã đổi kể từ lần sao lưu
-        /// gần nhất VÀ (đã quá RemindAfterDays ngày, hoặc chưa từng sao lưu mà tính năng tự sao lưu đang tắt).
-        /// </summary>
+
+
+
+
         public static string? GetReminder(string username)
         {
             try
@@ -240,7 +240,7 @@ namespace PersonalInfoManager.Services
                 if (last == null)
                 {
                     return IsEnabled(username)
-                        ? null   // sẽ tự sao lưu ở lần thoát tới
+                        ? null
                         : "Bạn chưa từng sao lưu dữ liệu, và tính năng tự sao lưu khi thoát đang tắt.";
                 }
 
@@ -257,13 +257,13 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        // ================================================================
-        // ================== NỘI BỘ ==================
-        // ================================================================
+
+
+
 
         private static string Tag(string username) => BackupCrypto.UserTag(username);
 
-        /// <summary>Số tài khoản trong vault; -1 nếu không đọc được.</summary>
+
         private static int CountAccounts(string username)
         {
             try { return new AccountVaultService().Count(username); }

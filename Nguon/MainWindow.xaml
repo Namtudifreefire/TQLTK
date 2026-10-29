@@ -9,7 +9,7 @@
 
     <Window.Resources>
 
-        <!-- ============ MỤC ĐIỀU HƯỚNG (sidebar chính + danh sách trong Cài đặt) ============ -->
+
         <Style x:Key="NavItem" TargetType="RadioButton">
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
             <Setter Property="FontFamily" Value="Segoe UI" />
@@ -47,7 +47,7 @@
             </Setter>
         </Style>
 
-        <!-- Nhãn nhóm trong danh sách Cài đặt -->
+
         <Style x:Key="NavGroup" TargetType="TextBlock">
             <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
             <Setter Property="FontFamily" Value="Segoe UI" />
@@ -55,7 +55,7 @@
             <Setter Property="Margin" Value="12,14,0,6" />
         </Style>
 
-        <!-- Nút icon vuông (ẩn / hiện sidebar, đóng Cài đặt) -->
+
         <Style x:Key="IconButton" TargetType="Button">
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
             <Setter Property="FontFamily" Value="Segoe MDL2 Assets" />
@@ -86,7 +86,7 @@
             </Setter>
         </Style>
 
-        <!-- ============ Ô NGƯỜI DÙNG Ở CHÂN SIDEBAR (bấm để mở menu) ============ -->
+
         <Style x:Key="UserChip" TargetType="Button">
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="FocusVisualStyle" Value="{x:Null}" />
@@ -110,7 +110,7 @@
             </Setter>
         </Style>
 
-        <!-- Một dòng trong menu người dùng -->
+
         <Style x:Key="UserMenuItem" TargetType="Button">
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="FocusVisualStyle" Value="{x:Null}" />
@@ -134,7 +134,7 @@
             </Setter>
         </Style>
 
-        <!-- ============ NỘI DUNG TRANG ============ -->
+
         <Style x:Key="PageTitle" TargetType="TextBlock">
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
             <Setter Property="FontFamily" Value="Segoe UI" />
@@ -151,7 +151,7 @@
             <Setter Property="Margin" Value="0,0,0,10" />
         </Style>
 
-        <!-- Một hàng cài đặt: tên và mô tả bên trái, nút hoặc trạng thái bên phải, kẻ mờ phía dưới -->
+
         <Style x:Key="SettingRow" TargetType="Border">
             <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
             <Setter Property="BorderThickness" Value="0,0,0,1" />
@@ -195,12 +195,12 @@
 
     </Window.Resources>
 
-    <!-- Lớp ngoài cùng: giao diện chính + lớp phủ Cài đặt nằm đè lên trên -->
+
     <Grid>
 
         <DockPanel x:Name="shellMain">
 
-            <!-- ================== STATUS BAR ================== -->
+
             <StatusBar DockPanel.Dock="Bottom">
                 <StatusBarItem>
                     <TextBlock x:Name="lblTheme"
@@ -211,7 +211,7 @@
                 </StatusBarItem>
             </StatusBar>
 
-            <!-- ================== THANH TRÊN CÙNG: NÚT ẨN / HIỆN SIDEBAR + TÊN APP ================== -->
+
             <Border DockPanel.Dock="Top" Padding="12,8,16,2">
                 <StackPanel Orientation="Horizontal">
                     <Button x:Name="btnToggleSidebar"
@@ -233,13 +233,13 @@
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
-                <!-- ======================================================== -->
-                <!-- ================== SIDEBAR TRÁI ======================== -->
-                <!-- ======================================================== -->
+
+
+
                 <Border x:Name="panelSidebar" Grid.Column="0" Width="250" ClipToBounds="True">
                     <DockPanel Width="226" HorizontalAlignment="Left" Margin="14,6,10,10">
 
-                        <!-- Chân sidebar: ô người dùng, bấm để mở menu (Cài đặt, Đăng xuất, Thoát) -->
+
                         <StackPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
                             <Button x:Name="btnUser"
                                     Style="{StaticResource UserChip}"
@@ -288,7 +288,7 @@
                                 </Grid>
                             </Button>
 
-                            <!-- Menu người dùng: mở lên phía trên ô người dùng -->
+
                             <Popup x:Name="popUserMenu"
                                    PlacementTarget="{Binding ElementName=btnUser}"
                                    Placement="Top"
@@ -344,7 +344,7 @@
                             </Popup>
                         </StackPanel>
 
-                        <!-- Hai mục chính -->
+
                         <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                             <StackPanel Margin="0,10,0,0">
                                 <RadioButton x:Name="navAccounts" GroupName="Nav" Tag="accounts" Content="🔐  Tài khoản"
@@ -356,16 +356,16 @@
                     </DockPanel>
                 </Border>
 
-                <!-- ======================================================== -->
-                <!-- ================== NỘI DUNG PHẢI ======================= -->
-                <!-- ======================================================== -->
+
+
+
                 <Border Grid.Column="1"
                         Background="{DynamicResource SurfaceBrush}"
                         BorderBrush="{DynamicResource BorderBrush}"
                         BorderThickness="1,0,0,0">
                     <Grid>
 
-                        <!-- ============ TRANG: TÀI KHOẢN ============ -->
+
                         <Grid x:Name="pageAccounts" Margin="24,20" Visibility="Collapsed">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
@@ -496,7 +496,7 @@
                             </Border>
                         </Grid>
 
-                        <!-- ============ TRANG: TÀI LIỆU (File cá nhân) ============ -->
+
                         <Grid x:Name="pageFiles" Margin="24,20" Visibility="Collapsed">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
@@ -569,12 +569,12 @@
             </Grid>
         </DockPanel>
 
-        <!-- ================================================================== -->
-        <!-- ============ LỚP PHỦ CÀI ĐẶT (mở từ menu người dùng) ============== -->
-        <!-- ================================================================== -->
+
+
+
         <Grid x:Name="settingsOverlay" Visibility="Collapsed">
 
-            <!-- Nền mờ: bấm vào để đóng -->
+
             <Border Background="#99000000" MouseLeftButtonDown="SettingsScrim_MouseDown" />
 
             <Border MaxWidth="960" MaxHeight="660" Margin="40"
@@ -592,7 +592,7 @@
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
 
-                    <!-- Tiêu đề + nút đóng -->
+
                     <Grid Grid.Row="0" Margin="24,12,12,10">
                         <TextBlock Text="Cài đặt" FontSize="18" FontWeight="Bold" Margin="0" VerticalAlignment="Center" />
                         <Button x:Name="btnCloseSettings"
@@ -610,7 +610,7 @@
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
 
-                        <!-- ============ DANH SÁCH BÊN TRÁI: tìm kiếm + các nhóm ============ -->
+
                         <Border Grid.Column="0"
                                 Background="{DynamicResource BackgroundBrush}"
                                 BorderBrush="{DynamicResource BorderBrush}"
@@ -678,10 +678,10 @@
                             </DockPanel>
                         </Border>
 
-                        <!-- ============ NỘI DUNG BÊN PHẢI: mỗi mục một trang, chỉ một trang hiện ============ -->
+
                         <Grid Grid.Column="1">
 
-                            <!-- ============ TRANG: THÔNG TIN CÁ NHÂN ============ -->
+
                             <ScrollViewer x:Name="pageProfile" Visibility="Collapsed"
                                           VerticalScrollBarVisibility="Auto" PanningMode="VerticalOnly">
                                 <StackPanel Margin="28,8,28,24">
@@ -706,7 +706,7 @@
                                     <TextBlock Text="Ngày tạo tài khoản:" FontWeight="SemiBold" Margin="0,0,0,5" />
                                     <TextBlock x:Name="lblProfileCreatedAt" FontSize="13" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,10" />
 
-                                    <!-- Windows Hello -->
+
                                     <Border Style="{StaticResource SettingRow}" BorderThickness="0,1,0,1" Margin="0,10,0,0">
                                         <DockPanel>
                                             <Button x:Name="btnToggleWindowsHello"
@@ -737,7 +737,7 @@
                                 </StackPanel>
                             </ScrollViewer>
 
-                            <!-- ============ TRANG: BẢO MẬT ============ -->
+
                             <ScrollViewer x:Name="pageSecurity" Visibility="Collapsed"
                                           VerticalScrollBarVisibility="Auto" PanningMode="VerticalOnly">
                                 <StackPanel Margin="28,8,28,24">
@@ -787,7 +787,7 @@
                                 </StackPanel>
                             </ScrollViewer>
 
-                            <!-- ============ TRANG: GIAO DIỆN ============ -->
+
                             <ScrollViewer x:Name="pageAppearance" Visibility="Collapsed"
                                           VerticalScrollBarVisibility="Auto" PanningMode="VerticalOnly">
                                 <StackPanel Margin="28,8,28,24">
@@ -827,7 +827,7 @@
                                 </StackPanel>
                             </ScrollViewer>
 
-                            <!-- ============ TRANG: XUẤT / NHẬP DỮ LIỆU ============ -->
+
                             <ScrollViewer x:Name="pageBackup" Visibility="Collapsed"
                                           VerticalScrollBarVisibility="Auto" PanningMode="VerticalOnly">
                                 <StackPanel Margin="28,8,28,24">
@@ -876,7 +876,7 @@
                                 </StackPanel>
                             </ScrollViewer>
 
-                            <!-- ============ TRANG: GOOGLE DRIVE ============ -->
+
                             <ScrollViewer x:Name="pageDrive" Visibility="Collapsed"
                                           VerticalScrollBarVisibility="Auto" PanningMode="VerticalOnly">
                                 <StackPanel Margin="28,8,28,24">
@@ -935,7 +935,7 @@
                                 </StackPanel>
                             </ScrollViewer>
 
-                            <!-- ============ TRANG: HỆ THỐNG ============ -->
+
                             <ScrollViewer x:Name="pageSystem" Visibility="Collapsed"
                                           VerticalScrollBarVisibility="Auto" PanningMode="VerticalOnly">
                                 <StackPanel Margin="28,8,28,24">
@@ -966,7 +966,7 @@
                                 </StackPanel>
                             </ScrollViewer>
 
-                            <!-- ============ TRANG: QUẢN TRỊ (chỉ Admin) ============ -->
+
                             <ScrollViewer x:Name="pageAdmin" Visibility="Collapsed"
                                           VerticalScrollBarVisibility="Auto" PanningMode="VerticalOnly">
                                 <StackPanel Margin="28,8,28,24">

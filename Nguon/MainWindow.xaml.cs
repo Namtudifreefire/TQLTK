@@ -13,36 +13,36 @@ using PersonalInfoManager.Services;
 
 namespace PersonalInfoManager
 {
-    // Phần khung (điều hướng, ô người dùng, hộp thoại Cài đặt) nằm ở MainWindow.Shell.cs
+
     public partial class MainWindow : Window
     {
-        // ================== SERVICES ==================
+
         private readonly AccountVaultService _vaultService = new();
         private readonly LocalFileService _fileService = new();
         private readonly UserService _userService = new();
 
-        // ================== STATE ==================
+
         private List<SavedAccount> _accounts = new();
         private bool _showPassword = false;
 
-        // ================== TỰ KHÓA / TỰ ẨN MK / NHỚ XÁC THỰC ==================
-        private const int AutoLockMinutes = 5;            // không thao tác bao lâu thì tự khóa
-        private const int AutoHidePasswordSeconds = 30;   // mật khẩu đang hiện tự ẩn lại sau bao lâu
-        private const int AuthRememberSeconds = 60;       // nhớ xác thực bao lâu (Hiện MK / Copy Password / Sửa)
+
+        private const int AutoLockMinutes = 5;
+        private const int AutoHidePasswordSeconds = 30;
+        private const int AuthRememberSeconds = 60;
 
         private readonly DispatcherTimer _idleTimer = new() { Interval = TimeSpan.FromSeconds(5) };
         private readonly DispatcherTimer _hidePasswordTimer = new() { Interval = TimeSpan.FromSeconds(AutoHidePasswordSeconds) };
 
-        // Debounce ô tìm kiếm: chỉ lọc khi người dùng ngừng gõ một chút, không lọc sau từng phím
+
         private readonly DispatcherTimer _searchTimer = new() { Interval = TimeSpan.FromMilliseconds(250) };
         private DateTime _lastActivity = DateTime.UtcNow;
         private DateTime _lastAuthTime = DateTime.MinValue;
         private bool _isLocked = false;
 
-        // ================== DEBOUNCE TIMER ==================
+
         private readonly DispatcherTimer _saveStateTimer;
 
-        // ================== CONSTRUCTOR ==================
+
         public MainWindow()
         {
             InitializeComponent();
@@ -81,7 +81,7 @@ namespace PersonalInfoManager
                 if (SessionService.IsLoggedIn) RefreshAccounts(updateStatus: false);
             };
 
-            // Ctrl+B: ẩn / hiện thanh bên
+
             PreviewKeyDown += (_, e) =>
             {
                 if (e.Key == Key.B && Keyboard.Modifiers == ModifierKeys.Control)
@@ -97,9 +97,9 @@ namespace PersonalInfoManager
             SizeChanged += MainWindow_SizeChanged;
         }
 
-        // ================================================================
-        // ================== KHỞI ĐỘNG ==================
-        // ================================================================
+
+
+
 
         private void MainWindow_Loaded(object? sender, RoutedEventArgs e)
         {
@@ -115,7 +115,7 @@ namespace PersonalInfoManager
 
             BuildPages();
 
-            // Mục "Quản trị" trong Cài đặt chỉ hiện với Admin
+
             navAdmin.Visibility = SessionService.IsAdmin ? Visibility.Visible : Visibility.Collapsed;
 
             UpdateUserChip();
@@ -130,12 +130,12 @@ namespace PersonalInfoManager
             Update2FAMenu();
             StartAutoLock();
 
-            navAccounts.IsChecked = true;   // trang mặc định
+            navAccounts.IsChecked = true;
         }
 
-        // ================================================================
-        // ================== ẨN / HIỆN SIDEBAR ==================
-        // ================================================================
+
+
+
 
         private const double SidebarWidth = 250;
         private bool _sidebarVisible = true;
@@ -157,7 +157,7 @@ namespace PersonalInfoManager
 
             anim.Completed += (_, _) =>
             {
-                // Bấm liên tiếp: chỉ áp dụng kết quả của lần bấm mới nhất
+
                 if (_sidebarVisible != show) return;
 
                 panelSidebar.BeginAnimation(WidthProperty, null);
@@ -168,18 +168,18 @@ namespace PersonalInfoManager
             panelSidebar.BeginAnimation(WidthProperty, anim);
         }
 
-        // Nút "Mở" ở hàng Windows Hello trong trang Bảo mật
+
         private void GoProfile_Click(object sender, RoutedEventArgs e) => navProfile.IsChecked = true;
 
-        // ================================================================
-        // ================== NHỚ VỊ TRÍ + KÍCH THƯỚC ==================
-        // ================================================================
+
+
+
 
         private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
         {
             StopAutoLock();
-            try { ClipboardGuard.ClearNow(); } catch { }   // đăng xuất / tự khóa / thoát: xóa mật khẩu còn trong clipboard
-            try { AccountVaultService.ClearCache(); } catch { }   // và xóa danh sách đã giải mã khỏi bộ nhớ
+            try { ClipboardGuard.ClearNow(); } catch { }
+            try { AccountVaultService.ClearCache(); } catch { }
             SaveWindowState();
         }
 
@@ -217,15 +217,15 @@ namespace PersonalInfoManager
             catch { }
         }
 
-        // ================================================================
-        // ================== TỰ KHÓA / TỰ ẨN MK / NHỚ XÁC THỰC ==================
-        // ================================================================
+
+
+
 
         private void StartAutoLock()
         {
             _lastActivity = DateTime.UtcNow;
             InputManager.Current.PreProcessInput += OnPreProcessInput;
-            SystemEvents.SessionSwitch += OnSessionSwitch;   // sự kiện static: BẮT BUỘC gỡ ở StopAutoLock
+            SystemEvents.SessionSwitch += OnSessionSwitch;
             _idleTimer.Start();
         }
 
@@ -235,10 +235,10 @@ namespace PersonalInfoManager
             try { SystemEvents.SessionSwitch -= OnSessionSwitch; } catch { }
             _idleTimer.Stop();
             _hidePasswordTimer.Stop();
-            _searchTimer.Stop();   // tránh timer chạy sau khi đã đăng xuất (CurrentUser = null)
+            _searchTimer.Stop();
         }
 
-        // Mọi thao tác chuột / bàn phím trong app đều làm mới thời điểm hoạt động
+
         private void OnPreProcessInput(object sender, PreProcessInputEventArgs e)
         {
             var input = e.StagingItem.Input;
@@ -246,8 +246,8 @@ namespace PersonalInfoManager
                 _lastActivity = DateTime.UtcNow;
         }
 
-        // Windows khóa (Win+L) hoặc phiên bị ngắt kết nối: khóa app ngay.
-        // Sự kiện này chạy ở luồng khác, nên phải chuyển về luồng giao diện trước khi khóa.
+
+
         private void OnSessionSwitch(object sender, SessionSwitchEventArgs e)
         {
             if (e.Reason is SessionSwitchReason.SessionLock
@@ -269,7 +269,7 @@ namespace PersonalInfoManager
                 LockNow();
         }
 
-        // Khóa = đăng xuất và quay về màn hình đăng nhập
+
         private void LockNow(string? reason = null)
         {
             if (_isLocked) return;
@@ -279,7 +279,7 @@ namespace PersonalInfoManager
             StopAutoLock();
             try { ActivityLogger.Log(username, "AUTO_LOCK", reason ?? $"Không hoạt động {AutoLockMinutes} phút"); } catch { }
 
-            // Các cửa sổ con đang mở (Thêm/Sửa tài khoản, nhập mã 2FA...) cũng phải đóng để không lộ dữ liệu
+
             var others = Application.Current.Windows.Cast<Window>()
                 .Where(w => w != this && w.IsVisible).ToList();
 
@@ -293,7 +293,7 @@ namespace PersonalInfoManager
             Close();
         }
 
-        // ----- Tự ẩn mật khẩu -----
+
         private void RefreshAccountsKeepSelection()
         {
             var selectedId = GetSelectedAccount()?.Id;
@@ -315,7 +315,7 @@ namespace PersonalInfoManager
         {
             _showPassword = true;
             _hidePasswordTimer.Stop();
-            _hidePasswordTimer.Start();   // đếm lại AutoHidePasswordSeconds giây
+            _hidePasswordTimer.Start();
             RefreshAccountsKeepSelection();
         }
 
@@ -327,15 +327,15 @@ namespace PersonalInfoManager
             RefreshAccountsKeepSelection();
         }
 
-        // ----- Nhớ xác thực -----
+
         private bool IsAuthFresh() =>
             _lastAuthTime != DateTime.MinValue &&
             (DateTime.UtcNow - _lastAuthTime).TotalSeconds < AuthRememberSeconds;
 
         private void MarkAuthenticated() => _lastAuthTime = DateTime.UtcNow;
 
-        // Xác thực trước khi làm việc nhạy cảm: nhớ xác thực → Windows Hello → (dự phòng) 2FA.
-        // Trả về false nếu bị từ chối / hủy / app đã tự khóa. Đã tự hiện thông báo và ghi log.
+
+
         private async Task<bool> RequireAuthAsync(string actionText, string deniedLogCode)
         {
             string username = SessionService.CurrentUser!.Username;
@@ -372,12 +372,12 @@ namespace PersonalInfoManager
             return false;
         }
 
-        // ================================================================
-        // ================== TAB TÀI KHOẢN ==================
-        // ================================================================
 
-        // updateStatus = false khi chỉ lọc theo từ khóa: thanh trạng thái hiển thị tổng số tài khoản
-        // và dung lượng file, không đổi khi lọc nên khỏi tính lại (đỡ quét thư mục mỗi lần).
+
+
+
+
+
         private void RefreshAccounts(bool updateStatus = true)
         {
             string user = SessionService.CurrentUser!.Username;
@@ -397,13 +397,13 @@ namespace PersonalInfoManager
                 _original = a
             }).ToList();
 
-            // Gán thẳng danh sách mới (bỏ bước đặt null trước, đỡ một lần xóa và dựng lại bảng)
+
             dgAccounts.ItemsSource = viewList;
 
             if (updateStatus) UpdateStorageInfo();
         }
 
-        // Mỗi phím gõ chỉ đặt lại đồng hồ; việc lọc chạy một lần khi ngừng gõ ~250 ms
+
         private void TxtSearch_TextChanged(object? sender, TextChangedEventArgs e)
         {
             _searchTimer.Stop();
@@ -412,15 +412,15 @@ namespace PersonalInfoManager
 
         private void BtnRefreshAccounts_Click(object? sender, RoutedEventArgs e)
         {
-            txtSearch.Clear();        // có thể làm timer tìm kiếm khởi động
-            _searchTimer.Stop();      // hủy để khỏi làm mới lần thứ hai
+            txtSearch.Clear();
+            _searchTimer.Stop();
             RefreshAccounts();
         }
 
-        // ✅ Hiện MK: BẮT BUỘC xác thực Windows Hello. Ẩn lại thì không cần.
+
         private async void BtnToggleShow_Click(object? sender, RoutedEventArgs e)
         {
-            // Đang hiện -> chỉ cần ẩn lại
+
             if (_showPassword)
             {
                 HidePasswordNow();
@@ -428,13 +428,13 @@ namespace PersonalInfoManager
             }
 
             var btn = sender as Button;
-            if (btn != null) btn.IsEnabled = false; // tránh bấm liên tục khi đang chờ xác thực
+            if (btn != null) btn.IsEnabled = false;
 
             try
             {
                 string username = SessionService.CurrentUser!.Username;
 
-                // Vừa xác thực trong AuthRememberSeconds giây qua -> không hỏi lại
+
                 if (IsAuthFresh())
                 {
                     ShowPasswordNow();
@@ -453,7 +453,7 @@ namespace PersonalInfoManager
                 }
 
                 bool verified = await WindowsHelloService.VerifyAsync(this, "Xác nhận để hiện mật khẩu");
-                if (_isLocked) return; // app đã tự khóa trong lúc chờ xác thực
+                if (_isLocked) return;
                 if (!verified)
                 {
                     try { ActivityLogger.Log(username, "SHOW_PASSWORD_DENIED", "Xác thực Windows Hello thất bại"); } catch { }
@@ -490,15 +490,15 @@ namespace PersonalInfoManager
             }
         }
 
-        // ✅ Sửa: cửa sổ Sửa nạp sẵn mật khẩu và có nút 👁, nên BẮT BUỘC xác thực trước khi mở
-        //    (nếu không thì xem/copy được mật khẩu mà không qua Windows Hello).
+
+
         private async void BtnEditAccount_Click(object? sender, RoutedEventArgs e)
         {
             var selected = GetSelectedAccount();
             if (selected == null) { MessageBox.Show("Chọn một tài khoản để sửa."); return; }
 
             var btn = sender as Button;
-            if (btn != null) btn.IsEnabled = false; // tránh bấm liên tục khi đang chờ xác thực
+            if (btn != null) btn.IsEnabled = false;
 
             bool authorized = false;
             try
@@ -567,7 +567,7 @@ namespace PersonalInfoManager
             if (selected == null) return;
 
             var btn = sender as Button;
-            if (btn != null) btn.IsEnabled = false; // tránh bấm liên tục khi đang chờ xác thực
+            if (btn != null) btn.IsEnabled = false;
 
             try
             {
@@ -575,14 +575,14 @@ namespace PersonalInfoManager
                 string method = "";
                 bool ok = false;
 
-                // ----- Đã xác thực gần đây -> không hỏi lại -----
+
                 if (IsAuthFresh())
                 {
                     ok = true;
                     method = $"nhớ xác thực ≤{AuthRememberSeconds}s";
                 }
 
-                // ----- Trường hợp 1: Windows Hello -----
+
                 if (!ok)
                 {
                     bool helloAvailable = false;
@@ -591,15 +591,15 @@ namespace PersonalInfoManager
                     if (helloAvailable)
                     {
                         try { ok = await WindowsHelloService.VerifyAsync(this, "Xác nhận để copy mật khẩu"); } catch { ok = false; }
-                        if (_isLocked) return; // app đã tự khóa trong lúc chờ
+                        if (_isLocked) return;
                         if (ok) { method = "Windows Hello"; MarkAuthenticated(); }
                     }
                 }
 
-                // ----- Trường hợp 2: Windows Hello thất bại -> xác thực 2 bước -----
+
                 if (!ok)
                 {
-                    // Chưa bật 2FA thì không có cách dự phòng -> từ chối (không để lọt)
+
                     if (!TwoFactorService.IsEnabled(username))
                     {
                         try { ActivityLogger.Log(username, "COPY_PASSWORD_DENIED", "Windows Hello thất bại, chưa bật 2FA"); } catch { }
@@ -611,7 +611,7 @@ namespace PersonalInfoManager
                     }
 
                     ok = TwoFactorPromptWindow.AskIfEnabled(this, username);
-                    if (_isLocked) return; // app đã tự khóa và đóng cửa sổ nhập mã
+                    if (_isLocked) return;
                     if (ok) { method = "2FA"; MarkAuthenticated(); }
                 }
 
@@ -654,9 +654,9 @@ namespace PersonalInfoManager
             return prop?.GetValue(item) as SavedAccount;
         }
 
-        // ================================================================
-        // ================== TAB FILE ==================
-        // ================================================================
+
+
+
 
         private void RefreshFiles()
         {
@@ -724,9 +724,9 @@ namespace PersonalInfoManager
 
         private void BtnRefreshFiles_Click(object? sender, RoutedEventArgs e) => RefreshFiles();
 
-        // ================================================================
-        // ================== TAB PROFILE ==================
-        // ================================================================
+
+
+
 
         private void LoadProfile()
         {
@@ -776,9 +776,9 @@ namespace PersonalInfoManager
             else { MessageBox.Show(result.message, "Lỗi"); }
         }
 
-        // ================================================================
-        // ================== WINDOWS HELLO ==================
-        // ================================================================
+
+
+
 
         private async void BtnToggleWindowsHello_Click(object sender, RoutedEventArgs e)
         {
@@ -833,11 +833,11 @@ namespace PersonalInfoManager
             finally { btnToggleWindowsHello.IsEnabled = true; }
         }
 
-        // ================================================================
-        // ================== TRẠNG THÁI TRÊN CÀI ĐẶT ==================
-        // ================================================================
 
-        // Dùng chung cho hàng 2FA và hàng Tự động đổi theme: "● Đang bật" (xanh) / "○ Đang tắt" (xám theo theme)
+
+
+
+
         private static void SetCardState(TextBlock label, bool on)
         {
             label.Text = on ? "● Đang bật" : "○ Đang tắt";
@@ -858,11 +858,11 @@ namespace PersonalInfoManager
             try { SetCardState(lblAutoThemeState, AutoThemeService.IsEnabled); } catch { }
         }
 
-        // ================================================================
-        // ================== XÁC THỰC 2 BƯỚC (AUTHENTICATOR) ==================
-        // ================================================================
 
-        // Cập nhật hàng "Bật/Tắt 2FA" và hiện/ẩn hàng "Tạo lại mã khôi phục"
+
+
+
+
         private void Update2FAMenu()
         {
             try
@@ -873,14 +873,14 @@ namespace PersonalInfoManager
                 lbl2FATitle.Text = enabled ? "Tắt xác thực 2 bước" : "Bật xác thực 2 bước";
                 SetCardState(lbl2FAState, enabled);
 
-                // Chỉ hiện "Tạo lại mã khôi phục" khi 2FA đang bật
+
                 card2FARegen.Visibility = enabled ? Visibility.Visible : Visibility.Collapsed;
             }
             catch { }
         }
 
-        // ✅ Tạo lại 8 mã khôi phục: phải nhập đúng mã 6 số Authenticator HIỆN TẠI.
-        //    Mã cũ chỉ bị vô hiệu khi người dùng bấm "Tôi đã lưu, hoàn tất".
+
+
         private void Mnu2FARegen_Click(object? sender, RoutedEventArgs e)
         {
             try
@@ -935,7 +935,7 @@ namespace PersonalInfoManager
 
                 if (!TwoFactorService.IsEnabled(username))
                 {
-                    // ===== BẬT: quét QR -> nhập mã -> lưu mã khôi phục =====
+
                     var setup = new TwoFactorSetupWindow(username) { Owner = this };
                     setup.ShowDialog();
 
@@ -946,7 +946,7 @@ namespace PersonalInfoManager
                 }
                 else
                 {
-                    // ===== TẮT: bắt buộc nhập đúng mã hiện tại (hoặc mã khôi phục) =====
+
                     var dlg = new TwoFactorPromptWindow(
                         "Tắt xác thực 2 bước",
                         "Nhập mã 6 số từ Authenticator (hoặc mã khôi phục) để xác nhận tắt.",
@@ -968,18 +968,18 @@ namespace PersonalInfoManager
             }
         }
 
-        // ================================================================
-        // ================== CSV ==================
-        // ================================================================
 
-        // ✅ Xuất CSV: BẮT BUỘC xác thực Windows Hello trước (chỉ áp dụng cho chức năng này)
+
+
+
+
         private async void MnuExportCsv_Click(object? sender, RoutedEventArgs e)
         {
             try
             {
                 string username = SessionService.CurrentUser!.Username;
 
-                // ===== BƯỚC 1: XÁC THỰC WINDOWS HELLO =====
+
                 bool available = await WindowsHelloService.IsAvailableAsync();
                 if (!available)
                 {
@@ -998,7 +998,7 @@ namespace PersonalInfoManager
                     return;
                 }
 
-                // ===== BƯỚC 2: XUẤT CSV =====
+
                 var dlg = new SaveFileDialog
                 {
                     Title = "Xuất CSV",
@@ -1030,8 +1030,8 @@ namespace PersonalInfoManager
             }
         }
 
-        // ✅ Nhập CSV: đọc bằng CsvService (nhận TQLTK, Chrome, Bitwarden, LastPass, ô có xuống dòng)
-        //    rồi cho xem trước / chọn dòng bằng CsvImportWindow (dòng trùng được bỏ tick sẵn).
+
+
         private void MnuImportCsv_Click(object? sender, RoutedEventArgs e)
         {
             try
@@ -1050,9 +1050,9 @@ namespace PersonalInfoManager
 
                 var preview = new CsvImportWindow(parsed.accounts, _vaultService.Load(username)) { Owner = this };
                 bool confirmed = preview.ShowDialog() == true;
-                if (_isLocked || !confirmed) return;   // app tự khóa trong lúc xem trước thì thôi
+                if (_isLocked || !confirmed) return;
 
-                // Nạp lại danh sách ngay trước khi ghi để không đè lên thay đổi trong lúc xem trước
+
                 var list = _vaultService.Load(username);
                 list.AddRange(preview.Result);
                 _vaultService.Save(username, list);
@@ -1067,9 +1067,9 @@ namespace PersonalInfoManager
             catch (Exception ex) { MessageBox.Show($"Lỗi nhập CSV: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error); }
         }
 
-        // ================================================================
-        // ================== HỆ THỐNG (thẻ / nút trên thanh tiêu đề) ==================
-        // ================================================================
+
+
+
 
         private void MnuAdmin_Click(object? sender, RoutedEventArgs e) => new AdminWindow().ShowDialog();
         private void MnuChangePwd_Click(object? sender, RoutedEventArgs e) => new ChangePasswordWindow().ShowDialog();
@@ -1094,9 +1094,9 @@ namespace PersonalInfoManager
             Close();
         }
 
-        // ================================================================
-        // ================== THEME ==================
-        // ================================================================
+
+
+
 
         private void MnuToggleTheme_Click(object? sender, RoutedEventArgs e)
         {
@@ -1115,11 +1115,11 @@ namespace PersonalInfoManager
             catch { }
         }
 
-        // ================================================================
-        // ================== AUTO THEME ==================
-        // ================================================================
 
-        // Thẻ là nút thường (không tự đánh dấu như MenuItem IsCheckable) nên đảo trạng thái từ AutoThemeService.IsEnabled
+
+
+
+
         private void MnuAutoTheme_Click(object? sender, RoutedEventArgs e)
         {
             try
@@ -1145,9 +1145,9 @@ namespace PersonalInfoManager
             catch (Exception ex) { MessageBox.Show($"Lỗi: {ex.Message}"); }
         }
 
-        // ================================================================
-        // ================== EXPORT / IMPORT VAULT ==================
-        // ================================================================
+
+
+
 
         private void MnuExportVault_Click(object? sender, RoutedEventArgs e)
         {
@@ -1189,9 +1189,9 @@ namespace PersonalInfoManager
             catch (Exception ex) { MessageBox.Show($"Lỗi: {ex.Message}"); }
         }
 
-        // ================================================================
-        // ================== GOOGLE DRIVE SYNC ==================
-        // ================================================================
+
+
+
 
         private async void MnuSyncGoogleDrive_Click(object? sender, RoutedEventArgs e)
         {
@@ -1240,8 +1240,8 @@ namespace PersonalInfoManager
             }
         }
 
-        // Khôi phục = tải bản sao lưu (file .vault) từ Drive về file tạm rồi nhập bằng đúng hàm
-        // "Nhập vault" có sẵn: tài khoản trùng bị bỏ qua, dữ liệu hiện tại không bị xóa.
+
+
         private async void MnuRestoreGoogleDrive_Click(object? sender, RoutedEventArgs e)
         {
             string tempFile = Path.Combine(Path.GetTempPath(), $"vault_restore_{DateTime.Now:yyyyMMdd_HHmmss}.vault");
@@ -1297,9 +1297,9 @@ namespace PersonalInfoManager
             }
         }
 
-        // ================================================================
-        // ================== CỤM MẬT KHẨU SAO LƯU ==================
-        // ================================================================
+
+
+
 
         private void MnuBackupPassphrase_Click(object? sender, RoutedEventArgs e)
         {
@@ -1320,7 +1320,7 @@ namespace PersonalInfoManager
             catch (Exception ex) { MessageBox.Show($"Lỗi: {ex.Message}"); }
         }
 
-        // Mở cửa sổ đặt cụm, lưu lại trên máy (DPAPI). Trả về false nếu người dùng hủy.
+
         private bool SetBackupPassphrase()
         {
             var dlg = new BackupPassphraseWindow(confirmMode: true) { Owner = this };
@@ -1337,9 +1337,9 @@ namespace PersonalInfoManager
             return true;
         }
 
-        // Chuẩn bị cụm để nhập một file sao lưu.
-        // Trả về false nếu người dùng hủy hoặc nhập sai 3 lần.
-        // passphrase = null nghĩa là không cần nhập: file kiểu cũ, hoặc cụm đã lưu trên máy này mở được.
+
+
+
         private bool TryGetImportPassphrase(string file, out string? passphrase)
         {
             passphrase = null;
@@ -1365,7 +1365,7 @@ namespace PersonalInfoManager
             return false;
         }
 
-        // Máy chưa có cụm mật khẩu: sau khi nhập thành công bằng một cụm, gợi ý dùng luôn cụm đó cho máy này.
+
         private void OfferSavePassphrase(string? passphrase)
         {
             string username = SessionService.CurrentUser!.Username;
@@ -1380,7 +1380,7 @@ namespace PersonalInfoManager
             }
         }
 
-        // Bản sao lưu ghi tên người dùng khác: hỏi xác nhận (mặc định Không) trước khi nhập vào vault hiện tại.
+
         private bool ConfirmForeignOwner(string owner)
         {
             string current = SessionService.CurrentUser!.Username;
@@ -1394,8 +1394,8 @@ namespace PersonalInfoManager
                 MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) == MessageBoxResult.Yes;
         }
 
-        // Trước khi tách theo người dùng, máy chỉ có một cụm mật khẩu sao lưu dùng chung.
-        // Hỏi người dùng hiện tại có nhận cụm đó không (chỉ người đầu tiên nhận được, sau đó file cũ bị xóa).
+
+
         private void OfferAdoptLegacyPassphrase(string username)
         {
             if (BackupCrypto.HasStoredPassphrase(username) || !BackupCrypto.HasLegacyPassphrase()) return;
@@ -1415,12 +1415,12 @@ namespace PersonalInfoManager
             }
         }
 
-        // ================================================================
-        // ================== SAO LƯU FILE CÁ NHÂN LÊN DRIVE ==================
-        // ================================================================
 
-        // Sao lưu File cá nhân: nén toàn bộ kho, mã hóa bằng cụm mật khẩu sao lưu rồi đưa lên thư mục "TQLTK Backup".
-        // File cá nhân lưu KHÔNG mã hóa trên máy, nên bản đưa lên Drive luôn phải được mã hóa.
+
+
+
+
+
         private async void MnuSyncFilesGoogleDrive_Click(object? sender, RoutedEventArgs e)
         {
             string tempFile = Path.Combine(Path.GetTempPath(), $"files_backup_{DateTime.Now:yyyyMMdd_HHmmss}.tqf");
@@ -1480,7 +1480,7 @@ namespace PersonalInfoManager
                 bool success = await syncService.UploadFilesBackupAsync(tempFile);
                 Mouse.OverrideCursor = null;
 
-                if (_isLocked) return; // app đã tự khóa trong lúc chờ
+                if (_isLocked) return;
 
                 if (success)
                 {
@@ -1508,7 +1508,7 @@ namespace PersonalInfoManager
             }
         }
 
-        // Khôi phục File cá nhân: tải bản sao lưu về file tạm rồi giải mã và đưa vào kho. Không ghi đè file nào.
+
         private async void MnuRestoreFilesGoogleDrive_Click(object? sender, RoutedEventArgs e)
         {
             string tempFile = Path.Combine(Path.GetTempPath(), $"files_restore_{DateTime.Now:yyyyMMdd_HHmmss}.tqf");
@@ -1536,7 +1536,7 @@ namespace PersonalInfoManager
                     return;
                 }
 
-                // Giải mã, đóng gói và ghi file chạy ở luồng nền; hộp thoại hỏi cụm/xác nhận được chuyển về luồng giao diện
+
                 string? typed = null;
                 var result = await Task.Run(() => FileBackupService.RestoreFromFile(
                     username, tempFile, null,
@@ -1544,11 +1544,11 @@ namespace PersonalInfoManager
                     owner => AskOnUi(() => ConfirmForeignOwner(owner))));
                 Mouse.OverrideCursor = null;
 
-                if (_isLocked) return; // app đã tự khóa trong lúc chờ
+                if (_isLocked) return;
 
                 MessageBox.Show(result.message, result.ok ? "Thành công" : "Lỗi", MessageBoxButton.OK, result.ok ? MessageBoxImage.Information : MessageBoxImage.Warning);
 
-                // Làm mới cả khi lỗi giữa chừng, vì có thể một số file đã được khôi phục
+
                 RefreshFiles();
                 UpdateStorageInfo();
 
@@ -1571,8 +1571,8 @@ namespace PersonalInfoManager
             }
         }
 
-        // Hộp thoại phải hiện từ luồng giao diện, nhưng việc khôi phục chạy trong Task.Run:
-        // chuyển về luồng giao diện và tạm bỏ con trỏ chờ để người dùng thấy con trỏ bình thường.
+
+
         private T AskOnUi<T>(Func<T> ask) => Dispatcher.Invoke(() =>
         {
             Mouse.OverrideCursor = null;
@@ -1580,7 +1580,7 @@ namespace PersonalInfoManager
             finally { Mouse.OverrideCursor = Cursors.Wait; }
         });
 
-        // Hỏi cụm mật khẩu để mở một bản sao lưu File cá nhân (previousError: lý do lần nhập trước thất bại, nếu có).
+
         private string? PromptRestorePassphrase(string? previousError)
         {
             if (previousError != null)
@@ -1590,9 +1590,9 @@ namespace PersonalInfoManager
             return dlg.ShowDialog() == true ? dlg.Passphrase : null;
         }
 
-        // ================================================================
-        // ================== WINDOW POSITION ==================
-        // ================================================================
+
+
+
 
         private void MnuCenterWindow_Click(object? sender, RoutedEventArgs e)
         {
@@ -1606,9 +1606,9 @@ namespace PersonalInfoManager
             MessageBox.Show("Đã đưa cửa sổ về giữa màn hình.");
         }
 
-        // ================================================================
-        // ================== RESET ==================
-        // ================================================================
+
+
+
 
         private void MnuResetSettings_Click(object? sender, RoutedEventArgs e)
         {
@@ -1620,9 +1620,9 @@ namespace PersonalInfoManager
             MessageBox.Show("Đã reset cài đặt.\n\nKhởi động lại app để áp dụng toàn bộ.");
         }
 
-        // ================================================================
-        // ================== STATUS BAR ==================
-        // ================================================================
+
+
+
 
         private void UpdateStorageInfo()
         {

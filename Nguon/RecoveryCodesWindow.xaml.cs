@@ -29,7 +29,7 @@ namespace PersonalInfoManager
                     "Không thể sao chép", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
 
-        // Chỉ khi bấm "hoàn tất" mới lưu bộ mã mới và vô hiệu hóa mã cũ
+
         private void BtnFinish_Click(object sender, RoutedEventArgs e)
         {
             var result = TwoFactorService.CommitRecoveryCodes(_username, _codes);
@@ -44,8 +44,8 @@ namespace PersonalInfoManager
             DialogResult = true;
         }
 
-        // Đóng khi chưa hoàn tất: mã mới bị hủy, mã cũ vẫn dùng được.
-        // Nếu app đang tự khóa (đã đăng xuất) thì đóng luôn, không hỏi.
+
+
         protected override void OnClosing(CancelEventArgs e)
         {
             if (!_finished && SessionService.IsLoggedIn)

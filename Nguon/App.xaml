@@ -6,13 +6,13 @@
     <Application.Resources>
         <ResourceDictionary>
 
-            <!-- ✅ Theme TRƯỚC, Controls SAU -->
+
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="Themes/LightTheme.xaml" />
                 <ResourceDictionary Source="Themes/Controls.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
-            <!-- ============ STYLE MẶC ĐỊNH ============ -->
+
 
             <Style TargetType="Button" BasedOn="{StaticResource RoundedButton}" />
             <Style TargetType="TextBox" BasedOn="{StaticResource RoundedTextBox}" />
@@ -20,7 +20,7 @@
             <Style TargetType="ComboBox" BasedOn="{StaticResource ModernComboBox}" />
             <Style TargetType="TabControl" BasedOn="{StaticResource ModernTabControl}" />
 
-            <!-- ============ TEXT ============ -->
+
 
             <Style TargetType="TextBlock">
                 <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
@@ -35,7 +35,7 @@
                 <Setter Property="FontSize" Value="13" />
             </Style>
 
-            <!-- ============ MENU — BO TRÒN, AN TOÀN ============ -->
+
 
             <Style TargetType="Menu">
                 <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
@@ -44,7 +44,7 @@
                 <Setter Property="FontSize" Value="13" />
             </Style>
 
-            <!-- ✅ 1 STYLE MENUITEM DUY NHẤT — bao gồm cả bo tròn -->
+
             <Style TargetType="MenuItem">
                 <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
                 <Setter Property="Background" Value="Transparent" />
@@ -55,7 +55,7 @@
                     <Setter.Value>
                         <ControlTemplate TargetType="MenuItem">
                             <Grid>
-                                <!-- Border bo tròn chứa toàn bộ MenuItem -->
+
                                 <Border x:Name="Bd"
                                         Background="{TemplateBinding Background}"
                                         CornerRadius="6"
@@ -69,19 +69,19 @@
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
 
-                                        <!-- Icon -->
+
                                         <ContentPresenter Grid.Column="0"
                                                           ContentSource="Icon"
                                                           VerticalAlignment="Center"
                                                           Margin="0,0,10,0" />
 
-                                        <!-- Header -->
+
                                         <ContentPresenter Grid.Column="1"
                                                           ContentSource="Header"
                                                           RecognizesAccessKey="True"
                                                           VerticalAlignment="Center" />
 
-                                        <!-- Arrow cho submenu -->
+
                                         <Path Grid.Column="2"
                                               x:Name="SubArrow"
                                               Data="M 0 0 L 4 4 L 0 8 Z"
@@ -92,7 +92,7 @@
                                     </Grid>
                                 </Border>
 
-                                <!-- Popup cho submenu -->
+
                                 <Popup x:Name="PART_Popup"
                                        Placement="Right"
                                        HorizontalOffset="-2"
@@ -121,24 +121,24 @@
                             </Grid>
 
                             <ControlTemplate.Triggers>
-                                <!-- SubmenuHeader: có arrow -->
+
                                 <Trigger Property="Role" Value="SubmenuHeader">
                                     <Setter TargetName="SubArrow" Property="Visibility" Value="Visible" />
                                 </Trigger>
 
-                                <!-- Hover -->
+
                                 <Trigger Property="IsHighlighted" Value="True">
                                     <Setter TargetName="Bd" Property="Background"
                                             Value="{DynamicResource TabHoverBackgroundBrush}" />
                                 </Trigger>
 
-                                <!-- Submenu đang mở -->
+
                                 <Trigger Property="IsSubmenuOpen" Value="True">
                                     <Setter TargetName="Bd" Property="Background"
                                             Value="{DynamicResource TabHoverBackgroundBrush}" />
                                 </Trigger>
 
-                                <!-- Disabled -->
+
                                 <Trigger Property="IsEnabled" Value="False">
                                     <Setter Property="Foreground"
                                             Value="{DynamicResource TextSecondaryBrush}" />
@@ -150,7 +150,7 @@
                 </Setter>
             </Style>
 
-            <!-- ============ STATUS BAR ============ -->
+
 
             <Style TargetType="StatusBar">
                 <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
@@ -159,7 +159,7 @@
                 <Setter Property="FontSize" Value="12" />
             </Style>
 
-            <!-- ============ TOOLTIP ============ -->
+
 
             <Style TargetType="ToolTip">
                 <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
@@ -169,7 +169,7 @@
                 <Setter Property="FontSize" Value="12" />
             </Style>
 
-            <!-- ============ CHECKBOX / RADIO ============ -->
+
 
             <Style TargetType="CheckBox">
                 <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
@@ -183,7 +183,7 @@
                 <Setter Property="FontSize" Value="13" />
             </Style>
 
-            <!-- ============ SEPARATOR ============ -->
+
 
             <Style TargetType="Separator">
                 <Setter Property="Background" Value="{DynamicResource BorderBrush}" />

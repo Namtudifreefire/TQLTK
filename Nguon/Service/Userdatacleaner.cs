@@ -5,15 +5,15 @@ using System.Linq;
 
 namespace PersonalInfoManager.Services
 {
-    /// <summary>
-    /// Liệt kê và xóa dữ liệu trên máy của một người dùng đã bị xóa khỏi danh sách tài khoản:
-    /// vault (kèm .bak/.tmp/.corrupt-*), cấu hình 2FA, thư mục File cá nhân,
-    /// cụm mật khẩu sao lưu và đăng nhập Google của người dùng đó.
-    ///
-    /// KHÔNG đụng tới: nhật ký hoạt động, bản sao lưu trên Google Drive, dữ liệu của người dùng khác.
-    /// Quy tắc đặt tên file phải khớp với AccountVaultService, TwoFactorService, LocalFileService,
-    /// BackupCrypto và CloudSyncService; nếu đổi cách đặt tên ở đó thì sửa cả ở đây.
-    /// </summary>
+
+
+
+
+
+
+
+
+
     public static class UserDataCleaner
     {
         private static readonly string Root = Path.Combine(
@@ -29,11 +29,11 @@ namespace PersonalInfoManager.Services
             public int FileCount;
         }
 
-        // ================================================================
-        // ================== API ==================
-        // ================================================================
 
-        /// <summary>Các mục dữ liệu còn tồn tại của người dùng (để hiện cho quản trị viên xem trước khi xóa).</summary>
+
+
+
+
         public static List<string> Describe(Guid userId, string username)
         {
             var warnings = new List<string>();
@@ -44,7 +44,7 @@ namespace PersonalInfoManager.Services
             return descriptions;
         }
 
-        /// <summary>Xóa các mục trên. Trả về danh sách đã xóa và danh sách lỗi (nếu có).</summary>
+
         public static (List<string> removed, List<string> errors) Delete(Guid userId, string username)
         {
             var removed = new List<string>();
@@ -70,7 +70,7 @@ namespace PersonalInfoManager.Services
 
             errors.AddRange(warnings);
 
-            // Ô "tên đăng nhập" ở màn hình đăng nhập không nên điền sẵn tên đã xóa
+
             try
             {
                 if (string.Equals(RegistryService.GetLastUser(), username, StringComparison.OrdinalIgnoreCase))
@@ -81,9 +81,9 @@ namespace PersonalInfoManager.Services
             return (removed, errors);
         }
 
-        // ================================================================
-        // ================== NỘI BỘ ==================
-        // ================================================================
+
+
+
 
         private static List<Item> BuildItems(Guid userId, string username, List<string> warnings)
         {
@@ -93,7 +93,7 @@ namespace PersonalInfoManager.Services
 
             string tag = BackupCrypto.UserTag(username);
 
-            // 1. Vault và các bản dự phòng
+
             var vault = new Item { Label = "Kho tài khoản đã lưu (vault) và bản dự phòng" };
             string vaultFile = Path.Combine(Root, $"vault_{isolatedName}.dat");
             AddFile(vault, vaultFile);
@@ -116,7 +116,7 @@ namespace PersonalInfoManager.Services
                 warnings.Add("Vault cũ có đường dẫn trùng với tài khoản khác nên được giữ nguyên.");
             AddIfAny(items, vault);
 
-            // 2. Xác thực 2 bước
+
             var twoFa = new Item { Label = "Cấu hình xác thực 2 bước (2FA)" };
             AddFile(twoFa, Path.Combine(
                 Root, "2fa", UserStorageIdentity.GetDirectoryName(userId) + ".2fa"));
@@ -130,14 +130,14 @@ namespace PersonalInfoManager.Services
                 warnings.Add("File 2FA cũ có đường dẫn trùng với tài khoản khác nên được giữ nguyên.");
             AddIfAny(items, twoFa);
 
-            // 3. Cụm mật khẩu sao lưu
+
             var pass = new Item { Label = "Cụm mật khẩu sao lưu đã lưu trên máy" };
             string passFile = Path.Combine(Root, $"backup_pass_{tag}.dat");
             AddFile(pass, passFile);
             AddFile(pass, passFile + ".tmp");
             AddIfAny(items, pass);
 
-            // 4. File cá nhân
+
             string storageRoot = Path.Combine(Root, "Storage");
             string storageDir = Path.Combine(storageRoot, isolatedName);
             AddStorageDirectory(items, storageDir);
@@ -151,7 +151,7 @@ namespace PersonalInfoManager.Services
                 Root, username, LegacyUserStorageKind.LocalFiles))
                 warnings.Add("Thư mục file cũ có đường dẫn trùng với tài khoản khác nên được giữ nguyên.");
 
-            // 5. Đăng nhập Google (token)
+
             string tokenRoot = Path.Combine(Root, "GoogleTokens");
             string tokenDir = Path.Combine(tokenRoot, tag);
             if (Directory.Exists(tokenDir) && IsDirectChild(tokenRoot, tokenDir))
@@ -182,7 +182,7 @@ namespace PersonalInfoManager.Services
             AddIfAny(items, storage);
         }
 
-        /// <summary>child phải là thư mục con TRỰC TIẾP của parent (chặn tên kiểu "..." trỏ ra ngoài).</summary>
+
         private static bool IsDirectChild(string parent, string child)
         {
             string p = Path.GetFullPath(parent).TrimEnd(Path.DirectorySeparatorChar);

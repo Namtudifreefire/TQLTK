@@ -12,9 +12,9 @@ namespace PersonalInfoManager
         private readonly UserService _userService = new();
         private readonly bool _isInitialAdmin;
 
-        /// <summary>
-        /// Username sau khi đăng ký thành công — LoginWindow sẽ đọc để tự điền.
-        /// </summary>
+
+
+
         public string RegisteredUsername { get; private set; } = "";
 
         public RegisterWindow() : this(false) { }
@@ -35,7 +35,7 @@ namespace PersonalInfoManager
             Loaded += (_, _) => txtUsername.Focus();
         }
 
-        // ================== ĐÁNH GIÁ ĐỘ MẠNH MẬT KHẨU ==================
+
 
         private void TxtPassword_PasswordChanged(object sender, RoutedEventArgs e)
         {
@@ -90,7 +90,7 @@ namespace PersonalInfoManager
             return score;
         }
 
-        // ================== XỬ LÝ ĐĂNG KÝ ==================
+
 
         private void BtnRegister_Click(object sender, RoutedEventArgs e)
         {
@@ -101,7 +101,7 @@ namespace PersonalInfoManager
             string email = txtEmail.Text.Trim();
             string phone = txtPhone.Text.Trim();
 
-            // ===== VALIDATE =====
+
 
             if (string.IsNullOrWhiteSpace(username) || username.Length < 3)
             {
@@ -110,7 +110,7 @@ namespace PersonalInfoManager
                 return;
             }
 
-            // Kiểm tra ký tự đặc biệt trong username
+
             if (username.Any(c => !char.IsLetterOrDigit(c) && c != '_'))
             {
                 ShowError("Tên đăng nhập chỉ được chứa chữ, số và dấu gạch dưới.");
@@ -140,7 +140,7 @@ namespace PersonalInfoManager
                 return;
             }
 
-            // ===== TẠO TÀI KHOẢN =====
+
             var result = _isInitialAdmin
                 ? _userService.CreateInitialAdmin(username, password, fullName, email, phone)
                 : _userService.CreateUserFull(
@@ -157,7 +157,7 @@ namespace PersonalInfoManager
                 return;
             }
 
-            // ===== THÀNH CÔNG =====
+
             try
             {
                 ActivityLogger.Log(username, _isInitialAdmin ? "INITIAL_ADMIN_CREATED" : "REGISTER",
@@ -181,7 +181,7 @@ namespace PersonalInfoManager
             Close();
         }
 
-        // ================== HỦY ==================
+
 
         private void BtnCancel_Click(object sender, RoutedEventArgs e)
         {
@@ -189,7 +189,7 @@ namespace PersonalInfoManager
             Close();
         }
 
-        // ================== HELPER ==================
+
 
         private void ShowError(string message)
         {

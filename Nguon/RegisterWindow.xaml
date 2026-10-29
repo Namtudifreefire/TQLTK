@@ -27,7 +27,7 @@
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <!-- Tiêu đề -->
+
             <TextBlock x:Name="lblFormTitle"
                        Grid.Row="0"
                        Text="📝 Đăng ký tài khoản"
@@ -45,7 +45,7 @@
                        HorizontalAlignment="Center"
                        Margin="0,0,0,25" />
 
-            <!-- Username -->
+
             <StackPanel Grid.Row="2">
                 <TextBlock Text="Tên đăng nhập (*):"
                            FontWeight="SemiBold"
@@ -63,7 +63,7 @@
                            Margin="0,4,0,0" />
             </StackPanel>
 
-            <!-- Password -->
+
             <StackPanel Grid.Row="3" Margin="0,15,0,0">
                 <TextBlock Text="Mật khẩu (*):"
                            FontWeight="SemiBold"
@@ -83,7 +83,7 @@
                            Margin="0,4,0,0" />
             </StackPanel>
 
-            <!-- Confirm Password -->
+
             <StackPanel Grid.Row="4" Margin="0,15,0,0">
                 <TextBlock Text="Xác nhận mật khẩu (*):"
                            FontWeight="SemiBold"
@@ -103,7 +103,7 @@
                            Margin="0,4,0,0" />
             </StackPanel>
 
-            <!-- FullName -->
+
             <StackPanel Grid.Row="5" Margin="0,15,0,0">
                 <TextBlock Text="Họ tên (*):"
                            FontWeight="SemiBold"
@@ -117,7 +117,7 @@
                          VerticalContentAlignment="Center" />
             </StackPanel>
 
-            <!-- Email -->
+
             <StackPanel Grid.Row="6" Margin="0,15,0,0">
                 <TextBlock Text="Gmail:"
                            FontWeight="SemiBold"
@@ -135,7 +135,7 @@
                            Margin="0,4,0,0" />
             </StackPanel>
 
-            <!-- Phone -->
+
             <StackPanel Grid.Row="7" Margin="0,15,0,0">
                 <TextBlock Text="Số điện thoại:"
                            FontWeight="SemiBold"
@@ -149,7 +149,7 @@
                          VerticalContentAlignment="Center" />
             </StackPanel>
 
-            <!-- Nút hành động -->
+
             <Grid Grid.Row="8" Margin="0,30,0,0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
@@ -181,7 +181,7 @@
                 </Button>
             </Grid>
 
-            <!-- Nút quay lại đăng nhập -->
+
             <TextBlock Grid.Row="9"
                        FontSize="12"
                        Foreground="{DynamicResource TextSecondaryBrush}"

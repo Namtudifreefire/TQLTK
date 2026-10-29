@@ -48,7 +48,7 @@ namespace PersonalInfoManager
             dgUsers.ItemsSource = _userService.GetAll();
         }
 
-        // ============ TẠO USER MỚI ============
+
 
         private void BtnCreate_Click(object sender, RoutedEventArgs e)
         {
@@ -77,7 +77,7 @@ namespace PersonalInfoManager
                 }
                 catch { }
 
-                // Clear form
+
                 txtNewUser.Clear();
                 txtNewPwd.Clear();
                 txtNewFullName.Clear();
@@ -88,7 +88,7 @@ namespace PersonalInfoManager
             }
         }
 
-        // ============ SỬA THÔNG TIN USER ============
+
 
         private void BtnEdit_Click(object sender, RoutedEventArgs e)
         {
@@ -98,7 +98,7 @@ namespace PersonalInfoManager
                 return;
             }
 
-            // Mở dialog sửa
+
             var dlg = new EditUserWindow(u, _userService);
             if (dlg.ShowDialog() == true)
             {
@@ -112,7 +112,7 @@ namespace PersonalInfoManager
             }
         }
 
-        // ============ RESET MẬT KHẨU ============
+
 
         private void BtnResetPwd_Click(object sender, RoutedEventArgs e)
         {
@@ -146,7 +146,7 @@ namespace PersonalInfoManager
             }
         }
 
-        // ============ KHÓA / MỞ ============
+
 
         private void BtnToggleActive_Click(object sender, RoutedEventArgs e)
         {
@@ -162,7 +162,7 @@ namespace PersonalInfoManager
                 return;
             }
 
-            // Tính trạng thái mới TRƯỚC khi đổi (bản cũ ghi log ngược: khóa lại ghi thành mở)
+
             bool newActive = !u.IsActive;
             _userService.SetActive(u.Id, newActive);
 
@@ -176,7 +176,7 @@ namespace PersonalInfoManager
             Refresh();
         }
 
-        // ============ CẤP / THU ADMIN ============
+
 
         private void BtnToggleRole_Click(object sender, RoutedEventArgs e)
         {
@@ -205,7 +205,7 @@ namespace PersonalInfoManager
             Refresh();
         }
 
-        // ============ XÓA ============
+
 
         private void BtnDelete_Click(object sender, RoutedEventArgs e)
         {
@@ -221,7 +221,7 @@ namespace PersonalInfoManager
                     MessageBoxImage.Warning) != MessageBoxResult.Yes)
                 return;
 
-            // Hỏi riêng việc xóa dữ liệu gắn với tài khoản trước khi xóa dòng người dùng.
+
             var leftovers = UserDataCleaner.Describe(u.Id, u.Username);
             bool wipeData = false;
 

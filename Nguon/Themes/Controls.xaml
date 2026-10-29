@@ -62,9 +62,9 @@
 
     <Style TargetType="ScrollBar" BasedOn="{StaticResource ModernScrollBar}" />
 
-    <!-- ============================================================ -->
-    <!-- ================== COMBOBOX ================================ -->
-    <!-- ============================================================ -->
+
+
+
 
     <Style x:Key="ModernComboBoxItem" TargetType="ComboBoxItem">
         <Setter Property="Background" Value="Transparent" />
@@ -168,9 +168,9 @@
 
     <Style TargetType="ComboBox" BasedOn="{StaticResource ModernComboBox}" />
 
-    <!-- ============================================================ -->
-    <!-- ================== TAB ===================================== -->
-    <!-- ============================================================ -->
+
+
+
 
     <Style x:Key="ModernTabItem" TargetType="TabItem">
         <Setter Property="Template">
@@ -206,9 +206,9 @@
         <Setter Property="ItemContainerStyle" Value="{StaticResource ModernTabItem}" />
     </Style>
 
-    <!-- ============================================================ -->
-    <!-- ================== BUTTON ================================== -->
-    <!-- ============================================================ -->
+
+
+
 
     <Style x:Key="RoundedButton" TargetType="Button">
         <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
@@ -267,9 +267,9 @@
         </Setter>
     </Style>
 
-    <!-- ============================================================ -->
-    <!-- ================== TEXTBOX / PASSWORDBOX ==================== -->
-    <!-- ============================================================ -->
+
+
+
 
     <Style x:Key="RoundedTextBox" TargetType="TextBox">
         <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
@@ -341,9 +341,9 @@
         </Setter>
     </Style>
 
-    <!-- ============================================================ -->
-    <!-- ================== DATAGRID ================================ -->
-    <!-- ============================================================ -->
+
+
+
 
     <Style x:Key="ModernDataGridColumnHeader" TargetType="DataGridColumnHeader">
         <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
@@ -444,9 +444,9 @@
 
     <Style TargetType="DataGrid" BasedOn="{StaticResource ModernDataGrid}" />
 
-    <!-- ============================================================ -->
-    <!-- ============ FADE IN DATAGRID ============================== -->
-    <!-- ============================================================ -->
+
+
+
 
     <Style x:Key="FadeInDataGrid" TargetType="DataGrid"
            BasedOn="{StaticResource ModernDataGrid}">
@@ -463,9 +463,9 @@
         </Style.Triggers>
     </Style>
 
-    <!-- ============================================================ -->
-    <!-- ================== CARD ==================================== -->
-    <!-- ============================================================ -->
+
+
+
 
     <Style x:Key="Card" TargetType="Border">
         <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
@@ -476,9 +476,9 @@
         <Setter Property="Margin" Value="0,0,0,12" />
     </Style>
 
-    <!-- ============================================================ -->
-    <!-- ================== SLIDE IN WINDOW ========================= -->
-    <!-- ============================================================ -->
+
+
+
 
     <Style x:Key="SlideInWindow" TargetType="Window">
         <Setter Property="Opacity" Value="0" />

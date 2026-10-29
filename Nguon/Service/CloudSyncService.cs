@@ -18,27 +18,27 @@ using DriveFile = Google.Apis.Drive.v3.Data.File;
 
 namespace PersonalInfoManager.Services
 {
-    /// <summary>Loại bản sao lưu trên Drive.</summary>
+
     public enum BackupKind
     {
-        /// <summary>Danh sách tài khoản đã lưu (file xuất của VaultBackupService).</summary>
+
         Vault,
-        /// <summary>Kho File cá nhân (file nén và mã hóa của FileBackupService).</summary>
+
         Files
     }
 
-    /// <summary>Bản sao lưu thuộc về ai, suy ra từ tên file trên Drive.</summary>
+
     public enum BackupOwner
     {
-        /// <summary>Do người dùng đang đăng nhập tạo (tên file mang đúng nhãn của họ).</summary>
+
         Mine,
-        /// <summary>Tạo trước khi tách theo người dùng (tên file không có nhãn), chưa biết của ai.</summary>
+
         Legacy,
-        /// <summary>Do người dùng khác tạo (tên file mang nhãn khác), chỉ gặp khi dùng chung một tài khoản Google.</summary>
+
         Other
     }
 
-    /// <summary>Thông tin một bản sao lưu trên Google Drive (dùng cho danh sách chọn khôi phục).</summary>
+
     public sealed class BackupInfo
     {
         public string Id { get; init; } = "";
@@ -68,21 +68,21 @@ namespace PersonalInfoManager.Services
         }
     }
 
-    /// <summary>
-    /// Sao lưu và khôi phục trên Google Drive, tách theo người dùng của app. Có hai loại bản sao lưu:
-    /// - Vault: file xuất danh sách tài khoản (vault_backup_{tag}_{thời gian}.dat), giữ 5 bản gần nhất.
-    /// - Files: kho File cá nhân đã nén và mã hóa (files_backup_{tag}_{thời gian}.tqf), giữ 3 bản gần nhất vì nặng hơn.
-    /// - credentials.json được NHÚNG vào .exe (EmbeddedResource), không đọc từ thư mục hiện tại nữa.
-    /// - Scope drive.file: app chỉ thấy/sửa được file do chính nó tạo (cùng OAuth client).
-    /// - Mỗi người dùng của app có thư mục token Google riêng (GoogleTokens\{tag}), nên mỗi người đăng nhập
-    ///   tài khoản Google của mình. Tên file sao lưu mang nhãn người dùng.
-    /// - Bản sao lưu nằm trong thư mục "TQLTK Backup", mỗi người dùng chỉ giữ N bản gần nhất của chính họ
-    ///   (bản cũ được chuyển vào Thùng rác); bản của người khác không bao giờ bị dọn, hai loại không dọn lẫn nhau.
-    /// - Danh sách khôi phục mặc định chỉ gồm bản của mình và (với Vault) bản cũ chưa có nhãn.
-    /// - Khôi phục: liệt kê bản sao lưu và tải về file tạm; việc đưa dữ liệu vào app do VaultBackupService.ImportFromFile
-    ///   hoặc FileBackupService.RestoreFromFile làm.
-    /// - Lỗi không còn bị nuốt: xem LastError sau khi một hàm trả về false/null.
-    /// </summary>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     public class CloudSyncService
     {
         private const string ResourceName = "credentials.json";
@@ -92,7 +92,7 @@ namespace PersonalInfoManager.Services
         private const string VaultPrefix = "vault_backup_";
         private const string FilesPrefix = "files_backup_";
 
-        // Tên file có nhãn người dùng: vault_backup_u1a2b3c4d_20261021_101500.dat
+
         private static readonly Regex TaggedVaultName =
             new(@"^vault_backup_u[0-9a-f]{8}_", RegexOptions.Compiled);
 
@@ -108,16 +108,16 @@ namespace PersonalInfoManager.Services
         private readonly string _tag;
         private readonly string _tokenDir;
 
-        /// <summary>Tiền tố tên file sao lưu của người dùng này, theo loại.</summary>
+
         private string MyPrefixOf(BackupKind kind) => $"{PrefixOf(kind)}{_tag}_";
 
-        /// <summary>Thông báo lỗi dễ hiểu của lần gọi gần nhất (null nếu thành công).</summary>
+
         public string? LastError { get; private set; }
 
-        /// <summary>Tên file đã tạo trên Drive ở lần gọi thành công gần nhất.</summary>
+
         public string? LastUploadedName { get; private set; }
 
-        /// <param name="username">Tên đăng nhập của người dùng app đang dùng dịch vụ này.</param>
+
         public CloudSyncService(string username)
         {
             if (string.IsNullOrWhiteSpace(username))
@@ -125,7 +125,7 @@ namespace PersonalInfoManager.Services
 
             _tag = BackupCrypto.UserTag(username);
 
-            // Thư mục "GoogleTokens" (số nhiều) tách khỏi "GoogleToken" của phiên bản cũ dùng chung cho mọi người
+
             _tokenDir = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                 "PersonalInfoManager", "GoogleTokens", _tag);
@@ -139,26 +139,26 @@ namespace PersonalInfoManager.Services
                        "(Google Cloud Console → OAuth client kiểu Desktop) và đặt cạnh file .csproj.") { }
         }
 
-        // ============================================================
-        //  SAO LƯU
-        // ============================================================
 
-        /// <summary>
-        /// Tải file vault (danh sách tài khoản đã xuất) lên Google Drive. Trả về true nếu thành công.
-        /// Nếu false, đọc LastError để biết lý do.
-        /// </summary>
-        /// <param name="localFilePath">Đường dẫn file cần sao lưu.</param>
-        /// <param name="keep">Số bản sao lưu gần nhất của người dùng này được giữ lại.</param>
+
+
+
+
+
+
+
+
+
         public Task<bool> UploadVaultAsync(
             string localFilePath, int keep = 5, CancellationToken ct = default)
             => UploadAsync(BackupKind.Vault, localFilePath, keep, ct);
 
-        /// <summary>
-        /// Tải file sao lưu File cá nhân (đã nén và mã hóa) lên Google Drive. Trả về true nếu thành công.
-        /// Nếu false, đọc LastError để biết lý do.
-        /// </summary>
-        /// <param name="localFilePath">Đường dẫn file cần sao lưu.</param>
-        /// <param name="keep">Số bản sao lưu File cá nhân gần nhất của người dùng này được giữ lại.</param>
+
+
+
+
+
+
         public Task<bool> UploadFilesBackupAsync(
             string localFilePath, int keep = 3, CancellationToken ct = default)
             => UploadAsync(BackupKind.Files, localFilePath, keep, ct);
@@ -174,8 +174,8 @@ namespace PersonalInfoManager.Services
                 if (!File.Exists(localFilePath))
                     throw new FileNotFoundException("Chưa có file dữ liệu để sao lưu.", localFilePath);
 
-                // Giới hạn thời gian để không treo mãi nếu người dùng đóng trình duyệt giữa chừng
-                // (bản sao lưu File cá nhân nặng hơn nên cho nhiều thời gian hơn)
+
+
                 using var cts = LinkedWithTimeout(ct, kind == BackupKind.Files ? 20 : 5);
 
                 try
@@ -184,8 +184,8 @@ namespace PersonalInfoManager.Services
                 }
                 catch (TokenResponseException)
                 {
-                    // Token hết hạn hoặc bị thu hồi (hay gặp khi app Google ở chế độ Testing:
-                    // token hết hạn sau 7 ngày). Xóa token cũ, đăng nhập lại 1 lần rồi thử lại.
+
+
                     if (Directory.Exists(_tokenDir))
                         Directory.Delete(_tokenDir, recursive: true);
 
@@ -215,7 +215,7 @@ namespace PersonalInfoManager.Services
                 Parents = new List<string> { folderId }
             };
 
-            // FileShare.ReadWrite|Delete để không lỗi nếu file đang được app ghi hoặc xóa cùng lúc
+
             using var stream = new FileStream(
                 filePath, FileMode.Open, FileAccess.Read,
                 FileShare.ReadWrite | FileShare.Delete);
@@ -234,22 +234,22 @@ namespace PersonalInfoManager.Services
             return name;
         }
 
-        // ============================================================
-        //  KHÔI PHỤC
-        // ============================================================
 
-        /// <summary>
-        /// Lấy danh sách bản sao lưu tài khoản (Vault) trên Drive, mới nhất trước.
-        /// Mặc định gồm bản của người dùng này và bản cũ chưa có nhãn (tạo trước khi tách theo người dùng).
-        /// includeOthers = true thì thêm cả bản của người dùng khác (chỉ có khi nhiều người dùng chung một tài khoản Google).
-        /// Trả về null nếu lỗi (xem LastError), danh sách rỗng nếu chưa có bản nào.
-        /// Chỉ thấy các bản do cùng OAuth client tạo (bản tạo bằng client cũ trước v3.6.1 sẽ không hiện).
-        /// </summary>
+
+
+
+
+
+
+
+
+
+
         public Task<List<BackupInfo>?> ListBackupsAsync(
             bool includeOthers = false, CancellationToken ct = default)
             => ListBackupsAsync(BackupKind.Vault, includeOthers, ct);
 
-        /// <summary>Như trên nhưng chọn loại bản sao lưu (Vault hoặc Files).</summary>
+
         public async Task<List<BackupInfo>?> ListBackupsAsync(
             BackupKind kind, bool includeOthers = false, CancellationToken ct = default)
         {
@@ -266,14 +266,14 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        /// <summary>
-        /// Tải một bản sao lưu từ Drive về file đích (thường là file tạm).
-        /// Với bản Vault, đó là file XUẤT của VaultBackupService.ExportToFile; với bản Files, đó là file của
-        /// FileBackupService.CreateArchive. Việc đưa dữ liệu vào app do các lớp đó đảm nhiệm, không phải hàm này.
-        /// Trả về true nếu thành công; nếu false, đọc LastError.
-        /// </summary>
-        /// <param name="fileId">Id của bản sao lưu (BackupInfo.Id).</param>
-        /// <param name="destPath">Đường dẫn file sẽ ghi, nếu đã có thì bị ghi đè.</param>
+
+
+
+
+
+
+
+
         public async Task<bool> DownloadBackupAsync(
             string fileId, string destPath, CancellationToken ct = default)
         {
@@ -281,7 +281,7 @@ namespace PersonalInfoManager.Services
 
             try
             {
-                // Bản sao lưu File cá nhân có thể lên tới hàng chục MB nên cho nhiều thời gian hơn
+
                 using var cts = LinkedWithTimeout(ct, 20);
                 await WithAuthRetryAsync(async () =>
                 {
@@ -298,8 +298,8 @@ namespace PersonalInfoManager.Services
             {
                 LastError = Explain(ex);
 
-                // Không để file tải dở nằm lại trong thư mục tạm
-                try { if (File.Exists(destPath)) File.Delete(destPath); } catch { /* bỏ qua */ }
+
+                try { if (File.Exists(destPath)) File.Delete(destPath); } catch {   }
 
                 return false;
             }
@@ -358,7 +358,7 @@ namespace PersonalInfoManager.Services
             return BackupOwner.Legacy;
         }
 
-        /// <summary>Chạy một thao tác; nếu token hết hạn/bị thu hồi thì xóa token, đăng nhập lại 1 lần rồi thử lại.</summary>
+
         private async Task<T> WithAuthRetryAsync<T>(Func<Task<T>> op, CancellationToken ct)
         {
             try
@@ -382,9 +382,9 @@ namespace PersonalInfoManager.Services
             return cts;
         }
 
-        // ============================================================
-        //  DÙNG CHUNG
-        // ============================================================
+
+
+
 
         private async Task<DriveService> GetDriveServiceAsync(CancellationToken ct)
         {
@@ -429,7 +429,7 @@ namespace PersonalInfoManager.Services
             return (await create.ExecuteAsync(ct)).Id;
         }
 
-        /// <summary>Liệt kê mọi file sao lưu có tiền tố này trong thư mục (qua tất cả các trang), mới nhất trước.</summary>
+
         private static async Task<List<DriveFile>> ListBackupFilesAsync(
             DriveService service, string folderId, string prefix, CancellationToken ct)
         {
@@ -458,10 +458,10 @@ namespace PersonalInfoManager.Services
             return all;
         }
 
-        /// <summary>
-        /// Chỉ dọn bản sao lưu cùng loại của chính người dùng này; bản của người khác, bản cũ chưa có nhãn
-        /// và bản thuộc loại khác được giữ nguyên.
-        /// </summary>
+
+
+
+
         private async Task TrimOldBackupsAsync(
             DriveService service, string folderId, BackupKind kind, int keep, CancellationToken ct)
         {
@@ -472,14 +472,14 @@ namespace PersonalInfoManager.Services
             var mineFiles = (await ListBackupFilesAsync(service, folderId, PrefixOf(kind), ct))
                 .Where(f => f.Name!.StartsWith(mine, StringComparison.Ordinal));
 
-            // Chuyển bản cũ vào Thùng rác (khôi phục được trong 30 ngày), không xóa vĩnh viễn
+
             foreach (var old in mineFiles.Skip(keep))
                 await service.Files.Update(new DriveFile { Trashed = true }, old.Id).ExecuteAsync(ct);
         }
 
-        /// <summary>
-        /// Chuyển exception thành thông báo dễ hiểu, vẫn giữ chi tiết kỹ thuật để biết lỗi thật.
-        /// </summary>
+
+
+
         public static string Explain(Exception ex)
         {
             string detail = ex.Message;

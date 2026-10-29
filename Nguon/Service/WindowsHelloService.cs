@@ -8,17 +8,17 @@ using WindowsHello;
 
 namespace PersonalInfoManager.Services
 {
-    /// <summary>
-    /// Dịch vụ xác thực Windows Hello cho WPF desktop.
-    /// Dùng thư viện HaemmerElectronics.SeppPenner.WindowsHello.
-    ///
-    /// Cơ chế: CHỈ dùng PromptToDecrypt() — đảm bảo 1 hộp thoại duy nhất mỗi lần gọi.
-    /// </summary>
+
+
+
+
+
+
     public static class WindowsHelloService
     {
-        // ================================================================
-        // ================== LOG HELPER ==================
-        // ================================================================
+
+
+
 
         private static void Log(string msg)
         {
@@ -39,15 +39,15 @@ namespace PersonalInfoManager.Services
             catch { }
         }
 
-        // ================================================================
-        // ================== KIỂM TRA KHẢ DỤNG ==================
-        // ================================================================
 
-        /// <summary>
-        /// Hỏi Windows xem máy này đã có và đã thiết lập Windows Hello (PIN / vân tay / khuôn mặt) chưa.
-        /// Nếu chính lời gọi kiểm tra bị lỗi (không xác định được) thì giữ hành vi cũ là coi như khả dụng,
-        /// bước xác thực thật phía sau sẽ báo lỗi nếu thực sự không dùng được.
-        /// </summary>
+
+
+
+
+
+
+
+
         public static async Task<bool> IsAvailableAsync()
         {
             try
@@ -67,14 +67,14 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        // ================================================================
-        // ================== BẬT TÍNH NĂNG (1 hộp thoại) ==================
-        // ================================================================
 
-        /// <summary>
-        /// Bật tính năng Windows Hello — CHỈ HIỆN 1 HỘP THOẠI DUY NHẤT.
-        /// Chỉ dùng Encrypt + PromptToDecrypt, KHÔNG gọi SetPersistentKeyName.
-        /// </summary>
+
+
+
+
+
+
+
         public static Task<bool> EnableAsync(Window owner, string message)
         {
             try
@@ -93,7 +93,7 @@ namespace PersonalInfoManager.Services
                 var provider = WinHelloProvider.CreateInstance(message, hwnd);
                 Log("Đã tạo WinHelloProvider");
 
-                // ✅ Chỉ Encrypt + PromptToDecrypt — PromptToDecrypt tự dùng key mặc định
+
                 var data = new byte[] { 0x50, 0x49, 0x4D };
                 var encryptedData = provider.Encrypt(data);
                 Log("Encrypt hoàn tất");
@@ -114,13 +114,13 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        // ================================================================
-        // ================== XÁC THỰC (đăng nhập) ==================
-        // ================================================================
 
-        /// <summary>
-        /// Yêu cầu xác thực Windows Hello — CHỈ HIỆN 1 HỘP THOẠI DUY NHẤT.
-        /// </summary>
+
+
+
+
+
+
         public static Task<bool> VerifyAsync(Window owner, string message)
         {
             try
@@ -159,9 +159,9 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        // ================================================================
-        // ================== SID USER WINDOWS ==================
-        // ================================================================
+
+
+
 
         public static string GetCurrentWindowsSid()
         {

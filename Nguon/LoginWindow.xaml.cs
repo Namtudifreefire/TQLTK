@@ -22,7 +22,7 @@ namespace PersonalInfoManager
         {
             try
             {
-                // Record legacy .2fa-file enrollments before a password login can be attempted.
+
                 TwoFactorService.MigrateLegacyEnrollmentState();
             }
             catch (Exception ex)
@@ -43,7 +43,7 @@ namespace PersonalInfoManager
             catch { txtUsername.Focus(); }
         }
 
-        // ================== ĐĂNG NHẬP THƯỜNG ==================
+
 
         private void BtnLogin_Click(object? sender, RoutedEventArgs e) => DoLogin();
 
@@ -81,17 +81,17 @@ namespace PersonalInfoManager
                 return;
             }
 
-            // ✅ Đăng nhập bằng MẬT KHẨU → có hỏi 2FA (nếu user đã bật)
+
             CompleteLogin(result.user!, requireTwoFactor: true);
         }
 
-        // ================== WINDOWS HELLO ==================
+
 
         private async void BtnWindowsHello_Click(object? sender, RoutedEventArgs e)
         {
             lblStatus.Text = "";
 
-            // 1. Kiểm tra máy có hỗ trợ Windows Hello không
+
             bool available = await WindowsHelloService.IsAvailableAsync();
             if (!available)
             {
@@ -101,7 +101,7 @@ namespace PersonalInfoManager
                 return;
             }
 
-            // 2. Lấy SID
+
             string sid = WindowsHelloService.GetCurrentWindowsSid();
             if (string.IsNullOrWhiteSpace(sid))
             {
@@ -109,11 +109,11 @@ namespace PersonalInfoManager
                 return;
             }
 
-            // 3. Tìm user TQLTK khớp SID
+
             var user = _userService.FindByWindowsHelloSid(sid);
             if (user == null)
             {
-                // ✅ Chưa bật → hướng dẫn
+
                 MessageBox.Show(
                     "Tài khoản này chưa bật đăng nhập bằng Windows Hello.\n\n" +
                     "👉 Vui lòng đăng nhập bằng mật khẩu, sau đó vào:\n" +
@@ -124,7 +124,7 @@ namespace PersonalInfoManager
                 return;
             }
 
-            // 4. Gọi xác thực Windows Hello
+
             bool verified = await WindowsHelloService.VerifyAsync(
                 this,
                 $"Đăng nhập TQLTK với tài khoản '{user.Username}'");
@@ -135,7 +135,7 @@ namespace PersonalInfoManager
                 return;
             }
 
-            // 5. Đăng nhập thành công
+
             try
             {
                 ActivityLogger.Log(user.Username, "LOGIN_WINDOWS_HELLO",
@@ -143,16 +143,16 @@ namespace PersonalInfoManager
             }
             catch { }
 
-            // ✅ Đăng nhập bằng WINDOWS HELLO → BỎ QUA 2FA
+
             CompleteLogin(user, requireTwoFactor: false);
         }
 
-        // ================== HOÀN TẤT ĐĂNG NHẬP ==================
+
 
         private void CompleteLogin(User user, bool requireTwoFactor)
         {
-            // Chỉ hỏi mã Authenticator khi đăng nhập bằng mật khẩu và user đã bật 2FA.
-            // Sai / hủy thì dừng đăng nhập, quay lại màn hình này.
+
+
             if (requireTwoFactor)
             {
                 if (!TwoFactorPromptWindow.AskIfEnabled(this, user.Username))
@@ -165,10 +165,10 @@ namespace PersonalInfoManager
                 }
             }
 
-            // Mật khẩu mặc định cũ hoặc vừa được admin reset: bắt buộc đổi trước khi vào app.
+
             if (user.MustChangePassword)
             {
-                SessionService.Login(user);   // ChangePasswordWindow lấy tên người dùng từ SessionService
+                SessionService.Login(user);
 
                 var dlg = new ChangePasswordWindow(forced: true) { Owner = this };
                 dlg.ShowDialog();
@@ -191,7 +191,7 @@ namespace PersonalInfoManager
 
             try { RegistryService.SetLastUser(user.Username); } catch { }
 
-            // Phải đọc nhật ký TRƯỚC khi ghi dòng LOGIN của lần này, kẻo "lần đăng nhập trước" bị tính là bây giờ
+
             string? warning = LoginHistory.BuildWarning(user.Username);
 
             try
@@ -200,7 +200,7 @@ namespace PersonalInfoManager
             }
             catch { }
 
-            // Hiện trước khi mở MainWindow (lúc này chưa có đồng hồ tự khóa nào chạy)
+
             if (warning != null)
                 MessageBox.Show(this, warning, "Cảnh báo bảo mật", MessageBoxButton.OK, MessageBoxImage.Warning);
 
@@ -208,13 +208,13 @@ namespace PersonalInfoManager
             Application.Current.MainWindow = main;
             main.Show();
 
-            // ĐÓNG hẳn (không Hide): cửa sổ đăng nhập bị ẩn vẫn tính là cửa sổ còn mở,
-            // nên thoát MainWindow xong tiến trình vẫn chạy ngầm và không tự kết thúc.
-            // Phải Show() MainWindow trước rồi mới Close() để app không tắt giữa chừng.
+
+
+
             Close();
         }
 
-        // ================== ĐĂNG KÝ ==================
+
 
         private void BtnRegister_Click(object? sender, RoutedEventArgs e)
         {
@@ -234,7 +234,7 @@ namespace PersonalInfoManager
             }
         }
 
-        // ================== HELPER ==================
+
 
         private void ShowError(string message)
         {

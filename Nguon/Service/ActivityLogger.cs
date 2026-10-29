@@ -4,11 +4,11 @@ using System.Text;
 
 namespace PersonalInfoManager.Services
 {
-    /// <summary>
-    /// Ghi log hoạt động của user vào file local.
-    /// Log chia theo ngày để dễ tra cứu.
-    /// Vị trí: %AppData%\PersonalInfoManager\Logs\activity_yyyy-MM-dd.log
-    /// </summary>
+
+
+
+
+
     public static class ActivityLogger
     {
         private static readonly string _logRoot = Path.Combine(
@@ -17,9 +17,9 @@ namespace PersonalInfoManager.Services
 
         private static readonly object _lock = new();
 
-        /// <summary>
-        /// Ghi một dòng log hoạt động.
-        /// </summary>
+
+
+
         public static void Log(string username, string action, string detail = "")
         {
             try
@@ -41,13 +41,13 @@ namespace PersonalInfoManager.Services
             }
             catch
             {
-                // Không để log lỗi làm sập app
+
             }
         }
 
-        /// <summary>
-        /// Đọc toàn bộ log trong ngày (dùng cho AdminWindow).
-        /// </summary>
+
+
+
         public static string ReadTodayLog()
         {
             try
@@ -66,18 +66,18 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        /// <summary>
-        /// Liệt kê các file log đã có.
-        /// </summary>
+
+
+
         public static string[] ListLogFiles()
         {
             if (!Directory.Exists(_logRoot)) return Array.Empty<string>();
             return Directory.GetFiles(_logRoot, "activity_*.log");
         }
 
-        /// <summary>
-        /// Xóa log cũ hơn N ngày.
-        /// </summary>
+
+
+
         public static void CleanupOldLogs(int keepDays = 30)
         {
             if (!Directory.Exists(_logRoot)) return;

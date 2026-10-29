@@ -7,12 +7,12 @@ using System.Windows.Threading;
 
 namespace PersonalInfoManager.Services
 {
-    /// <summary>
-    /// Copy dữ liệu nhạy cảm (mật khẩu) vào clipboard rồi tự xóa sau ClearAfterSeconds giây.
-    /// - Chỉ xóa nếu clipboard VẪN còn đúng nội dung vừa copy (người dùng đã copy thứ khác thì giữ nguyên).
-    /// - Đánh dấu để Windows không lưu vào lịch sử Win+V và không đồng bộ lên clipboard đám mây.
-    /// Phải gọi từ luồng giao diện (UI thread).
-    /// </summary>
+
+
+
+
+
+
     public static class ClipboardGuard
     {
         public const int ClearAfterSeconds = 30;
@@ -30,7 +30,7 @@ namespace PersonalInfoManager.Services
                 var data = new DataObject();
                 data.SetText(text);
 
-                // Các định dạng Windows 10/11 đọc để bỏ qua lịch sử và clipboard đám mây
+
                 data.SetData("ExcludeClipboardContentFromMonitorProcessing", new MemoryStream(BitConverter.GetBytes(1)));
                 data.SetData("CanIncludeInClipboardHistory", new MemoryStream(BitConverter.GetBytes(0)));
                 data.SetData("CanUploadToCloudClipboard", new MemoryStream(BitConverter.GetBytes(0)));
@@ -39,7 +39,7 @@ namespace PersonalInfoManager.Services
             }
             catch
             {
-                // Fail closed: never put sensitive text on the clipboard without exclusion flags.
+
                 return false;
             }
 
@@ -56,9 +56,9 @@ namespace PersonalInfoManager.Services
             return true;
         }
 
-        /// <summary>
-        /// Xóa clipboard ngay nếu nó vẫn chứa mật khẩu đã copy. Gọi khi đăng xuất, tự khóa hoặc thoát app.
-        /// </summary>
+
+
+
         public static void ClearNow()
         {
             _timer?.Stop();
@@ -75,11 +75,11 @@ namespace PersonalInfoManager.Services
             }
             catch
             {
-                // Clipboard đang bị tiến trình khác giữ: bỏ qua, không làm sập app
+
             }
         }
 
-        // Clipboard hay báo bận (CLIPBRD_E_CANT_OPEN) nếu tiến trình khác đang dùng
+
         private static void SetWithRetry(IDataObject data)
         {
             for (int i = 0; ; i++)

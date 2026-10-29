@@ -11,9 +11,9 @@ namespace PersonalInfoManager
         private readonly Func<string, (bool ok, string message)> _verify;
         private int _attempts;
 
-        /// <param name="title">Tiêu đề cửa sổ</param>
-        /// <param name="description">Dòng hướng dẫn</param>
-        /// <param name="verify">Hàm kiểm tra mã: trả về (ok, message)</param>
+
+
+
         public TwoFactorPromptWindow(string title, string description, Func<string, (bool ok, string message)> verify)
         {
             InitializeComponent();
@@ -26,15 +26,15 @@ namespace PersonalInfoManager
             Loaded += (_, _) => txtCode.Focus();
         }
 
-        // ================================================================
-        // ================== DÙNG CHO ĐĂNG NHẬP ==================
-        // ================================================================
 
-        /// <summary>
-        /// Gọi sau khi mật khẩu (hoặc Windows Hello) đã đúng, TRƯỚC khi mở MainWindow.
-        /// - Nếu user chưa bật 2FA: trả về true ngay.
-        /// - Nếu đã bật: hiện cửa sổ nhập mã, trả về true khi nhập đúng.
-        /// </summary>
+
+
+
+
+
+
+
+
         public static bool AskIfEnabled(Window? owner, string username)
         {
             try
@@ -69,9 +69,9 @@ namespace PersonalInfoManager
             return ok;
         }
 
-        // ================================================================
-        // ================== XÁC NHẬN ==================
-        // ================================================================
+
+
+
 
         private void BtnOk_Click(object sender, RoutedEventArgs e)
         {

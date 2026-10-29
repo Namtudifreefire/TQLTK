@@ -16,9 +16,9 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <!-- ============================================================ -->
-        <!-- ============ FORM TẠO TÀI KHOẢN MỚI ======================== -->
-        <!-- ============================================================ -->
+
+
+
         <Border Grid.Row="0"
                 Style="{StaticResource Card}"
                 Margin="0,0,0,12">
@@ -123,9 +123,9 @@
             </StackPanel>
         </Border>
 
-        <!-- ============================================================ -->
-        <!-- ============ BẢNG DANH SÁCH USER =========================== -->
-        <!-- ============================================================ -->
+
+
+
         <Border Grid.Row="1"
                 Background="{DynamicResource SurfaceBrush}"
                 BorderBrush="{DynamicResource BorderBrush}"
@@ -167,9 +167,9 @@
             </DataGrid>
         </Border>
 
-        <!-- ============================================================ -->
-        <!-- ============ THANH HÀNH ĐỘNG ============================== -->
-        <!-- ============================================================ -->
+
+
+
         <Border Grid.Row="2"
                 Background="{DynamicResource SurfaceBrush}"
                 BorderBrush="{DynamicResource BorderBrush}"

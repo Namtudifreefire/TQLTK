@@ -18,7 +18,7 @@ namespace PersonalInfoManager
         {
             InitializeComponent();
 
-            // Đánh dấu trùng lặp
+
             var existingKeys = new HashSet<string>(
                 existing.Select(a => $"{a.ServiceName.ToLower()}|{a.Username.ToLower()}"));
 
@@ -32,10 +32,10 @@ namespace PersonalInfoManager
                 var item = new CsvPreviewItem
                 {
                     Account = acc,
-                    IsSelected = !isDuplicate,   // mặc định bỏ chọn nếu trùng
+                    IsSelected = !isDuplicate,
                     Status = isDuplicate ? "⚠ Trùng lặp" : "✓ Mới"
                 };
-                item.PropertyChanged += (_, _) => UpdateWillImportCount();   // tick lẻ cũng cập nhật số đếm
+                item.PropertyChanged += (_, _) => UpdateWillImportCount();
                 Items.Add(item);
             }
 
@@ -92,9 +92,9 @@ namespace PersonalInfoManager
         }
     }
 
-    /// <summary>
-    /// Item hiển thị trong DataGrid preview.
-    /// </summary>
+
+
+
     public class CsvPreviewItem : INotifyPropertyChanged
     {
         private bool _isSelected;

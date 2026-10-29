@@ -5,12 +5,12 @@ using PersonalInfoManager.Services;
 
 namespace PersonalInfoManager
 {
-    /// <summary>
-    /// Hai chế độ:
-    /// - confirmMode = true: đặt cụm mới (nhập hai lần, tối thiểu BackupCrypto.MinPassphraseLength ký tự).
-    /// - confirmMode = false: nhập cụm đã đặt để mở một bản sao lưu.
-    /// Sau ShowDialog() == true, đọc thuộc tính Passphrase.
-    /// </summary>
+
+
+
+
+
+
     public partial class BackupPassphraseWindow : Window
     {
         private readonly bool _confirmMode;
@@ -55,7 +55,7 @@ namespace PersonalInfoManager
                     return;
                 }
 
-                // So sánh sau khi chuẩn hóa NFC, giống cách BackupCrypto tạo khóa
+
                 string a = p.Normalize(NormalizationForm.FormC);
                 string b = pwdConfirm.Password.Normalize(NormalizationForm.FormC);
                 if (!string.Equals(a, b, StringComparison.Ordinal))

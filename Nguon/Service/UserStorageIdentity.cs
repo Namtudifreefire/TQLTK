@@ -19,10 +19,10 @@ namespace PersonalInfoManager.Services
         public AmbiguousLegacyUserStorageException(string message) : base(message) { }
     }
 
-    /// <summary>
-    /// Gives each account's new local files a key based on its stable user id, while
-    /// providing guarded, one-time migration from the old username-derived paths.
-    /// </summary>
+
+
+
+
     internal static class UserStorageIdentity
     {
         public static string GetDirectoryName(Guid userId) => "user_" + userId.ToString("N");
@@ -148,7 +148,7 @@ namespace PersonalInfoManager.Services
                 ? string.Join("_", username.Split(Path.GetInvalidFileNameChars()))
                 : SanitizeName(username);
 
-            // Win32 treats trailing dots and spaces in directory names as aliases.
+
             return kind == LegacyUserStorageKind.LocalFiles
                 ? safeName.TrimEnd(' ', '.')
                 : safeName;
