@@ -6,7 +6,7 @@
 
 TQLTK is a local account and password manager for Windows. It stores logins in an encrypted vault on your PC, supports TOTP and optional Windows Hello authentication, and can back up to your own Google Drive. It is written in C# with WPF and .NET and is distributed as a portable, self-contained executable.
 
-> The current source version is **v3.6.5 (BETA)**. The newest published download is **v3.6.4**; check the [Releases page](https://github.com/Namtudifreefire/TQLTK/releases) for available builds.
+> The latest published build is **v3.6.5 (BETA)**. Download [PersonalInfoManager-3.6.5-win-x64.zip](https://github.com/Namtudifreefire/TQLTK/releases/download/v3.6.5/PersonalInfoManager-3.6.5-win-x64.zip) or browse the [Releases page](https://github.com/Namtudifreefire/TQLTK/releases).
 >
 > The application interface is currently **Vietnamese only**. A Vietnamese summary is at the bottom of this page.
 
@@ -32,9 +32,9 @@ TQLTK is a personal project maintained by one developer. It has not been indepen
 
 ## Install
 
-**Manual download:** download the `PersonalInfoManager-<version>-win-x64.zip` file from the [Releases page](https://github.com/Namtudifreefire/TQLTK/releases), extract it, then run `PersonalInfoManager.exe`. To remove the app, delete the extracted folder. Your data remains in `%AppData%\PersonalInfoManager` unless you remove it separately.
+**Manual download:** download [PersonalInfoManager-3.6.5-win-x64.zip](https://github.com/Namtudifreefire/TQLTK/releases/download/v3.6.5/PersonalInfoManager-3.6.5-win-x64.zip) from the [Releases page](https://github.com/Namtudifreefire/TQLTK/releases), extract it, then run `PersonalInfoManager.exe`. To remove the app, delete the extracted folder. Your data remains in `%AppData%\PersonalInfoManager` unless you remove it separately.
 
-**WinGet:** the initial package submission, [PR #463698](https://github.com/microsoft/winget-pkgs/pull/463698), is open and awaiting repository review. The package is not available through WinGet until that PR is merged. Its package identifier is `Namtudifreefire.TQLTK`; after it becomes available, install it with:
+**WinGet:** the open initial package submission [PR #463698](https://github.com/microsoft/winget-pkgs/pull/463698) targets v3.6.4 and has not been merged, so it does not yet provide v3.6.5. After the package is accepted and updated to the current release, install it with:
 
 ```powershell
 winget install --id Namtudifreefire.TQLTK --exact
@@ -69,7 +69,7 @@ Google Drive features need your own OAuth client. In Google Cloud Console, creat
 
 See the [Releases page](https://github.com/Namtudifreefire/TQLTK/releases) for downloadable builds and the full release history.
 
-### v3.6.5 (BETA — current source version)
+### v3.6.5 (BETA)
 
 - Strengthen account and session checks around sensitive vault, backup and Google Drive operations.
 - Protect CSV exports against spreadsheet formula injection.
@@ -93,15 +93,15 @@ TQLTK is distributed under the [MIT License](LICENSE). Copyright © 2026 Namtudi
 
 **TQLTK** là ứng dụng quản lý tài khoản và mật khẩu chạy trên Windows. Dữ liệu tài khoản được lưu trong vault mã hóa trên máy, hỗ trợ mã TOTP và tùy chọn Windows Hello, đồng thời có thể sao lưu lên Google Drive **của chính bạn**. Ứng dụng viết bằng C# (WPF, .NET), phát hành dạng portable và không cần cài .NET riêng.
 
-> Mã nguồn hiện là **v3.6.5 (BETA)**. Bản tải mới nhất đã phát hành hiện là **v3.6.4**; xem [trang Releases](https://github.com/Namtudifreefire/TQLTK/releases) để biết các bản đang có.
+> Bản mới nhất đã phát hành là **v3.6.5 (BETA)**. Tải [PersonalInfoManager-3.6.5-win-x64.zip](https://github.com/Namtudifreefire/TQLTK/releases/download/v3.6.5/PersonalInfoManager-3.6.5-win-x64.zip) hoặc xem [trang Releases](https://github.com/Namtudifreefire/TQLTK/releases).
 
 Giao diện ứng dụng hiện chỉ có tiếng Việt.
 
 **Tính năng:** lưu và tìm kiếm tài khoản, tạo mật khẩu ngẫu nhiên; mã hóa vault AES-256-GCM với khóa được bảo vệ bằng Windows DPAPI; TOTP kèm 8 mã khôi phục; Windows Hello (BETA, có thể dùng thay TOTP khi được cấu hình); tự khóa sau 5 phút không hoạt động và ẩn mật khẩu đang hiện sau 30 giây; nhập/xuất CSV và file `.vault` mã hóa; sao lưu và khôi phục Google Drive (BETA) bằng cụm mật khẩu sao lưu; nhiều người dùng và quyền admin; tab File cá nhân; giao diện sáng/tối/tự động.
 
-**Cài đặt:** tải file `PersonalInfoManager-<version>-win-x64.zip` ở trang [Releases](https://github.com/Namtudifreefire/TQLTK/releases), giải nén rồi chạy `PersonalInfoManager.exe`. File chạy sau khi giải nén khoảng 190 MB. Xóa thư mục đã giải nén để gỡ ứng dụng; dữ liệu trong `%AppData%\PersonalInfoManager` vẫn được giữ lại.
+**Cài đặt:** tải file [PersonalInfoManager-3.6.5-win-x64.zip](https://github.com/Namtudifreefire/TQLTK/releases/download/v3.6.5/PersonalInfoManager-3.6.5-win-x64.zip) ở trang [Releases](https://github.com/Namtudifreefire/TQLTK/releases), giải nén rồi chạy `PersonalInfoManager.exe`. File chạy sau khi giải nén khoảng 190 MB. Xóa thư mục đã giải nén để gỡ ứng dụng; dữ liệu trong `%AppData%\PersonalInfoManager` vẫn được giữ lại.
 
-**WinGet:** PR tạo gói ban đầu [#463698](https://github.com/microsoft/winget-pkgs/pull/463698) đang chờ duyệt. Trước khi PR được merge, gói chưa cài được từ WinGet. Sau khi gói khả dụng, dùng:
+**WinGet:** PR tạo gói ban đầu [#463698](https://github.com/microsoft/winget-pkgs/pull/463698) đang mở và nhắm tới v3.6.4, nên chưa có v3.6.5. Sau khi gói được chấp nhận và cập nhật lên bản hiện tại, dùng:
 
 ```powershell
 winget install --id Namtudifreefire.TQLTK --exact
@@ -116,7 +116,7 @@ winget install --id Namtudifreefire.TQLTK --exact
 - Dự án chưa được kiểm toán bảo mật độc lập; không nên dùng làm bản lưu duy nhất cho thông tin đăng nhập quan trọng.
 - Tính năng Windows Hello và Google Drive đang ở giai đoạn BETA.
 
-### Thay đổi trong v3.6.5 (BETA)
+### v3.6.5 (BETA)
 
 - Tăng cường kiểm tra tài khoản và phiên đăng nhập trước các thao tác nhạy cảm với vault, sao lưu và Google Drive.
 - Chống nội dung CSV có thể bị bảng tính hiểu thành công thức.
