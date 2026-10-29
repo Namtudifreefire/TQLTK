@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -45,6 +45,20 @@ namespace PersonalInfoManager.Services
                 .OrderByDescending(f => f, StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
+            var logs = new List<string[]>();
+            foreach (var file in files)
+            {
+                try { logs.Add(File.ReadAllLines(file, Encoding.UTF8)); }
+                catch { }
+            }
+
+            return BuildWarningFromLogs(username, now, logs);
+        }
+
+        internal static string? BuildWarningFromLogs(
+            string username, DateTime now, IEnumerable<string[]> logsNewestFileFirst)
+        {
+
             DateTime cutoff = now.AddMinutes(-IgnoreRecentMinutes);
 
             int passwordFails = 0;
@@ -53,25 +67,23 @@ namespace PersonalInfoManager.Services
             DateTime? previousLogin = null;
             bool foundLogin = false;
 
-            foreach (var file in files)
+            foreach (var lines in logsNewestFileFirst)
             {
-                string[] lines;
-                try { lines = File.ReadAllLines(file, Encoding.UTF8); }
-                catch { continue; }
-
                 for (int i = lines.Length - 1; i >= 0; i--)
                 {
                     var m = LineRx.Match(lines[i]);
                     if (!m.Success) continue;
 
-                    if (!string.Equals(m.Groups["u"].Value, username, StringComparison.OrdinalIgnoreCase))
+                    string loggedUsername = m.Groups["u"].Value;
+                    if (!string.Equals(loggedUsername, ActivityLogger.EscapeField(username), StringComparison.OrdinalIgnoreCase) &&
+                        !string.Equals(loggedUsername, username, StringComparison.OrdinalIgnoreCase))
                         continue;
 
                     if (!DateTime.TryParseExact(m.Groups["t"].Value, "yyyy-MM-dd HH:mm:ss",
                             CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime when))
                         continue;
 
-                    string action = m.Groups["a"].Value;
+                    string action = ActivityLogger.UnescapeField(m.Groups["a"].Value);
 
 
                     if (action == "LOGIN")

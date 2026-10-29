@@ -57,6 +57,9 @@ namespace PersonalInfoManager.Services
             var user = userService.FindByUsername(username)
                 ?? throw new InvalidOperationException("Không tìm thấy tài khoản để xác định kho dữ liệu riêng.");
 
+            if (!user.IsActive)
+                throw new UnauthorizedAccessException("Tài khoản đã bị khóa, không thể truy cập kho dữ liệu.");
+
             string isolatedPath = Path.Combine(
                 _root, $"vault_{UserStorageIdentity.GetDirectoryName(user.Id)}.dat");
             string legacyPath = UserStorageIdentity.GetLegacyPath(

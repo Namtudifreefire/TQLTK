@@ -29,10 +29,7 @@ namespace PersonalInfoManager.Services
                 string logFile = Path.Combine(_logRoot,
                     $"activity_{DateTime.Now:yyyy-MM-dd}.log");
 
-                string line = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] " +
-                              $"[{username}] " +
-                              $"[{action}] " +
-                              $"{detail}";
+                string line = FormatLine(DateTime.Now, username, action, detail);
 
                 lock (_lock)
                 {
@@ -43,6 +40,82 @@ namespace PersonalInfoManager.Services
             {
 
             }
+        }
+
+        internal static string FormatLine(DateTime timestamp, string username, string action, string detail)
+            => $"[{timestamp:yyyy-MM-dd HH:mm:ss}] [{EscapeField(username)}] " +
+               $"[{EscapeField(action)}] {EscapeField(detail)}";
+
+        internal static string EscapeField(string? value)
+        {
+            if (string.IsNullOrEmpty(value)) return value ?? "";
+
+            var escaped = new StringBuilder(value.Length);
+            foreach (char character in value)
+            {
+                switch (character)
+                {
+                    case '%': escaped.Append("%25"); break;
+                    case '[': escaped.Append("%5B"); break;
+                    case ']': escaped.Append("%5D"); break;
+                    case '\r': escaped.Append("%0D"); break;
+                    case '\n': escaped.Append("%0A"); break;
+                    default:
+                        if (char.IsControl(character))
+                            escaped.Append("%u").Append(((int)character).ToString("X4"));
+                        else
+                            escaped.Append(character);
+                        break;
+                }
+            }
+            return escaped.ToString();
+        }
+
+        internal static string UnescapeField(string? value)
+        {
+            if (string.IsNullOrEmpty(value)) return value ?? "";
+
+            var decoded = new StringBuilder(value.Length);
+            for (int index = 0; index < value.Length; index++)
+            {
+                if (value[index] != '%' || index + 1 >= value.Length)
+                {
+                    decoded.Append(value[index]);
+                    continue;
+                }
+
+                if (index + 5 < value.Length && value[index + 1] == 'u' &&
+                    ushort.TryParse(value.AsSpan(index + 2, 4), System.Globalization.NumberStyles.HexNumber,
+                        System.Globalization.CultureInfo.InvariantCulture, out ushort control))
+                {
+                    decoded.Append((char)control);
+                    index += 5;
+                    continue;
+                }
+
+                if (index + 2 < value.Length)
+                {
+                    string escape = value.Substring(index, 3);
+                    char? replacement = escape switch
+                    {
+                        "%25" => '%',
+                        "%5B" => '[',
+                        "%5D" => ']',
+                        "%0D" => '\r',
+                        "%0A" => '\n',
+                        _ => null
+                    };
+                    if (replacement is { } character)
+                    {
+                        decoded.Append(character);
+                        index += 2;
+                        continue;
+                    }
+                }
+
+                decoded.Append(value[index]);
+            }
+            return decoded.ToString();
         }
 
 

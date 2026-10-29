@@ -38,6 +38,7 @@ namespace PersonalInfoManager
         private DateTime _lastActivity = DateTime.UtcNow;
         private DateTime _lastAuthTime = DateTime.MinValue;
         private bool _isLocked = false;
+        private readonly CancellationTokenSource _sessionRevocationCts = new();
 
 
         private readonly DispatcherTimer _saveStateTimer;
@@ -113,6 +114,8 @@ namespace PersonalInfoManager
                 return;
             }
 
+            if (!EnsureActiveSession()) return;
+
             BuildPages();
 
 
@@ -121,7 +124,9 @@ namespace PersonalInfoManager
             UpdateUserChip();
 
             RefreshAccounts();
+            if (_isLocked) return;
             RefreshFiles();
+            if (_isLocked) return;
             UpdateStorageInfo();
             LoadProfile();
 
@@ -178,6 +183,7 @@ namespace PersonalInfoManager
         private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
         {
             StopAutoLock();
+            try { _sessionRevocationCts.Cancel(); } catch { }
             try { ClipboardGuard.ClearNow(); } catch { }
             try { AccountVaultService.ClearCache(); } catch { }
             SaveWindowState();
@@ -265,8 +271,28 @@ namespace PersonalInfoManager
         private void IdleTimer_Tick(object? sender, EventArgs e)
         {
             if (_isLocked) return;
+            if (!EnsureActiveSession()) return;
             if (DateTime.UtcNow - _lastActivity >= TimeSpan.FromMinutes(AutoLockMinutes))
                 LockNow();
+        }
+
+        private bool EnsureActiveSession()
+        {
+            if (_isLocked) return false;
+
+            var current = SessionService.CurrentUser;
+            if (current != null)
+            {
+                try
+                {
+                    if (_userService.FindById(current.Id) is { IsActive: true })
+                        return true;
+                }
+                catch { }
+            }
+
+            LockNow("Tài khoản đã bị khóa hoặc không thể xác minh trạng thái.");
+            return false;
         }
 
 
@@ -277,6 +303,12 @@ namespace PersonalInfoManager
 
             string username = SessionService.CurrentUser?.Username ?? "SYSTEM";
             StopAutoLock();
+            try { _sessionRevocationCts.Cancel(); } catch { }
+            _showPassword = false;
+            try { _accounts.Clear(); } catch { }
+            try { dgAccounts.ItemsSource = null; } catch { }
+            try { ClipboardGuard.ClearNow(); } catch { }
+            try { AccountVaultService.ClearCache(); } catch { }
             try { ActivityLogger.Log(username, "AUTO_LOCK", reason ?? $"Không hoạt động {AutoLockMinutes} phút"); } catch { }
 
 
@@ -338,18 +370,20 @@ namespace PersonalInfoManager
 
         private async Task<bool> RequireAuthAsync(string actionText, string deniedLogCode)
         {
+            if (!EnsureActiveSession()) return false;
             string username = SessionService.CurrentUser!.Username;
 
             if (IsAuthFresh()) return true;
 
             bool helloAvailable = false;
             try { helloAvailable = await WindowsHelloService.IsAvailableAsync(); } catch { }
+            if (_isLocked || !EnsureActiveSession()) return false;
 
             if (helloAvailable)
             {
                 bool ok = false;
                 try { ok = await WindowsHelloService.VerifyAsync(this, $"Xác nhận để {actionText}"); } catch { }
-                if (_isLocked) return false;
+                if (_isLocked || !EnsureActiveSession()) return false;
                 if (ok) { MarkAuthenticated(); return true; }
             }
 
@@ -364,7 +398,7 @@ namespace PersonalInfoManager
             }
 
             bool ok2 = TwoFactorPromptWindow.AskIfEnabled(this, username);
-            if (_isLocked) return false;
+            if (_isLocked || !EnsureActiveSession()) return false;
             if (ok2) { MarkAuthenticated(); return true; }
 
             try { ActivityLogger.Log(username, deniedLogCode, "Windows Hello và 2FA đều thất bại"); } catch { }
@@ -380,10 +414,17 @@ namespace PersonalInfoManager
 
         private void RefreshAccounts(bool updateStatus = true)
         {
+            if (!EnsureActiveSession()) return;
+
             string user = SessionService.CurrentUser!.Username;
             string keyword = txtSearch.Text;
 
-            _accounts = _vaultService.Search(user, keyword);
+            try { _accounts = _vaultService.Search(user, keyword); }
+            catch (UnauthorizedAccessException)
+            {
+                LockNow("Tài khoản đã bị khóa.");
+                return;
+            }
 
             var viewList = _accounts.Select(a => new
             {
@@ -420,6 +461,8 @@ namespace PersonalInfoManager
 
         private async void BtnToggleShow_Click(object? sender, RoutedEventArgs e)
         {
+            if (!EnsureActiveSession()) return;
+
 
             if (_showPassword)
             {
@@ -443,6 +486,7 @@ namespace PersonalInfoManager
                 }
 
                 bool available = await WindowsHelloService.IsAvailableAsync();
+                if (_isLocked || !EnsureActiveSession()) return;
                 if (!available)
                 {
                     MessageBox.Show(
@@ -453,7 +497,7 @@ namespace PersonalInfoManager
                 }
 
                 bool verified = await WindowsHelloService.VerifyAsync(this, "Xác nhận để hiện mật khẩu");
-                if (_isLocked) return;
+                if (_isLocked || !EnsureActiveSession()) return;
                 if (!verified)
                 {
                     try { ActivityLogger.Log(username, "SHOW_PASSWORD_DENIED", "Xác thực Windows Hello thất bại"); } catch { }
@@ -563,6 +607,8 @@ namespace PersonalInfoManager
 
         private async void BtnCopyPassword_Click(object? sender, RoutedEventArgs e)
         {
+            if (!EnsureActiveSession()) return;
+
             var selected = GetSelectedAccount();
             if (selected == null) return;
 
@@ -587,11 +633,12 @@ namespace PersonalInfoManager
                 {
                     bool helloAvailable = false;
                     try { helloAvailable = await WindowsHelloService.IsAvailableAsync(); } catch { }
+                    if (_isLocked || !EnsureActiveSession()) return;
 
                     if (helloAvailable)
                     {
                         try { ok = await WindowsHelloService.VerifyAsync(this, "Xác nhận để copy mật khẩu"); } catch { ok = false; }
-                        if (_isLocked) return;
+                        if (_isLocked || !EnsureActiveSession()) return;
                         if (ok) { method = "Windows Hello"; MarkAuthenticated(); }
                     }
                 }
@@ -611,7 +658,7 @@ namespace PersonalInfoManager
                     }
 
                     ok = TwoFactorPromptWindow.AskIfEnabled(this, username);
-                    if (_isLocked) return;
+                    if (_isLocked || !EnsureActiveSession()) return;
                     if (ok) { method = "2FA"; MarkAuthenticated(); }
                 }
 
@@ -621,6 +668,8 @@ namespace PersonalInfoManager
                     MessageBox.Show("Xác thực thất bại. Đã hủy copy mật khẩu.", "Từ chối", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
+
+                if (!EnsureActiveSession()) return;
 
                 if (!ClipboardGuard.CopySensitive(selected.Password))
                 {
@@ -660,6 +709,7 @@ namespace PersonalInfoManager
 
         private void RefreshFiles()
         {
+            if (!EnsureActiveSession()) return;
             string user = SessionService.CurrentUser!.Username;
             dgFiles.ItemsSource = _fileService.ListFiles(user);
         }
@@ -1149,12 +1199,14 @@ namespace PersonalInfoManager
 
 
 
-        private void MnuExportVault_Click(object? sender, RoutedEventArgs e)
+        private async void MnuExportVault_Click(object? sender, RoutedEventArgs e)
         {
             try
             {
                 var dlg = new SaveFileDialog { Title = "Xuất vault", Filter = "Vault backup (*.vault)|*.vault|Tất cả file (*.*)|*.*", FileName = $"vault_backup_{DateTime.Now:yyyyMMdd_HHmmss}.vault" };
                 if (dlg.ShowDialog() != true) return;
+
+                if (!await RequireAuthAsync("xuất vault", "EXPORT_VAULT_DENIED")) return;
 
                 string username = SessionService.CurrentUser!.Username;
                 var result = VaultBackupService.ExportToFile(username, dlg.FileName);
@@ -1163,7 +1215,7 @@ namespace PersonalInfoManager
             catch (Exception ex) { MessageBox.Show($"Lỗi: {ex.Message}"); }
         }
 
-        private void MnuImportVault_Click(object? sender, RoutedEventArgs e)
+        private async void MnuImportVault_Click(object? sender, RoutedEventArgs e)
         {
             try
             {
@@ -1178,7 +1230,8 @@ namespace PersonalInfoManager
                 var result = VaultBackupService.ImportFromFile(username, dlg.FileName, passphrase, ConfirmForeignOwner);
                 MessageBox.Show(result.message, result.ok ? "Thành công" : "Lỗi", MessageBoxButton.OK, result.ok ? MessageBoxImage.Information : MessageBoxImage.Warning);
 
-                if (result.ok) OfferSavePassphrase(passphrase);
+                if (result.ok) await OfferSavePassphraseAsync(passphrase);
+                if (_isLocked) return;
 
                 if (result.ok && result.importedCount > 0)
                 {
@@ -1195,10 +1248,14 @@ namespace PersonalInfoManager
 
         private async void MnuSyncGoogleDrive_Click(object? sender, RoutedEventArgs e)
         {
+            string? tempFile = null;
             try
             {
+                if (!await RequireAuthAsync("đồng bộ vault lên Google Drive", "SYNC_GOOGLE_DRIVE_DENIED")) return;
+
                 string username = SessionService.CurrentUser!.Username;
-                OfferAdoptLegacyPassphrase(username);
+                await OfferAdoptLegacyPassphraseAsync(username);
+                if (_isLocked) return;
                 if (!BackupCrypto.HasStoredPassphrase(username))
                 {
                     var ask = MessageBox.Show(
@@ -1207,21 +1264,22 @@ namespace PersonalInfoManager
                         "Nên đặt cụm mật khẩu sao lưu", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning);
 
                     if (ask == MessageBoxResult.Cancel) return;
-                    if (ask == MessageBoxResult.Yes && !SetBackupPassphrase()) return;
+                    if (ask == MessageBoxResult.Yes && !await SetBackupPassphraseAsync()) return;
                 }
 
-                string tempFile = Path.Combine(Path.GetTempPath(), $"vault_backup_{DateTime.Now:yyyyMMdd_HHmmss}.vault");
+                tempFile = Path.Combine(Path.GetTempPath(), $"vault_backup_{DateTime.Now:yyyyMMdd_HHmmss}.vault");
 
                 var exportResult = VaultBackupService.ExportToFile(username, tempFile);
                 if (!exportResult.ok) { MessageBox.Show(exportResult.message, "Lỗi xuất file", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
+                if (!EnsureActiveSession()) return;
 
                 var syncService = new CloudSyncService(username);
 
                 Mouse.OverrideCursor = Cursors.Wait;
-                bool success = await syncService.UploadVaultAsync(tempFile);
+                bool success = await syncService.UploadVaultAsync(tempFile, ct: _sessionRevocationCts.Token);
                 Mouse.OverrideCursor = null;
 
-                try { File.Delete(tempFile); } catch { }
+                if (_isLocked || !EnsureActiveSession()) return;
 
                 if (success)
                 {
@@ -1236,7 +1294,12 @@ namespace PersonalInfoManager
             catch (Exception ex)
             {
                 Mouse.OverrideCursor = null;
-                MessageBox.Show($"Lỗi đồng bộ: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                if (!_isLocked)
+                    MessageBox.Show($"Lỗi đồng bộ: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                try { if (tempFile != null && File.Exists(tempFile)) File.Delete(tempFile); } catch { }
             }
         }
 
@@ -1259,9 +1322,12 @@ namespace PersonalInfoManager
                         "Các tài khoản trùng sẽ được bỏ qua, dữ liệu hiện tại không bị xóa.",
                         "Xác nhận khôi phục", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
 
+                if (!EnsureActiveSession()) return;
+
                 Mouse.OverrideCursor = Cursors.Wait;
-                bool downloaded = await syncService.DownloadBackupAsync(pick.Id, tempFile);
+                bool downloaded = await syncService.DownloadBackupAsync(pick.Id, tempFile, _sessionRevocationCts.Token);
                 Mouse.OverrideCursor = null;
+                if (_isLocked || !EnsureActiveSession()) return;
 
                 if (!downloaded)
                 {
@@ -1276,7 +1342,8 @@ namespace PersonalInfoManager
 
                 if (result.ok)
                 {
-                    OfferSavePassphrase(passphrase);
+                    await OfferSavePassphraseAsync(passphrase);
+                    if (_isLocked) return;
                     ActivityLogger.Log(username, "RESTORE_GOOGLE_DRIVE", $"Nhập vault từ Drive: {pick.Name}");
 
                     if (result.importedCount > 0)
@@ -1301,12 +1368,13 @@ namespace PersonalInfoManager
 
 
 
-        private void MnuBackupPassphrase_Click(object? sender, RoutedEventArgs e)
+        private async void MnuBackupPassphrase_Click(object? sender, RoutedEventArgs e)
         {
             try
             {
                 string username = SessionService.CurrentUser!.Username;
-                OfferAdoptLegacyPassphrase(username);
+                await OfferAdoptLegacyPassphraseAsync(username);
+                if (_isLocked) return;
 
                 if (BackupCrypto.HasStoredPassphrase(username) &&
                     MessageBox.Show(
@@ -1315,16 +1383,19 @@ namespace PersonalInfoManager
                         "Đổi cụm mật khẩu sao lưu", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
                     return;
 
-                SetBackupPassphrase();
+                await SetBackupPassphraseAsync();
             }
             catch (Exception ex) { MessageBox.Show($"Lỗi: {ex.Message}"); }
         }
 
 
-        private bool SetBackupPassphrase()
+        private async Task<bool> SetBackupPassphraseAsync()
         {
+            if (!await RequireAuthAsync("đặt hoặc đổi cụm mật khẩu sao lưu", "SET_BACKUP_PASSPHRASE_DENIED")) return false;
+
             var dlg = new BackupPassphraseWindow(confirmMode: true) { Owner = this };
             if (dlg.ShowDialog() != true) return false;
+            if (!EnsureActiveSession()) return false;
 
             string username = SessionService.CurrentUser!.Username;
             BackupCrypto.SaveStoredPassphrase(username, dlg.Passphrase);
@@ -1366,9 +1437,10 @@ namespace PersonalInfoManager
         }
 
 
-        private void OfferSavePassphrase(string? passphrase)
+        private async Task OfferSavePassphraseAsync(string? passphrase)
         {
-            string username = SessionService.CurrentUser!.Username;
+            if (_isLocked || SessionService.CurrentUser is not { } currentUser) return;
+            string username = currentUser.Username;
             if (passphrase == null || BackupCrypto.HasStoredPassphrase(username)) return;
 
             if (MessageBox.Show(
@@ -1376,6 +1448,8 @@ namespace PersonalInfoManager
                     "Từ giờ các bản sao lưu mới từ máy này sẽ mở được bằng cùng cụm đó.",
                     "Lưu cụm mật khẩu", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
             {
+                if (!await RequireAuthAsync("lưu cụm mật khẩu sao lưu", "SET_BACKUP_PASSPHRASE_DENIED")) return;
+                if (!EnsureActiveSession()) return;
                 BackupCrypto.SaveStoredPassphrase(username, passphrase);
             }
         }
@@ -1396,7 +1470,7 @@ namespace PersonalInfoManager
 
 
 
-        private void OfferAdoptLegacyPassphrase(string username)
+        private async Task OfferAdoptLegacyPassphraseAsync(string username)
         {
             if (BackupCrypto.HasStoredPassphrase(username) || !BackupCrypto.HasLegacyPassphrase()) return;
 
@@ -1407,7 +1481,11 @@ namespace PersonalInfoManager
                 "Không: giữ nguyên để đúng người đã đặt cụm đó nhận sau.",
                 "Cụm mật khẩu sao lưu cũ", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No);
 
-            if (ask == MessageBoxResult.Yes && !BackupCrypto.TryAdoptLegacyPassphrase(username))
+            if (ask != MessageBoxResult.Yes) return;
+            if (!await RequireAuthAsync("nhận cụm mật khẩu sao lưu cũ", "SET_BACKUP_PASSPHRASE_DENIED")) return;
+            if (!EnsureActiveSession()) return;
+
+            if (!BackupCrypto.TryAdoptLegacyPassphrase(username))
             {
                 MessageBox.Show(
                     "Không đọc được cụm cũ trên máy này. Hãy đặt cụm mới (Google Drive → Cụm mật khẩu sao lưu).",
@@ -1445,7 +1523,8 @@ namespace PersonalInfoManager
                     return;
                 }
 
-                OfferAdoptLegacyPassphrase(username);
+                await OfferAdoptLegacyPassphraseAsync(username);
+                if (_isLocked) return;
                 string? passphrase = BackupCrypto.GetStoredPassphrase(username);
                 if (passphrase == null)
                 {
@@ -1454,7 +1533,7 @@ namespace PersonalInfoManager
                         "Đặt cụm mật khẩu ngay bây giờ?",
                         "Cần cụm mật khẩu sao lưu", MessageBoxButton.YesNo, MessageBoxImage.Question);
 
-                    if (ask != MessageBoxResult.Yes || !SetBackupPassphrase()) return;
+                    if (ask != MessageBoxResult.Yes || !await SetBackupPassphraseAsync()) return;
 
                     passphrase = BackupCrypto.GetStoredPassphrase(username);
                     if (passphrase == null) return;
@@ -1476,11 +1555,13 @@ namespace PersonalInfoManager
                     return;
                 }
 
+                if (!EnsureActiveSession()) return;
+
                 var syncService = new CloudSyncService(username);
-                bool success = await syncService.UploadFilesBackupAsync(tempFile);
+                bool success = await syncService.UploadFilesBackupAsync(tempFile, ct: _sessionRevocationCts.Token);
                 Mouse.OverrideCursor = null;
 
-                if (_isLocked) return;
+                if (_isLocked || !EnsureActiveSession()) return;
 
                 if (success)
                 {
@@ -1526,8 +1607,12 @@ namespace PersonalInfoManager
                         "Không có file nào bị ghi đè: file trùng nội dung được bỏ qua, file trùng tên nhưng khác nội dung được lưu thêm với tên mới.",
                         "Xác nhận khôi phục", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
 
+                if (!EnsureActiveSession()) return;
+
                 Mouse.OverrideCursor = Cursors.Wait;
-                bool downloaded = await syncService.DownloadBackupAsync(pick.Id, tempFile);
+                bool downloaded = await syncService.DownloadBackupAsync(pick.Id, tempFile, _sessionRevocationCts.Token);
+                Mouse.OverrideCursor = null;
+                if (_isLocked || !EnsureActiveSession()) return;
 
                 if (!downloaded)
                 {
@@ -1541,10 +1626,11 @@ namespace PersonalInfoManager
                 var result = await Task.Run(() => FileBackupService.RestoreFromFile(
                     username, tempFile, null,
                     err => { typed = AskOnUi(() => PromptRestorePassphrase(err)); return typed; },
-                    owner => AskOnUi(() => ConfirmForeignOwner(owner))));
+                    owner => AskOnUi(() => ConfirmForeignOwner(owner)),
+                    _sessionRevocationCts.Token));
                 Mouse.OverrideCursor = null;
 
-                if (_isLocked) return;
+                if (_isLocked || !EnsureActiveSession()) return;
 
                 MessageBox.Show(result.message, result.ok ? "Thành công" : "Lỗi", MessageBoxButton.OK, result.ok ? MessageBoxImage.Information : MessageBoxImage.Warning);
 
@@ -1554,7 +1640,8 @@ namespace PersonalInfoManager
 
                 if (result.ok)
                 {
-                    OfferSavePassphrase(typed);
+                    await OfferSavePassphraseAsync(typed);
+                    if (_isLocked) return;
                     ActivityLogger.Log(username, "RESTORE_FILES_GOOGLE_DRIVE",
                         $"Khôi phục File cá nhân từ Drive: {pick.Name} ({result.added} file, bỏ qua {result.skipped})");
                 }

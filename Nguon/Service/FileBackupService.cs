@@ -149,7 +149,8 @@ namespace PersonalInfoManager.Services
         public static (bool ok, string message, int added, int skipped) RestoreFromFile(
             string username, string sourcePath, string? passphrase = null,
             Func<string?, string?>? askPassphrase = null,
-            Func<string, bool>? confirmForeignOwner = null)
+            Func<string, bool>? confirmForeignOwner = null,
+            CancellationToken cancellationToken = default)
         {
             string? tempDir = null;
             byte[]? zipBytes = null;
@@ -157,6 +158,8 @@ namespace PersonalInfoManager.Services
 
             try
             {
+                cancellationToken.ThrowIfCancellationRequested();
+
                 if (!File.Exists(sourcePath))
                     return (false, "File không tồn tại.", 0, 0);
 
@@ -205,6 +208,8 @@ namespace PersonalInfoManager.Services
 
                 foreach (var entry in entries)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
+
 
                     string entryDir = Path.Combine(tempDir, (index++).ToString());
                     Directory.CreateDirectory(entryDir);
@@ -212,7 +217,7 @@ namespace PersonalInfoManager.Services
 
                     using (var src = entry.Open())
                     using (var dst = new FileStream(tmp, FileMode.CreateNew, FileAccess.Write, FileShare.None))
-                        CopyBounded(src, dst, entry.Length);
+                        CopyBounded(src, dst, entry.Length, cancellationToken);
 
                     try { File.SetLastWriteTime(tmp, entry.LastWriteTime.LocalDateTime); } catch {   }
 
@@ -224,6 +229,7 @@ namespace PersonalInfoManager.Services
                     }
 
 
+                    cancellationToken.ThrowIfCancellationRequested();
                     fileService.ImportFile(username, tmp);
                     added++;
                 }
@@ -329,7 +335,8 @@ namespace PersonalInfoManager.Services
                    && !ReservedName.IsMatch(name);
         }
 
-        private static void CopyBounded(Stream src, Stream dst, long maxBytes)
+        private static void CopyBounded(
+            Stream src, Stream dst, long maxBytes, CancellationToken cancellationToken = default)
         {
             byte[] buffer = new byte[81920];
             long total = 0;
@@ -337,6 +344,7 @@ namespace PersonalInfoManager.Services
 
             while ((read = src.Read(buffer, 0, buffer.Length)) > 0)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 total += read;
                 if (total > maxBytes)
                     throw new InvalidDataException("Một file trong bản sao lưu lớn hơn dung lượng đã khai báo.");

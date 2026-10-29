@@ -62,6 +62,11 @@ namespace PersonalInfoManager.Services
             if (string.IsNullOrEmpty(value)) return "\"\"";
 
 
+
+            if (StartsWithSpreadsheetFormula(value))
+                value = "'" + value;
+
+
             if (value.Contains(',') || value.Contains('"') ||
                 value.Contains('\n') || value.Contains('\r'))
             {
@@ -69,6 +74,16 @@ namespace PersonalInfoManager.Services
             }
 
             return value;
+        }
+
+        private static bool StartsWithSpreadsheetFormula(string value)
+        {
+            int index = 0;
+            while (index < value.Length &&
+                   (char.IsWhiteSpace(value[index]) || char.IsControl(value[index]) || value[index] == '\uFEFF'))
+                index++;
+
+            return index < value.Length && value[index] is '=' or '+' or '-' or '@';
         }
 
 
