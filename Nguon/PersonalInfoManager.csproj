@@ -39,6 +39,18 @@
 		</Page>
 	</ItemGroup>
 
+	<ItemGroup>
+		<None Update="LICENSE"
+			  CopyToOutputDirectory="PreserveNewest"
+			  CopyToPublishDirectory="PreserveNewest"
+			  Condition="Exists('LICENSE')" />
+		<None Include="../LICENSE"
+			  Link="LICENSE"
+			  CopyToOutputDirectory="PreserveNewest"
+			  CopyToPublishDirectory="PreserveNewest"
+			  Condition="!Exists('LICENSE') and Exists('../LICENSE')" />
+	</ItemGroup>
+
 	<ItemGroup Condition="Exists('credentials.json')">
 		<EmbeddedResource Include="credentials.json" LogicalName="credentials.json" />
 	</ItemGroup>
