@@ -9,8 +9,7 @@ namespace PersonalInfoManager.Services
     /// <summary>
     /// Mã hóa / giải mã dữ liệu vault.
     /// - Định dạng mới (v2): AES-256-GCM, có kiểm tra toàn vẹn. Chuỗi bắt đầu bằng "v2:".
-    /// - Định dạng cũ: AES-256-CBC (IV 16 byte + cipher, Base64). Vẫn đọc được để không mất dữ liệu cũ;
-    ///   vault và ghi chú cũ được ghi lại bằng AES-GCM ngay lần đọc thành công đầu tiên.
+    /// - Định dạng AES-CBC cũ không có kiểm tra toàn vẹn nên bị từ chối; file cũ được giữ nguyên.
     /// Key sinh ngẫu nhiên, bảo vệ bằng DPAPI (gắn với tài khoản Windows hiện tại).
     /// Vị trí key: %AppData%\PersonalInfoManager\key.dat
     /// LƯU Ý: không đổi tham số DPAPI (entropy/scope), nếu không key.dat cũ sẽ không đọc được.
@@ -21,7 +20,6 @@ namespace PersonalInfoManager.Services
         private const int KeySize = 32;        // AES-256
         private const int NonceSize = 12;      // GCM
         private const int TagSize = 16;        // GCM
-        private const int LegacyIvSize = 16;   // CBC cũ
 
         private static readonly string KeyDir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
@@ -29,9 +27,9 @@ namespace PersonalInfoManager.Services
 
         private static readonly string KeyFile = Path.Combine(KeyDir, "key.dat");
 
-        /// <summary>True when stored vault data uses the legacy unauthenticated CBC format.</summary>
-        public static bool IsLegacyCbcFormat(string cipherText)
-            => !cipherText.TrimStart().StartsWith(V2Prefix, StringComparison.Ordinal);
+        /// <summary>True when data uses the authenticated AES-GCM v2 format.</summary>
+        public static bool IsAuthenticatedV2Format(string cipherText)
+            => cipherText.TrimStart().StartsWith(V2Prefix, StringComparison.Ordinal);
 
         /// <summary>
         /// Lấy key AES hiện có, hoặc tạo mới nếu đây là lần chạy đầu tiên.
@@ -109,20 +107,24 @@ namespace PersonalInfoManager.Services
         }
 
         /// <summary>
-        /// Giải mã chuỗi do Encrypt tạo ra (v2), hoặc định dạng CBC cũ.
-        /// Ném CryptographicException / FormatException nếu dữ liệu hỏng hoặc sai key.
+        /// Chỉ giải mã định dạng AES-GCM v2 do Encrypt tạo ra.
+        /// Định dạng CBC cũ và các định dạng không hỗ trợ bị từ chối.
         /// </summary>
         public static string Decrypt(string cipherText)
         {
             string text = cipherText.Trim();
+            if (!IsAuthenticatedV2Format(text))
+            {
+                throw new CryptographicException(
+                    "Định dạng CBC cũ hoặc định dạng không được hỗ trợ không thể được mở an toàn. " +
+                    "File gốc được giữ nguyên để phục hồi riêng.");
+            }
+
             byte[] key = GetOrCreateKey();
 
             try
             {
-                if (text.StartsWith(V2Prefix, StringComparison.Ordinal))
-                    return DecryptV2(key, text.Substring(V2Prefix.Length));
-
-                return DecryptLegacyCbc(key, text);
+                return DecryptV2(key, text.Substring(V2Prefix.Length));
             }
             finally
             {
@@ -159,32 +161,5 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        private static string DecryptLegacyCbc(byte[] key, string base64)
-        {
-            byte[] data = Convert.FromBase64String(base64);
-
-            // IV (16) + ít nhất 1 block (16), và phần cipher phải chia hết cho 16
-            if (data.Length < LegacyIvSize * 2 || (data.Length - LegacyIvSize) % 16 != 0)
-                throw new CryptographicException("Dữ liệu mã hóa không hợp lệ.");
-
-            byte[] iv = data[..LegacyIvSize];
-            byte[] cipher = data[LegacyIvSize..];
-
-            using var aes = Aes.Create();
-            aes.Key = key;
-            aes.IV = iv;
-
-            using var decryptor = aes.CreateDecryptor();
-            byte[] plain = decryptor.TransformFinalBlock(cipher, 0, cipher.Length);
-
-            try
-            {
-                return Encoding.UTF8.GetString(plain);
-            }
-            finally
-            {
-                CryptographicOperations.ZeroMemory(plain);
-            }
-        }
     }
 }

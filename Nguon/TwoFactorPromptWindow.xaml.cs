@@ -87,16 +87,17 @@ namespace PersonalInfoManager
             }
 
             _attempts++;
-            int left = MaxAttempts - _attempts;
 
-            if (left <= 0)
+            if (_attempts >= MaxAttempts)
             {
                 MessageBox.Show(this, "Bạn đã nhập sai quá nhiều lần.", "Bị từ chối", MessageBoxButton.OK, MessageBoxImage.Warning);
                 DialogResult = false;
                 return;
             }
 
-            lblError.Text = $"{result.message} (còn {left} lần thử)";
+            lblError.Text = string.IsNullOrWhiteSpace(result.message)
+                ? "Mã không đúng."
+                : result.message;
             lblError.Visibility = Visibility.Visible;
             txtCode.SelectAll();
             txtCode.Focus();

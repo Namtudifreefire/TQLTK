@@ -23,7 +23,10 @@ namespace PersonalInfoManager
 
         private void BtnCopy_Click(object sender, RoutedEventArgs e)
         {
-            try { Clipboard.SetText(txtCodes.Text); } catch { }
+            if (!ClipboardGuard.CopySensitive(txtCodes.Text))
+                MessageBox.Show(this,
+                    "Không thể sao chép mã khôi phục vào clipboard an toàn. Hãy thử lại.",
+                    "Không thể sao chép", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
 
         // Chỉ khi bấm "hoàn tất" mới lưu bộ mã mới và vô hiệu hóa mã cũ

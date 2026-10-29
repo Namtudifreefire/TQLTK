@@ -20,8 +20,11 @@ namespace PersonalInfoManager.Services
         private static DispatcherTimer? _timer;
         private static string? _copiedText;
 
-        public static void CopySensitive(string text)
+        public static bool CopySensitive(string text)
         {
+            var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(ClearAfterSeconds) };
+            timer.Tick += (_, _) => ClearNow();
+
             try
             {
                 var data = new DataObject();
@@ -36,16 +39,21 @@ namespace PersonalInfoManager.Services
             }
             catch
             {
-                // Không đặt được cờ loại trừ thì vẫn copy bình thường (vẫn tự xóa sau ClearAfterSeconds giây)
-                Clipboard.SetText(text);
+                // Fail closed: never put sensitive text on the clipboard without exclusion flags.
+                return false;
             }
 
-            _copiedText = text;
-
             _timer?.Stop();
-            _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(ClearAfterSeconds) };
-            _timer.Tick += (_, _) => ClearNow();
-            _timer.Start();
+            _copiedText = text;
+            _timer = timer;
+            try { timer.Start(); }
+            catch
+            {
+                ClearNow();
+                return false;
+            }
+
+            return true;
         }
 
         /// <summary>

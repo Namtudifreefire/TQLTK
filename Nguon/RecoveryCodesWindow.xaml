@@ -26,14 +26,13 @@
                 BorderThickness="1"
                 CornerRadius="8"
                 Padding="14,10">
-            <TextBox x:Name="txtCodes"
-                     IsReadOnly="True"
-                     AcceptsReturn="True"
-                     BorderThickness="0"
-                     Background="Transparent"
-                     FontFamily="Consolas"
-                     FontSize="17"
-                     Foreground="{DynamicResource TextPrimaryBrush}" />
+            <ScrollViewer Height="160" VerticalScrollBarVisibility="Auto">
+                <TextBlock x:Name="txtCodes"
+                           TextWrapping="Wrap"
+                           FontFamily="Consolas"
+                           FontSize="17"
+                           Foreground="{DynamicResource TextPrimaryBrush}" />
+            </ScrollViewer>
         </Border>
 
         <TextBlock x:Name="lblError"

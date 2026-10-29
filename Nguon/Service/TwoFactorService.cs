@@ -24,6 +24,8 @@ namespace PersonalInfoManager.Services
         private const int CodeModulus = 1_000_000;   // 6 chữ số
         private const int AllowedDrift = 1;          // chấp nhận lệch ±1 bước (±30 giây)
         private const int RecoveryCodeCount = 8;
+        private const int MaxFailedVerificationAttempts = 5;
+        private static readonly TimeSpan VerificationLockoutDuration = TimeSpan.FromMinutes(5);
         private const string Base32Alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
         private static readonly byte[] Entropy = Encoding.UTF8.GetBytes("TQLTK.2FA.v1");
         private static readonly object ValidationSync = new();
@@ -37,50 +39,152 @@ namespace PersonalInfoManager.Services
             public string Secret { get; set; } = "";
             public List<string> RecoveryHashes { get; set; } = new();
             public long LastUsedStep { get; set; } = -1;
+            public int FailedVerificationAttempts { get; set; }
+            public long LockedUntilUnixSeconds { get; set; }
         }
 
         /// <summary>
-        /// Serializes file-backed 2FA operations across app processes. The named mutex is
-        /// keyed by normalized username so distinct users do not block each other.
+        /// Serializes file-backed 2FA operations across processes and Windows sessions.
+        /// The exclusive lock file is keyed by the stable user ID and stored beside the
+        /// per-user 2FA file, so concurrent sessions sharing the same profile coordinate.
         /// </summary>
         private static IDisposable AcquireCrossProcessLock(string username)
         {
-            byte[] nameHash = SHA256.HashData(Encoding.UTF8.GetBytes(
-                (username ?? "").Trim().ToUpperInvariant()));
-            string mutexName = @"Local\TQLTK.TwoFactor." + Convert.ToHexString(nameHash);
-            CryptographicOperations.ZeroMemory(nameHash);
+            var user = new UserService().FindByUsername(username)
+                ?? throw new InvalidOperationException("Không tìm thấy tài khoản để khóa dữ liệu 2FA.");
 
-            var mutex = new Mutex(initiallyOwned: false, name: mutexName);
-            try
+            Directory.CreateDirectory(Folder);
+            string lockPath = Path.Combine(
+                Folder, UserStorageIdentity.GetDirectoryName(user.Id) + ".2fa.lock");
+            long deadline = Environment.TickCount64 + 15_000;
+
+            while (true)
             {
-                bool acquired = false;
-                try { acquired = mutex.WaitOne(TimeSpan.FromSeconds(15)); }
-                catch (AbandonedMutexException) { acquired = true; /* ownership transfers to this process */ }
-                if (!acquired)
-                    throw new TimeoutException("Hết thời gian chờ khóa dữ liệu 2FA.");
-                return new MutexScope(mutex);
-            }
-            catch
-            {
-                mutex.Dispose();
-                throw;
+                try
+                {
+                    return new FileStream(
+                        lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+                }
+                catch (IOException ex) when (IsFileLockContention(ex) && Environment.TickCount64 < deadline)
+                {
+                    Thread.Sleep(60);
+                }
+                catch (IOException ex) when (IsFileLockContention(ex))
+                {
+                    throw new TimeoutException("Hết thời gian chờ khóa dữ liệu 2FA.", ex);
+                }
             }
         }
 
-        private sealed class MutexScope : IDisposable
+        private static bool IsFileLockContention(IOException exception)
         {
-            private readonly Mutex _mutex;
-            private bool _disposed;
+            int nativeError = exception.HResult & 0xFFFF;
+            return nativeError == 32 || nativeError == 33;
+        }
 
-            public MutexScope(Mutex mutex) => _mutex = mutex;
-
-            public void Dispose()
+        private static bool TryGetLockoutMessage(TwoFactorData data, out string message)
+        {
+            long now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            if (data.LockedUntilUnixSeconds > now)
             {
-                if (_disposed) return;
-                _disposed = true;
-                try { _mutex.ReleaseMutex(); }
-                finally { _mutex.Dispose(); }
+                long remaining = data.LockedUntilUnixSeconds - now;
+                long minutes = Math.Max(1, (long)Math.Ceiling(remaining / 60d));
+                message = $"Nhập sai mã 2FA quá nhiều lần. Hãy thử lại sau khoảng {minutes} phút.";
+                return true;
             }
+
+            if (data.LockedUntilUnixSeconds != 0)
+            {
+                data.LockedUntilUnixSeconds = 0;
+                data.FailedVerificationAttempts = 0;
+            }
+
+            message = "";
+            return false;
+        }
+
+        private static void ResetFailedVerificationState(TwoFactorData data)
+        {
+            data.FailedVerificationAttempts = 0;
+            data.LockedUntilUnixSeconds = 0;
+        }
+
+        private static (bool ok, string message) RecordFailedVerification(
+            string username, TwoFactorData data, string failureMessage)
+        {
+            data.FailedVerificationAttempts =
+                Math.Clamp(data.FailedVerificationAttempts, 0, MaxFailedVerificationAttempts - 1) + 1;
+
+            bool locked = data.FailedVerificationAttempts >= MaxFailedVerificationAttempts;
+            if (locked)
+            {
+                data.FailedVerificationAttempts = 0;
+                data.LockedUntilUnixSeconds = DateTimeOffset.UtcNow
+                    .Add(VerificationLockoutDuration)
+                    .ToUnixTimeSeconds();
+            }
+
+            try
+            {
+                Save(username, data);
+            }
+            catch (Exception ex)
+            {
+                return (false, $"Không thể lưu trạng thái giới hạn thử 2FA; lần xác thực bị từ chối. Chi tiết: {ex.Message}");
+            }
+
+            if (locked)
+                return (false, $"{failureMessage} Đã tạm khóa xác thực 2FA trong {VerificationLockoutDuration.TotalMinutes:0} phút.");
+
+            int attemptsLeft = MaxFailedVerificationAttempts - data.FailedVerificationAttempts;
+            return (false, $"{failureMessage} Còn {attemptsLeft} lần thử trước khi bị khóa tạm thời.");
+        }
+
+        private static (bool ok, string message) ValidateCore(string username, string input)
+        {
+            var data = Load(username);
+            if (data == null)
+                return (false, "Không đọc được dữ liệu 2FA của tài khoản này.");
+
+            if (TryGetLockoutMessage(data, out string lockoutMessage))
+                return (false, lockoutMessage);
+
+            string code = NormalizeCode(input);
+            if (code.Length == 0)
+                return (false, "Vui lòng nhập mã.");
+
+            if (code.Length == 6 && code.All(char.IsDigit))
+            {
+                if (!TryMatch(data.Secret, code, data.LastUsedStep, out long matchedStep))
+                    return RecordFailedVerification(username, data, "Mã không đúng hoặc đã được dùng.");
+
+                data.LastUsedStep = matchedStep;
+                ResetFailedVerificationState(data);
+                try { Save(username, data); }
+                catch (Exception ex)
+                {
+                    return (false, $"Không thể lưu trạng thái 2FA; hãy thử lại. Chi tiết: {ex.Message}");
+                }
+                return (true, "");
+            }
+
+            if (code.Length == 10)
+            {
+                string hash = HashRecoveryCode(code);
+                string? found = data.RecoveryHashes.FirstOrDefault(h => FixedTimeEquals(h, hash));
+                if (found == null)
+                    return RecordFailedVerification(username, data, "Mã khôi phục không đúng hoặc đã được dùng.");
+
+                data.RecoveryHashes.Remove(found);
+                ResetFailedVerificationState(data);
+                try { Save(username, data); }
+                catch (Exception ex) { return (false, $"Lỗi lưu dữ liệu 2FA: {ex.Message}"); }
+
+                return (true, $"Bạn vừa dùng 1 mã khôi phục. Còn lại {data.RecoveryHashes.Count} mã.\nHãy tắt rồi bật lại 2FA nếu bạn đã mất điện thoại.");
+            }
+
+            return RecordFailedVerification(
+                username, data, "Nhập mã 6 số từ Authenticator hoặc mã khôi phục (10 ký tự).");
         }
 
         // ================================================================
@@ -224,45 +328,7 @@ namespace PersonalInfoManager.Services
             lock (ValidationSync)
             {
                 using var processLock = AcquireCrossProcessLock(username);
-                var data = Load(username);
-                if (data == null)
-                    return (false, "Không đọc được dữ liệu 2FA của tài khoản này.");
-
-                string code = NormalizeCode(input);
-                if (code.Length == 0)
-                    return (false, "Vui lòng nhập mã.");
-
-                // ---- Mã TOTP 6 số ----
-                if (code.Length == 6 && code.All(char.IsDigit))
-                {
-                    if (!TryMatch(data.Secret, code, data.LastUsedStep, out long matchedStep))
-                        return (false, "Mã không đúng hoặc đã được dùng.");
-
-                    data.LastUsedStep = matchedStep;
-                    try { Save(username, data); }
-                    catch (Exception ex)
-                    {
-                        return (false, $"Không thể lưu trạng thái 2FA; hãy thử lại. Chi tiết: {ex.Message}");
-                    }
-                    return (true, "");
-                }
-
-                // ---- Mã khôi phục (10 ký tự) ----
-                if (code.Length == 10)
-                {
-                    string hash = HashRecoveryCode(code);
-                    string? found = data.RecoveryHashes.FirstOrDefault(h => FixedTimeEquals(h, hash));
-                    if (found == null)
-                        return (false, "Mã khôi phục không đúng hoặc đã được dùng.");
-
-                    data.RecoveryHashes.Remove(found);
-                    try { Save(username, data); }
-                    catch (Exception ex) { return (false, $"Lỗi lưu dữ liệu 2FA: {ex.Message}"); }
-
-                    return (true, $"Bạn vừa dùng 1 mã khôi phục. Còn lại {data.RecoveryHashes.Count} mã.\nHãy tắt rồi bật lại 2FA nếu bạn đã mất điện thoại.");
-                }
-
-                return (false, "Nhập mã 6 số từ Authenticator hoặc mã khôi phục (10 ký tự).");
+                return ValidateCore(username, input);
             }
         }
 
@@ -276,7 +342,7 @@ namespace PersonalInfoManager.Services
             lock (ValidationSync)
             {
                 using var processLock = AcquireCrossProcessLock(username);
-                var result = Validate(username, input);
+                var result = ValidateCore(username, input);
                 if (!result.ok) return result;
 
                 try { File.Delete(GetPath(username)); }
@@ -325,15 +391,23 @@ namespace PersonalInfoManager.Services
                 if (data == null)
                     return (false, "Không đọc được dữ liệu 2FA của tài khoản này.", new List<string>());
 
+                if (TryGetLockoutMessage(data, out string lockoutMessage))
+                    return (false, lockoutMessage, new List<string>());
+
                 string code = NormalizeCode(input);
                 if (code.Length != 6 || !code.All(char.IsDigit))
-                    return (false, "Nhập mã 6 số hiện tại từ Authenticator (không dùng mã khôi phục).", new List<string>());
+                    return (false, RecordFailedVerification(
+                        username, data, "Nhập mã 6 số hiện tại từ Authenticator (không dùng mã khôi phục).").message,
+                        new List<string>());
 
                 if (!TryMatch(data.Secret, code, data.LastUsedStep, out long matchedStep))
-                    return (false, "Mã không đúng hoặc đã được dùng. Hãy đợi mã mới (tối đa 30 giây) rồi nhập lại.", new List<string>());
+                    return (false, RecordFailedVerification(
+                        username, data, "Mã không đúng hoặc đã được dùng. Hãy đợi mã mới (tối đa 30 giây) rồi nhập lại.").message,
+                        new List<string>());
 
                 // Ghi nhận mã TOTP đã dùng (chống dùng lại). Không tiếp tục nếu không lưu được.
                 data.LastUsedStep = matchedStep;
+                ResetFailedVerificationState(data);
                 try { Save(username, data); }
                 catch (Exception ex)
                 {

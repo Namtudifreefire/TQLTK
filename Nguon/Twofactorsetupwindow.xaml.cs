@@ -57,7 +57,10 @@ namespace PersonalInfoManager
 
         private void BtnCopySecret_Click(object sender, RoutedEventArgs e)
         {
-            try { Clipboard.SetText(_secret); } catch { }
+            if (!ClipboardGuard.CopySensitive(_secret))
+                MessageBox.Show(this,
+                    "Không thể sao chép khóa 2FA vào clipboard an toàn. Hãy thử lại.",
+                    "Không thể sao chép", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
 
         private void BtnConfirm_Click(object sender, RoutedEventArgs e)
@@ -86,7 +89,10 @@ namespace PersonalInfoManager
 
         private void BtnCopyRecovery_Click(object sender, RoutedEventArgs e)
         {
-            try { Clipboard.SetText(txtRecovery.Text); } catch { }
+            if (!ClipboardGuard.CopySensitive(txtRecovery.Text))
+                MessageBox.Show(this,
+                    "Không thể sao chép mã khôi phục vào clipboard an toàn. Hãy thử lại.",
+                    "Không thể sao chép", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
 
         private void BtnFinish_Click(object sender, RoutedEventArgs e)

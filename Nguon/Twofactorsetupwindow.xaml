@@ -46,12 +46,20 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
-                <TextBox x:Name="txtSecret"
-                         Grid.Column="0"
-                         Height="34"
-                         IsReadOnly="True"
-                         FontFamily="Consolas"
-                         VerticalContentAlignment="Center" />
+                <Border Grid.Column="0"
+                        Height="34"
+                        Padding="8,0"
+                        Background="{DynamicResource SurfaceBrush}"
+                        BorderBrush="{DynamicResource BorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="4"
+                        VerticalAlignment="Center">
+                    <TextBlock x:Name="txtSecret"
+                               FontFamily="Consolas"
+                               Foreground="{DynamicResource TextPrimaryBrush}"
+                               VerticalAlignment="Center"
+                               TextWrapping="Wrap" />
+                </Border>
 
                 <Button Grid.Column="1"
                         Content="📋 Copy"
@@ -106,15 +114,21 @@
                 <Run Text="Hãy lưu ở nơi an toàn (giấy, két sắt...). Mã chỉ hiển thị MỘT LẦN duy nhất." FontWeight="SemiBold" />
             </TextBlock>
 
-            <TextBox x:Name="txtRecovery"
-                     Height="200"
-                     IsReadOnly="True"
-                     AcceptsReturn="True"
-                     FontFamily="Consolas"
-                     FontSize="16"
-                     Padding="10"
-                     HorizontalContentAlignment="Center"
-                     VerticalScrollBarVisibility="Auto" />
+            <Border Height="200"
+                    Background="{DynamicResource SurfaceBrush}"
+                    BorderBrush="{DynamicResource BorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="10">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <TextBlock x:Name="txtRecovery"
+                               FontFamily="Consolas"
+                               FontSize="16"
+                               Foreground="{DynamicResource TextPrimaryBrush}"
+                               TextAlignment="Center"
+                               TextWrapping="Wrap" />
+                </ScrollViewer>
+            </Border>
 
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,18,0,0">
                 <Button Content="📋 Copy mã"

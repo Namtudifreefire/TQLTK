@@ -20,8 +20,8 @@ namespace PersonalInfoManager.Services
     }
 
     /// <summary>
-    /// Đọc / ghi vault tài khoản (mã hóa AES). Vault CBC cũ được tự chuyển sang GCM
-    /// sau lần đọc/khôi phục thành công đầu tiên; bản .bak cũng được mã hóa lại.
+    /// Đọc / ghi vault tài khoản (mã hóa AES-GCM). Định dạng CBC cũ không được mở;
+    /// file gốc được giữ nguyên để phục hồi riêng.
     ///
     /// CACHE: danh sách đã giải mã được giữ trong bộ nhớ (dùng chung cho mọi instance, theo từng file vault)
     /// để Search / Count / Load không phải đọc file và giải mã lại mỗi lần.
@@ -123,19 +123,13 @@ namespace PersonalInfoManager.Services
         /// Hàm này KHÔNG dùng cache (Save dựa vào nó để kiểm tra file hiện tại còn đọc được không).
         /// </summary>
         private static List<SavedAccount>? TryRead(string file, out Exception? error)
-            => TryRead(file, out error, out _);
-
-        private static List<SavedAccount>? TryRead(
-            string file, out Exception? error, out bool isLegacyFormat)
         {
             error = null;
-            isLegacyFormat = false;
 
             if (!File.Exists(file)) return null;
 
             string encrypted = File.ReadAllText(file);
             if (string.IsNullOrWhiteSpace(encrypted)) return new List<SavedAccount>();
-            isLegacyFormat = AesCrypto.IsLegacyCbcFormat(encrypted);
 
             try
             {
@@ -179,23 +173,16 @@ namespace PersonalInfoManager.Services
                     return hit.Accounts;
             }
 
-            var accounts = TryRead(file, out Exception? mainError, out bool legacyMain);
+            var accounts = TryRead(file, out Exception? mainError);
             if (accounts != null)
             {
-                if (legacyMain)
-                {
-                    // Migrate readable CBC data to authenticated AES-GCM on first access.
-                    Save(username, accounts);
-                    return accounts;
-                }
-
                 StoreCache(file, info, accounts);
                 return accounts;
             }
 
             // File chính hỏng → thử bản dự phòng gần nhất (không nạp cache, trường hợp hiếm)
             DropCache(file);
-            var fromBackup = TryRead(file + ".bak", out _, out _);
+            var fromBackup = TryRead(file + ".bak", out _);
             if (fromBackup != null)
             {
                 // Restore the last valid backup and write it in the authenticated format.
@@ -241,10 +228,10 @@ namespace PersonalInfoManager.Services
 
             if (File.Exists(file))
             {
-                var previous = TryRead(file, out _, out _);
+                var previous = TryRead(file, out _);
                 if (previous != null)
                 {
-                    // Re-encrypt the previous snapshot so a migrated CBC file is not retained as .bak.
+                    // Keep the previous readable snapshot as an authenticated AES-GCM backup.
                     string previousJson = JsonSerializer.Serialize(previous, JsonOpts);
                     WriteAtomically(file + ".bak", AesCrypto.Encrypt(previousJson));
                 }

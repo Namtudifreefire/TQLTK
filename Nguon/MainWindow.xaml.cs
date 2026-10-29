@@ -622,7 +622,14 @@ namespace PersonalInfoManager
                     return;
                 }
 
-                ClipboardGuard.CopySensitive(selected.Password);
+                if (!ClipboardGuard.CopySensitive(selected.Password))
+                {
+                    MessageBox.Show(
+                        "Không thể sao chép mật khẩu vào clipboard an toàn. Hãy thử lại.",
+                        "Không thể sao chép", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
                 try { ActivityLogger.Log(username, "COPY_PASSWORD", $"{selected.ServiceName} (xác thực: {method})"); } catch { }
                 MessageBox.Show($"Đã copy password! Clipboard sẽ tự xóa sau {ClipboardGuard.ClearAfterSeconds} giây.");
             }

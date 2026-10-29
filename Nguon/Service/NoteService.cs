@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Security.Cryptography;
 using System.Text.Json;
 using PersonalInfoManager.Models;
 
@@ -8,8 +9,8 @@ namespace PersonalInfoManager.Services
 {
     /// <summary>
     /// Quản lý ghi chú cá nhân.
-    /// Dữ liệu được mã hóa AES trước khi lưu xuống file. Ghi chú CBC cũ được tự chuyển
-    /// sang AES-GCM sau lần đọc thành công đầu tiên.
+    /// Dữ liệu được mã hóa AES-GCM trước khi lưu xuống file. Ghi chú CBC cũ không được mở;
+    /// file gốc được giữ nguyên để không âm thầm chấp nhận dữ liệu chưa xác thực.
     /// Vị trí: %AppData%\PersonalInfoManager\notes.json
     /// </summary>
     public class NoteService
@@ -25,29 +26,38 @@ namespace PersonalInfoManager.Services
         {
             if (!File.Exists(_dataFile)) return new List<Note>();
 
-            string encrypted;
-            List<Note> notes;
+            return DecryptNotes(File.ReadAllText(_dataFile));
+        }
+
+        private static List<Note> DecryptNotes(string encrypted)
+        {
+            if (string.IsNullOrWhiteSpace(encrypted)) return new List<Note>();
+
+            if (!AesCrypto.IsAuthenticatedV2Format(encrypted))
+            {
+                throw new CryptographicException(
+                    "Ghi chú không dùng định dạng AES-GCM v2. CBC cũ không có kiểm tra toàn vẹn, " +
+                    "nên ứng dụng từ chối mở và giữ nguyên file để phục hồi riêng.");
+            }
+
+            string json;
+            try { json = AesCrypto.Decrypt(encrypted); }
+            catch (FormatException ex)
+            {
+                throw new CryptographicException(
+                    "Dữ liệu ghi chú AES-GCM không hợp lệ; file được giữ nguyên.", ex);
+            }
+
             try
             {
-                encrypted = File.ReadAllText(_dataFile);
-                if (string.IsNullOrWhiteSpace(encrypted)) return new List<Note>();
-
-                string json = AesCrypto.Decrypt(encrypted);
-                notes = JsonSerializer.Deserialize<List<Note>>(json) ?? new List<Note>();
+                return JsonSerializer.Deserialize<List<Note>>(json)
+                    ?? throw new CryptographicException("Nội dung ghi chú không đúng định dạng danh sách.");
             }
-            catch
+            catch (JsonException ex)
             {
-                // File hỏng, sai key, hoặc giải mã thất bại → trả về rỗng
-                return new List<Note>();
+                throw new CryptographicException(
+                    "Nội dung ghi chú không hợp lệ; file được giữ nguyên.", ex);
             }
-
-            if (AesCrypto.IsLegacyCbcFormat(encrypted))
-            {
-                try { Save(notes); }
-                catch { /* Keep the successfully loaded notes if migration cannot be saved. */ }
-            }
-
-            return notes;
         }
 
         /// <summary>
@@ -55,6 +65,12 @@ namespace PersonalInfoManager.Services
         /// </summary>
         public void Save(List<Note> notes)
         {
+            if (File.Exists(_dataFile))
+            {
+                string existing = File.ReadAllText(_dataFile);
+                _ = DecryptNotes(existing);
+            }
+
             Directory.CreateDirectory(Path.GetDirectoryName(_dataFile)!);
 
             string json = JsonSerializer.Serialize(notes,

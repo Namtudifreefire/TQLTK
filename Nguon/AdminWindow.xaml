@@ -163,9 +163,6 @@
                     <DataGridTextColumn Header="Id"
                                         Binding="{Binding Id}"
                                         Width="Auto" MinWidth="280" />
-                    <DataGridTextColumn Header="PasswordHash"
-                                        Binding="{Binding PasswordHash}"
-                                        Width="Auto" MinWidth="300" />
                 </DataGrid.Columns>
             </DataGrid>
         </Border>

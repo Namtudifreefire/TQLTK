@@ -143,6 +143,13 @@ namespace PersonalInfoManager.Services
                 }
                 else
                 {
+                    if (!AesCrypto.IsAuthenticatedV2Format(encrypted))
+                    {
+                        return (false,
+                            "Bản sao lưu không dùng định dạng AES-GCM v2. CBC cũ không có kiểm tra toàn vẹn, " +
+                            "nên ứng dụng từ chối mở file này và không thay đổi bản gốc.", 0);
+                    }
+
                     try
                     {
                         json = AesCrypto.Decrypt(encrypted);

@@ -307,7 +307,18 @@ namespace PersonalInfoManager.Services
             {
                 if (!RequireAdmin(out _)) return Array.Empty<User>();
                 Reload();
-                return _users.ToList().AsReadOnly();
+                return _users.Select(user => new User
+                {
+                    Id = user.Id,
+                    Username = user.Username,
+                    Role = user.Role,
+                    CreatedAt = user.CreatedAt,
+                    LastLoginAt = user.LastLoginAt,
+                    IsActive = user.IsActive,
+                    FullName = user.FullName,
+                    Email = user.Email,
+                    Phone = user.Phone
+                }).ToList().AsReadOnly();
             }
         }
 
