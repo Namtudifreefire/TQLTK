@@ -9,26 +9,11 @@ using PersonalInfoManager.Models;
 namespace PersonalInfoManager.Services
 {
 
-
-
-
-
     public class VaultUnreadableException : Exception
     {
         public VaultUnreadableException(string message, Exception? inner = null)
             : base(message, inner) { }
     }
-
-
-
-
-
-
-
-
-
-
-
 
     public class AccountVaultService
     {
@@ -85,11 +70,6 @@ namespace PersonalInfoManager.Services
             return isolatedPath;
         }
 
-
-
-
-
-
         public static void ClearCache()
         {
             lock (CacheLock) Cache.Clear();
@@ -116,15 +96,6 @@ namespace PersonalInfoManager.Services
             lock (CacheLock) Cache.Remove(file);
         }
 
-
-
-
-
-
-
-
-
-
         private static List<SavedAccount>? TryRead(string file, out Exception? error)
         {
             error = null;
@@ -150,10 +121,6 @@ namespace PersonalInfoManager.Services
             }
         }
 
-
-
-
-
         private List<SavedAccount> LoadShared(string username)
         {
             string file = GetVaultFile(username);
@@ -164,7 +131,6 @@ namespace PersonalInfoManager.Services
                 DropCache(file);
                 return new List<SavedAccount>();
             }
-
 
             DateTime stamp = info.LastWriteTimeUtc;
             long length = info.Length;
@@ -183,7 +149,6 @@ namespace PersonalInfoManager.Services
                 return accounts;
             }
 
-
             DropCache(file);
             var fromBackup = TryRead(file + ".bak", out _);
             if (fromBackup != null)
@@ -200,21 +165,7 @@ namespace PersonalInfoManager.Services
                 mainError);
         }
 
-
-
-
-
-
         public List<SavedAccount> Load(string username) => CloneAll(LoadShared(username));
-
-
-
-
-
-
-
-
-
 
         public void Save(string username, List<SavedAccount> accounts)
         {
@@ -223,7 +174,6 @@ namespace PersonalInfoManager.Services
 
             string json = JsonSerializer.Serialize(accounts, JsonOpts);
             string encrypted = AesCrypto.Encrypt(json);
-
 
             if (AesCrypto.Decrypt(encrypted) != json)
                 throw new CryptographicException(
@@ -251,7 +201,6 @@ namespace PersonalInfoManager.Services
 
             WriteAtomically(file, encrypted);
 
-
             try { StoreCache(file, new FileInfo(file), CloneAll(accounts)); }
             catch { DropCache(file); }
         }
@@ -270,10 +219,6 @@ namespace PersonalInfoManager.Services
             }
         }
 
-
-
-
-
         public List<SavedAccount> Search(string username, string keyword)
         {
             var all = LoadShared(username);
@@ -287,9 +232,7 @@ namespace PersonalInfoManager.Services
             ));
         }
 
-
         public int Count(string username) => LoadShared(username).Count;
-
 
         public DateTime? GetLastWriteUtc(string username)
         {

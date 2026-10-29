@@ -6,18 +6,10 @@ using PersonalInfoManager.Services;
 namespace PersonalInfoManager
 {
 
-
-
-
-
-
-
-
     public partial class RestoreBackupWindow : Window
     {
         private readonly CloudSyncService _cloud;
         private readonly BackupKind _kind;
-
 
         public BackupInfo? Selected { get; private set; }
 

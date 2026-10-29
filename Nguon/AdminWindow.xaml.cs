@@ -48,8 +48,6 @@ namespace PersonalInfoManager
             dgUsers.ItemsSource = _userService.GetAll();
         }
 
-
-
         private void BtnCreate_Click(object sender, RoutedEventArgs e)
         {
             var role = cbRole.SelectedIndex == 1 ? UserRole.Admin : UserRole.User;
@@ -77,7 +75,6 @@ namespace PersonalInfoManager
                 }
                 catch { }
 
-
                 txtNewUser.Clear();
                 txtNewPwd.Clear();
                 txtNewFullName.Clear();
@@ -88,8 +85,6 @@ namespace PersonalInfoManager
             }
         }
 
-
-
         private void BtnEdit_Click(object sender, RoutedEventArgs e)
         {
             if (dgUsers.SelectedItem is not User u)
@@ -97,7 +92,6 @@ namespace PersonalInfoManager
                 MessageBox.Show("Chọn một tài khoản để sửa.");
                 return;
             }
-
 
             var dlg = new EditUserWindow(u, _userService);
             if (dlg.ShowDialog() == true)
@@ -111,8 +105,6 @@ namespace PersonalInfoManager
                 Refresh();
             }
         }
-
-
 
         private void BtnResetPwd_Click(object sender, RoutedEventArgs e)
         {
@@ -146,8 +138,6 @@ namespace PersonalInfoManager
             }
         }
 
-
-
         private void BtnToggleActive_Click(object sender, RoutedEventArgs e)
         {
             if (dgUsers.SelectedItem is not User u)
@@ -162,7 +152,6 @@ namespace PersonalInfoManager
                 return;
             }
 
-
             bool newActive = !u.IsActive;
             _userService.SetActive(u.Id, newActive);
 
@@ -175,8 +164,6 @@ namespace PersonalInfoManager
             catch { }
             Refresh();
         }
-
-
 
         private void BtnToggleRole_Click(object sender, RoutedEventArgs e)
         {
@@ -205,8 +192,6 @@ namespace PersonalInfoManager
             Refresh();
         }
 
-
-
         private void BtnDelete_Click(object sender, RoutedEventArgs e)
         {
             if (dgUsers.SelectedItem is not User u)
@@ -220,7 +205,6 @@ namespace PersonalInfoManager
                     "Xác nhận", MessageBoxButton.YesNo,
                     MessageBoxImage.Warning) != MessageBoxResult.Yes)
                 return;
-
 
             var leftovers = UserDataCleaner.Describe(u.Id, u.Username);
             bool wipeData = false;

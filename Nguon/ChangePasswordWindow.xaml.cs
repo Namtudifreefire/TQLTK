@@ -11,14 +11,9 @@ namespace PersonalInfoManager
         private readonly UserService _userService = new();
         private readonly bool _forced;
 
-
         public bool Changed { get; private set; }
 
         public ChangePasswordWindow() : this(false) { }
-
-
-
-
 
         public ChangePasswordWindow(bool forced)
         {
@@ -35,8 +30,6 @@ namespace PersonalInfoManager
 
             Loaded += (_, _) => txtOldPwd.Focus();
         }
-
-
 
         private void TxtNewPwd_PasswordChanged(object sender, RoutedEventArgs e)
         {
@@ -92,8 +85,6 @@ namespace PersonalInfoManager
             return score;
         }
 
-
-
         private void BtnOk_Click(object sender, RoutedEventArgs e)
         {
             string oldPwd = txtOldPwd.Password;
@@ -101,7 +92,6 @@ namespace PersonalInfoManager
             string confirm = txtConfirmPwd.Password;
 
             lblStatus.Text = "";
-
 
             if (string.IsNullOrWhiteSpace(oldPwd) ||
                 string.IsNullOrWhiteSpace(newPwd))
@@ -136,7 +126,6 @@ namespace PersonalInfoManager
                 lblStatus.Text = $"Mật khẩu mới phải từ {minimumLength} ký tự trở lên.";
                 return;
             }
-
 
             var result = _userService.ChangePassword(username, oldPwd, newPwd);
 

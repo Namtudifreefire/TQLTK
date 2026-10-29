@@ -5,21 +5,9 @@ using Microsoft.Win32;
 namespace PersonalInfoManager.Services
 {
 
-
-
-
-
     public static class RegistryService
     {
         private const string AppKey = @"Software\TQLTK";
-
-
-
-
-
-
-
-
 
         public static string GetTheme()
         {
@@ -34,9 +22,6 @@ namespace PersonalInfoManager.Services
             }
         }
 
-
-
-
         public static void SetTheme(string theme)
         {
             try
@@ -46,13 +31,6 @@ namespace PersonalInfoManager.Services
             }
             catch { }
         }
-
-
-
-
-
-
-
 
         public static string GetLastUser()
         {
@@ -67,9 +45,6 @@ namespace PersonalInfoManager.Services
             }
         }
 
-
-
-
         public static void SetLastUser(string username)
         {
             try
@@ -80,9 +55,6 @@ namespace PersonalInfoManager.Services
             catch { }
         }
 
-
-
-
         public static void ClearLastUser()
         {
             try
@@ -92,13 +64,6 @@ namespace PersonalInfoManager.Services
             }
             catch { }
         }
-
-
-
-
-
-
-
 
         public static (double width, double height) GetWindowSize(
             double defaultW = 1100, double defaultH = 700)
@@ -127,9 +92,6 @@ namespace PersonalInfoManager.Services
             }
         }
 
-
-
-
         public static void SetWindowSize(double width, double height)
         {
             try
@@ -140,14 +102,6 @@ namespace PersonalInfoManager.Services
             }
             catch { }
         }
-
-
-
-
-
-
-
-
 
         public static (double left, double top) GetWindowPosition()
         {
@@ -178,9 +132,6 @@ namespace PersonalInfoManager.Services
             }
         }
 
-
-
-
         public static void SetWindowPosition(double left, double top)
         {
             try
@@ -192,9 +143,6 @@ namespace PersonalInfoManager.Services
             catch { }
         }
 
-
-
-
         public static void ClearWindowPosition()
         {
             try
@@ -205,13 +153,6 @@ namespace PersonalInfoManager.Services
             }
             catch { }
         }
-
-
-
-
-
-
-
 
         public static bool GetAutoThemeEnabled()
         {
@@ -227,9 +168,6 @@ namespace PersonalInfoManager.Services
             }
         }
 
-
-
-
         public static void SetAutoThemeEnabled(bool enabled)
         {
             try
@@ -240,13 +178,6 @@ namespace PersonalInfoManager.Services
             catch { }
         }
 
-
-
-
-
-
-
-
         public static void Clear()
         {
             try
@@ -256,13 +187,6 @@ namespace PersonalInfoManager.Services
             }
             catch { }
         }
-
-
-
-
-
-
-
 
         public static bool Exists()
         {
@@ -276,9 +200,6 @@ namespace PersonalInfoManager.Services
                 return false;
             }
         }
-
-
-
 
         public static string DumpAll()
         {

@@ -13,18 +13,8 @@ using PersonalInfoManager.Services;
 namespace PersonalInfoManager
 {
 
-
-
-
-
     public partial class MainWindow
     {
-
-
-
-
-
-
 
         private Dictionary<string, FrameworkElement> _pages = new();
 
@@ -51,7 +41,6 @@ namespace PersonalInfoManager
             };
         }
 
-
         private void Nav_Checked(object sender, RoutedEventArgs e)
         {
             if (_pages.Count == 0) return;
@@ -77,12 +66,7 @@ namespace PersonalInfoManager
             if (tag == "files") RefreshFiles();
         }
 
-
-
-
-
         private DateTime _userMenuClosedAt = DateTime.MinValue;
-
 
         private void UpdateUserChip()
         {
@@ -100,7 +84,6 @@ namespace PersonalInfoManager
 
         private void BtnUser_Click(object sender, RoutedEventArgs e)
         {
-
 
             if ((DateTime.UtcNow - _userMenuClosedAt).TotalMilliseconds < 250) return;
 
@@ -126,11 +109,6 @@ namespace PersonalInfoManager
             }
         }
 
-
-
-
-
-
         protected override void OnPreviewKeyDown(KeyEventArgs e)
         {
             if (e.Key == Key.Escape)
@@ -149,13 +127,8 @@ namespace PersonalInfoManager
             base.OnPreviewKeyDown(e);
         }
 
-
-
-
-
         private bool _settingsOpen;
         private Dictionary<string, string>? _settingsIndex;
-
 
         private void OpenSettings(string tag = "profile")
         {
@@ -220,10 +193,6 @@ namespace PersonalInfoManager
                 .SelectMany(g => g.Children.OfType<RadioButton>())
                 .FirstOrDefault(rb => rb.Tag as string == tag);
 
-
-
-
-
         private void TxtSettingsSearch_TextChanged(object sender, TextChangedEventArgs e)
         {
             lblSettingsSearchHint.Visibility =
@@ -231,10 +200,6 @@ namespace PersonalInfoManager
 
             ApplySettingsFilter();
         }
-
-
-
-
 
         private void ApplySettingsFilter()
         {
@@ -274,7 +239,6 @@ namespace PersonalInfoManager
 
             lblSettingsNoResult.Visibility = visibleCount == 0 ? Visibility.Visible : Visibility.Collapsed;
 
-
             if (firstMatch != null &&
                 (_currentSettingsTag == null || FindSettingsNav(_currentSettingsTag)?.Visibility != Visibility.Visible))
             {
@@ -298,7 +262,6 @@ namespace PersonalInfoManager
             return map;
         }
 
-
         private static void CollectText(DependencyObject node, StringBuilder sb)
         {
             if (node is TextBlock tb)
@@ -315,7 +278,6 @@ namespace PersonalInfoManager
                 if (child is DependencyObject d) CollectText(d, sb);
             }
         }
-
 
         private static string Fold(string s)
         {

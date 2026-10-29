@@ -6,18 +6,12 @@ using System.Text;
 namespace PersonalInfoManager.Services
 {
 
-
-
-
     public static class SystemInfoService
     {
-
-
 
         public static string GetSystemReport()
         {
             var sb = new StringBuilder();
-
 
             sb.AppendLine("=== THÔNG TIN HỆ THỐNG ===");
             sb.AppendLine($"OS          : {Environment.OSVersion}");
@@ -30,7 +24,6 @@ namespace PersonalInfoManager.Services
             sb.AppendLine($"Thư mục app : {Environment.CurrentDirectory}");
             sb.AppendLine($"System Dir  : {Environment.SystemDirectory}");
             sb.AppendLine();
-
 
             sb.AppendLine("=== TIẾN TRÌNH HIỆN TẠI ===");
             using (var me = Process.GetCurrentProcess())
@@ -45,16 +38,12 @@ namespace PersonalInfoManager.Services
             }
             sb.AppendLine();
 
-
             sb.AppendLine("=== QUYỀN ===");
             sb.AppendLine($"Admin       : {(IsAdmin() ? "CÓ (Administrator)" : "KHÔNG (User thường)")}");
             sb.AppendLine($"Interactive : {Environment.UserInteractive}");
 
             return sb.ToString();
         }
-
-
-
 
         public static bool IsAdmin()
         {
@@ -69,9 +58,6 @@ namespace PersonalInfoManager.Services
                 return false;
             }
         }
-
-
-
 
         public static string GetShortInfo()
         {

@@ -12,9 +12,6 @@ namespace PersonalInfoManager
         private readonly SavedAccount? _existing;
         private bool _showPwd = false;
 
-
-
-
         public SavedAccount Result { get; private set; } = new();
 
         public EditAccountWindow(SavedAccount? existing)
@@ -35,8 +32,6 @@ namespace PersonalInfoManager
             Loaded += (_, _) => txtService.Focus();
         }
 
-
-
         private void BtnTogglePwd_Click(object sender, RoutedEventArgs e)
         {
             _showPwd = !_showPwd;
@@ -56,8 +51,6 @@ namespace PersonalInfoManager
             }
         }
 
-
-
         private void BtnGeneratePwd_Click(object sender, RoutedEventArgs e)
         {
             string pwd = GenerateStrongPassword(16);
@@ -71,10 +64,6 @@ namespace PersonalInfoManager
             lblPwdStrength.Foreground = Brushes.Green;
         }
 
-
-
-
-
         private static string GenerateStrongPassword(int length)
         {
             const string upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
@@ -85,7 +74,6 @@ namespace PersonalInfoManager
             string all = upper + lower + digits + special;
             var chars = new List<char>(length);
 
-
             chars.Add(Pick(upper));
             chars.Add(Pick(lower));
             chars.Add(Pick(digits));
@@ -93,7 +81,6 @@ namespace PersonalInfoManager
 
             for (int i = 4; i < length; i++)
                 chars.Add(Pick(all));
-
 
             for (int i = chars.Count - 1; i > 0; i--)
             {
@@ -105,8 +92,6 @@ namespace PersonalInfoManager
         }
 
         private static char Pick(string set) => set[RandomNumberGenerator.GetInt32(set.Length)];
-
-
 
         private void BtnSave_Click(object sender, RoutedEventArgs e)
         {

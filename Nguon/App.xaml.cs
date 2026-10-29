@@ -12,9 +12,7 @@ namespace PersonalInfoManager
 
             ShutdownMode = ShutdownMode.OnMainWindowClose;
 
-
             try { ThemeService.Initialize(); } catch { }
-
 
             try
             {
@@ -25,9 +23,7 @@ namespace PersonalInfoManager
             }
             catch { }
 
-
             try { ActivityLogger.CleanupOldLogs(30); } catch { }
-
 
             DispatcherUnhandledException += (_, args) =>
             {
@@ -53,7 +49,6 @@ namespace PersonalInfoManager
                 args.Handled = true;
             };
 
-
             System.Threading.Tasks.TaskScheduler.UnobservedTaskException += (_, args) =>
             {
                 try
@@ -66,7 +61,6 @@ namespace PersonalInfoManager
                 catch { }
                 args.SetObserved();
             };
-
 
             try
             {
@@ -85,15 +79,9 @@ namespace PersonalInfoManager
             }
         }
 
-
-
-
         protected override void OnExit(ExitEventArgs e)
         {
             try { AutoThemeService.Stop(); } catch { }
-
-
-
 
             try
             {

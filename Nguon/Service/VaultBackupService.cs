@@ -7,16 +7,8 @@ using PersonalInfoManager.Models;
 namespace PersonalInfoManager.Services
 {
 
-
-
-
-
-
-
     public static class VaultBackupService
     {
-
-
 
         public static (bool ok, string message) ExportToFile(string username, string destPath)
         {
@@ -67,18 +59,11 @@ namespace PersonalInfoManager.Services
             }
         }
 
-
-
-
         public static bool IsPassphraseProtected(string sourcePath)
         {
             try { return BackupCrypto.IsPassphraseFormat(File.ReadAllText(sourcePath)); }
             catch { return false; }
         }
-
-
-
-
 
         public static bool PassphraseWorks(string username, string sourcePath, string? passphrase = null)
         {
@@ -98,17 +83,6 @@ namespace PersonalInfoManager.Services
                 return false;
             }
         }
-
-
-
-
-
-
-
-
-
-
-
 
         public static (bool ok, string message, int importedCount) ImportFromFile(
             string username, string sourcePath, string? passphrase = null,
@@ -168,7 +142,6 @@ namespace PersonalInfoManager.Services
                 if (package?.Accounts == null || package.Accounts.Count == 0)
                     return (false, "File không chứa tài khoản nào.", 0);
 
-
                 string owner = (package.ExportedBy ?? "").Trim();
                 bool foreignOwner = owner.Length > 0 &&
                                     !string.Equals(owner, username, StringComparison.OrdinalIgnoreCase);
@@ -224,9 +197,6 @@ namespace PersonalInfoManager.Services
                 return (false, $"Lỗi: {ex.Message}", 0);
             }
         }
-
-
-
 
         private class VaultPackage
         {

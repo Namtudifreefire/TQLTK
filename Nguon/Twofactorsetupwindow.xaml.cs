@@ -29,10 +29,6 @@ namespace PersonalInfoManager
             Loaded += (_, _) => txtCode.Focus();
         }
 
-
-
-
-
         private static BitmapImage BuildQr(string content)
         {
             var generator = new QRCodeGenerator();
@@ -50,10 +46,6 @@ namespace PersonalInfoManager
             bmp.Freeze();
             return bmp;
         }
-
-
-
-
 
         private void BtnCopySecret_Click(object sender, RoutedEventArgs e)
         {
@@ -83,10 +75,6 @@ namespace PersonalInfoManager
             pnlStep2.Visibility = Visibility.Visible;
         }
 
-
-
-
-
         private void BtnCopyRecovery_Click(object sender, RoutedEventArgs e)
         {
             if (!ClipboardGuard.CopySensitive(txtRecovery.Text))
@@ -100,7 +88,6 @@ namespace PersonalInfoManager
             _finished = true;
             DialogResult = true;
         }
-
 
         protected override void OnClosing(CancelEventArgs e)
         {

@@ -10,12 +10,6 @@ using System.Threading;
 namespace PersonalInfoManager.Services
 {
 
-
-
-
-
-
-
     public static class TwoFactorService
     {
         public const string Issuer = "TQLTK";
@@ -42,11 +36,6 @@ namespace PersonalInfoManager.Services
             public int FailedVerificationAttempts { get; set; }
             public long LockedUntilUnixSeconds { get; set; }
         }
-
-
-
-
-
 
         private static IDisposable AcquireCrossProcessLock(string username)
         {
@@ -187,10 +176,6 @@ namespace PersonalInfoManager.Services
                 username, data, "Nhập mã 6 số từ Authenticator hoặc mã khôi phục (10 ký tự).");
         }
 
-
-
-
-
         public static bool IsEnabled(string username)
         {
             lock (ValidationSync)
@@ -201,11 +186,9 @@ namespace PersonalInfoManager.Services
                 var userService = new UserService();
                 var user = userService.FindByUsername(username);
 
-
                 if (user == null) return fileExists;
                 if (user.TwoFactorEnabled) return true;
                 if (!fileExists) return false;
-
 
                 try
                 {
@@ -238,13 +221,7 @@ namespace PersonalInfoManager.Services
                 _ = IsEnabled(username);
         }
 
-
-
-
-
-
         public static string GenerateSecret() => Base32Encode(RandomNumberGenerator.GetBytes(20));
-
 
         public static string BuildOtpAuthUri(string username, string secret)
         {
@@ -252,7 +229,6 @@ namespace PersonalInfoManager.Services
             string issuer = Uri.EscapeDataString(Issuer);
             return $"otpauth://totp/{label}?secret={secret}&issuer={issuer}&algorithm=SHA1&digits=6&period={StepSeconds}";
         }
-
 
         public static string FormatSecret(string secret)
         {
@@ -264,10 +240,6 @@ namespace PersonalInfoManager.Services
             }
             return sb.ToString();
         }
-
-
-
-
 
         public static (bool ok, string message, List<string> recoveryCodes) Enable(string username, string secret, string code)
         {
@@ -304,7 +276,6 @@ namespace PersonalInfoManager.Services
                 catch (Exception ex)
                 {
 
-
                     try { File.Delete(path); } catch { }
                     try { userService.SetTwoFactorEnabled(username, false); } catch { }
                     return (false, $"Không lưu được cấu hình 2FA: {ex.Message}", new List<string>());
@@ -313,14 +284,6 @@ namespace PersonalInfoManager.Services
                 return (true, "Đã bật xác thực 2 bước.", recoveryCodes);
             }
         }
-
-
-
-
-
-
-
-
 
         public static (bool ok, string message) Validate(string username, string input)
         {
@@ -331,11 +294,6 @@ namespace PersonalInfoManager.Services
                 return ValidateCore(username, input);
             }
         }
-
-
-
-
-
 
         public static (bool ok, string message) Disable(string username, string input)
         {
@@ -362,11 +320,6 @@ namespace PersonalInfoManager.Services
             }
         }
 
-
-
-
-
-
         public static int GetRecoveryCodeCount(string username)
         {
             lock (ValidationSync)
@@ -376,11 +329,6 @@ namespace PersonalInfoManager.Services
                 return data?.RecoveryHashes.Count ?? -1;
             }
         }
-
-
-
-
-
 
         public static (bool ok, string message, List<string> recoveryCodes) PrepareRecoveryCodes(string username, string input)
         {
@@ -405,7 +353,6 @@ namespace PersonalInfoManager.Services
                         username, data, "Mã không đúng hoặc đã được dùng. Hãy đợi mã mới (tối đa 30 giây) rồi nhập lại.").message,
                         new List<string>());
 
-
                 data.LastUsedStep = matchedStep;
                 ResetFailedVerificationState(data);
                 try { Save(username, data); }
@@ -417,9 +364,6 @@ namespace PersonalInfoManager.Services
                 return (true, "", GenerateRecoveryCodes());
             }
         }
-
-
-
 
         public static (bool ok, string message) CommitRecoveryCodes(string username, List<string> newCodes)
         {
@@ -441,10 +385,6 @@ namespace PersonalInfoManager.Services
                 return (true, "");
             }
         }
-
-
-
-
 
         private static long CurrentStep() => DateTimeOffset.UtcNow.ToUnixTimeSeconds() / StepSeconds;
 
@@ -492,10 +432,6 @@ namespace PersonalInfoManager.Services
             return (binary % CodeModulus).ToString("D6");
         }
 
-
-
-
-
         private static List<string> GenerateRecoveryCodes()
         {
             var list = new List<string>();
@@ -523,10 +459,6 @@ namespace PersonalInfoManager.Services
 
         private static string NormalizeCode(string? input) =>
             (input ?? "").Replace(" ", "").Replace("-", "").Trim().ToUpperInvariant();
-
-
-
-
 
         private static string Base32Encode(byte[] data)
         {
@@ -573,10 +505,6 @@ namespace PersonalInfoManager.Services
             }
             return bytes.ToArray();
         }
-
-
-
-
 
         private static string GetPath(string username)
         {

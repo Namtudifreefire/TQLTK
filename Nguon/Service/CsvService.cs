@@ -8,17 +8,8 @@ using PersonalInfoManager.Models;
 namespace PersonalInfoManager.Services
 {
 
-
-
-
     public static class CsvService
     {
-
-
-
-
-
-
 
         public static (bool ok, string message) ExportToFile(
             List<SavedAccount> accounts, string filePath)
@@ -27,9 +18,7 @@ namespace PersonalInfoManager.Services
             {
                 var sb = new StringBuilder();
 
-
                 sb.AppendLine("ServiceName,Username,Password,Note,CreatedAt,UpdatedAt");
-
 
                 foreach (var acc in accounts)
                 {
@@ -43,7 +32,6 @@ namespace PersonalInfoManager.Services
                     ));
                 }
 
-
                 File.WriteAllText(filePath, sb.ToString(), new UTF8Encoding(true));
 
                 return (true, $"Đã xuất {accounts.Count} tài khoản ra:\n{filePath}");
@@ -54,18 +42,12 @@ namespace PersonalInfoManager.Services
             }
         }
 
-
-
-
         private static string EscapeCsv(string? value)
         {
             if (string.IsNullOrEmpty(value)) return "\"\"";
 
-
-
             if (StartsWithSpreadsheetFormula(value))
                 value = "'" + value;
-
 
             if (value.Contains(',') || value.Contains('"') ||
                 value.Contains('\n') || value.Contains('\r'))
@@ -86,14 +68,6 @@ namespace PersonalInfoManager.Services
             return index < value.Length && value[index] is '=' or '+' or '-' or '@';
         }
 
-
-
-
-
-
-
-
-
         public static (bool ok, string message, List<SavedAccount> accounts)
             ImportFromFile(string filePath)
         {
@@ -102,20 +76,16 @@ namespace PersonalInfoManager.Services
                 if (!File.Exists(filePath))
                     return (false, "File không tồn tại.", new List<SavedAccount>());
 
-
                 string content = File.ReadAllText(filePath, Encoding.UTF8);
                 var lines = ParseCsvLines(content);
 
                 if (lines.Count < 2)
                     return (false, "File CSV rỗng hoặc không có dữ liệu.", new List<SavedAccount>());
 
-
                 var header = lines[0].Select(h => h.Trim().ToLowerInvariant()).ToList();
                 var accounts = new List<SavedAccount>();
 
-
                 string format = DetectFormat(header);
-
 
                 for (int i = 1; i < lines.Count; i++)
                 {
@@ -144,34 +114,24 @@ namespace PersonalInfoManager.Services
             }
         }
 
-
-
-
         private static string DetectFormat(List<string> header)
         {
             var h = header.Select(x => x.Trim().ToLowerInvariant()).ToList();
 
-
             if (h.Contains("login_username") || h.Contains("login_password"))
                 return "Bitwarden";
-
 
             if (h.Contains("url") && h.Contains("grouping"))
                 return "LastPass";
 
-
             if (h.Contains("url") && h.Contains("name") && h.Contains("username") && h.Contains("password"))
                 return "Chrome";
-
 
             if (h.Contains("servicename"))
                 return "TQLTK";
 
             return "Generic";
         }
-
-
-
 
         private static SavedAccount? ParseRow(
             List<string> row, List<string> header, string format)
@@ -229,7 +189,6 @@ namespace PersonalInfoManager.Services
                     break;
             }
 
-
             if (string.IsNullOrWhiteSpace(serviceName) &&
                 string.IsNullOrWhiteSpace(username) &&
                 string.IsNullOrWhiteSpace(password))
@@ -246,10 +205,6 @@ namespace PersonalInfoManager.Services
                 UpdatedAt = DateTime.Now
             };
         }
-
-
-
-
 
         private static List<List<string>> ParseCsvLines(string content)
         {
@@ -313,7 +268,6 @@ namespace PersonalInfoManager.Services
                 }
             }
 
-
             if (currentField.Length > 0 || currentRow.Count > 0)
             {
                 currentRow.Add(currentField.ToString());
@@ -323,13 +277,6 @@ namespace PersonalInfoManager.Services
 
             return result;
         }
-
-
-
-
-
-
-
 
         public static List<SavedAccount> RemoveDuplicates(
             List<SavedAccount> imported, List<SavedAccount> existing)

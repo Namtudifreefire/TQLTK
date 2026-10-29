@@ -10,18 +10,6 @@ using System.Text.RegularExpressions;
 namespace PersonalInfoManager.Services
 {
 
-
-
-
-
-
-
-
-
-
-
-
-
     public static class FileBackupService
     {
 
@@ -29,7 +17,6 @@ namespace PersonalInfoManager.Services
 
         private const int CurrentFormatVersion = 1;
         private const string ManifestEntryName = "__tqltk__/manifest.json";
-
 
         private static readonly Regex ReservedName =
             new(@"^(CON|PRN|AUX|NUL|COM[0-9]|LPT[0-9])(\..*)?$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -43,11 +30,6 @@ namespace PersonalInfoManager.Services
             public long TotalBytes { get; set; }
         }
 
-
-
-
-
-
         public static (int count, long bytes) Summarize(string username)
         {
             var files = new LocalFileService().ListFiles(username);
@@ -56,10 +38,6 @@ namespace PersonalInfoManager.Services
 
         public static string FormatSize(long bytes) =>
             bytes < 1024 * 1024 ? $"{bytes / 1024.0:0.#} KB" : $"{bytes / 1048576.0:0.#} MB";
-
-
-
-
 
         public static (bool ok, string message, int count, long bytes) CreateArchive(
             string username, string destPath, string passphrase)
@@ -101,7 +79,6 @@ namespace PersonalInfoManager.Services
                             var entry = zip.CreateEntry(f.Name, CompressionLevel.Optimal);
                             if (f.LastWriteTime.Year is >= 1980 and <= 2107) entry.LastWriteTime = f.LastWriteTime;
 
-
                             using var src = new FileStream(
                                 f.FullName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
                             using var dst = entry.Open();
@@ -129,23 +106,6 @@ namespace PersonalInfoManager.Services
             }
         }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         public static (bool ok, string message, int added, int skipped) RestoreFromFile(
             string username, string sourcePath, string? passphrase = null,
             Func<string?, string?>? askPassphrase = null,
@@ -163,7 +123,6 @@ namespace PersonalInfoManager.Services
                 if (!File.Exists(sourcePath))
                     return (false, "File không tồn tại.", 0, 0);
 
-
                 if (new FileInfo(sourcePath).Length > MaxTotalBytes + 16L * 1024 * 1024)
                     return (false, "File quá lớn so với một bản sao lưu File cá nhân của TQLTK.", 0, 0);
 
@@ -177,7 +136,6 @@ namespace PersonalInfoManager.Services
 
                 using var ms = new MemoryStream(zipBytes, writable: false);
                 using var zip = new ZipArchive(ms, ZipArchiveMode.Read);
-
 
                 string owner = ReadOwner(zip);
                 bool foreignOwner = owner.Length > 0 &&
@@ -194,7 +152,6 @@ namespace PersonalInfoManager.Services
                 if (entries.Count == 0)
                     return (false, "Bản sao lưu không chứa file nào để khôi phục.", 0, 0);
 
-
                 if (entries.Sum(e => e.Length) > MaxTotalBytes)
                     return (false, "Bản sao lưu có dung lượng lớn bất thường nên bị từ chối.", 0, 0);
 
@@ -209,7 +166,6 @@ namespace PersonalInfoManager.Services
                 foreach (var entry in entries)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-
 
                     string entryDir = Path.Combine(tempDir, (index++).ToString());
                     Directory.CreateDirectory(entryDir);
@@ -227,7 +183,6 @@ namespace PersonalInfoManager.Services
                         skipped++;
                         continue;
                     }
-
 
                     cancellationToken.ThrowIfCancellationRequested();
                     fileService.ImportFile(username, tmp);
@@ -257,11 +212,6 @@ namespace PersonalInfoManager.Services
                 }
             }
         }
-
-
-
-
-
 
         private static byte[]? DecryptWithPrompts(
             byte[] data, string username, string? passphrase, Func<string?, string?>? askPassphrase)
@@ -318,10 +268,6 @@ namespace PersonalInfoManager.Services
                 return "";
             }
         }
-
-
-
-
 
         private static bool IsUserFileEntry(ZipArchiveEntry e)
         {

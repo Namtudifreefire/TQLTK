@@ -21,10 +21,8 @@ namespace PersonalInfoManager
         private readonly LocalFileService _fileService = new();
         private readonly UserService _userService = new();
 
-
         private List<SavedAccount> _accounts = new();
         private bool _showPassword = false;
-
 
         private const int AutoLockMinutes = 5;
         private const int AutoHidePasswordSeconds = 30;
@@ -33,16 +31,13 @@ namespace PersonalInfoManager
         private readonly DispatcherTimer _idleTimer = new() { Interval = TimeSpan.FromSeconds(5) };
         private readonly DispatcherTimer _hidePasswordTimer = new() { Interval = TimeSpan.FromSeconds(AutoHidePasswordSeconds) };
 
-
         private readonly DispatcherTimer _searchTimer = new() { Interval = TimeSpan.FromMilliseconds(250) };
         private DateTime _lastActivity = DateTime.UtcNow;
         private DateTime _lastAuthTime = DateTime.MinValue;
         private bool _isLocked = false;
         private readonly CancellationTokenSource _sessionRevocationCts = new();
 
-
         private readonly DispatcherTimer _saveStateTimer;
-
 
         public MainWindow()
         {
@@ -82,7 +77,6 @@ namespace PersonalInfoManager
                 if (SessionService.IsLoggedIn) RefreshAccounts(updateStatus: false);
             };
 
-
             PreviewKeyDown += (_, e) =>
             {
                 if (e.Key == Key.B && Keyboard.Modifiers == ModifierKeys.Control)
@@ -97,10 +91,6 @@ namespace PersonalInfoManager
             LocationChanged += MainWindow_LocationChanged;
             SizeChanged += MainWindow_SizeChanged;
         }
-
-
-
-
 
         private void MainWindow_Loaded(object? sender, RoutedEventArgs e)
         {
@@ -117,7 +107,6 @@ namespace PersonalInfoManager
             if (!EnsureActiveSession()) return;
 
             BuildPages();
-
 
             navAdmin.Visibility = SessionService.IsAdmin ? Visibility.Visible : Visibility.Collapsed;
 
@@ -137,10 +126,6 @@ namespace PersonalInfoManager
 
             navAccounts.IsChecked = true;
         }
-
-
-
-
 
         private const double SidebarWidth = 250;
         private bool _sidebarVisible = true;
@@ -173,12 +158,7 @@ namespace PersonalInfoManager
             panelSidebar.BeginAnimation(WidthProperty, anim);
         }
 
-
         private void GoProfile_Click(object sender, RoutedEventArgs e) => navProfile.IsChecked = true;
-
-
-
-
 
         private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
         {
@@ -223,10 +203,6 @@ namespace PersonalInfoManager
             catch { }
         }
 
-
-
-
-
         private void StartAutoLock()
         {
             _lastActivity = DateTime.UtcNow;
@@ -244,15 +220,12 @@ namespace PersonalInfoManager
             _searchTimer.Stop();
         }
 
-
         private void OnPreProcessInput(object sender, PreProcessInputEventArgs e)
         {
             var input = e.StagingItem.Input;
             if (input is MouseEventArgs || input is KeyboardEventArgs)
                 _lastActivity = DateTime.UtcNow;
         }
-
-
 
         private void OnSessionSwitch(object sender, SessionSwitchEventArgs e)
         {
@@ -295,7 +268,6 @@ namespace PersonalInfoManager
             return false;
         }
 
-
         private void LockNow(string? reason = null)
         {
             if (_isLocked) return;
@@ -311,7 +283,6 @@ namespace PersonalInfoManager
             try { AccountVaultService.ClearCache(); } catch { }
             try { ActivityLogger.Log(username, "AUTO_LOCK", reason ?? $"Không hoạt động {AutoLockMinutes} phút"); } catch { }
 
-
             var others = Application.Current.Windows.Cast<Window>()
                 .Where(w => w != this && w.IsVisible).ToList();
 
@@ -324,7 +295,6 @@ namespace PersonalInfoManager
             foreach (var w in others) { try { w.Close(); } catch { } }
             Close();
         }
-
 
         private void RefreshAccountsKeepSelection()
         {
@@ -359,14 +329,11 @@ namespace PersonalInfoManager
             RefreshAccountsKeepSelection();
         }
 
-
         private bool IsAuthFresh() =>
             _lastAuthTime != DateTime.MinValue &&
             (DateTime.UtcNow - _lastAuthTime).TotalSeconds < AuthRememberSeconds;
 
         private void MarkAuthenticated() => _lastAuthTime = DateTime.UtcNow;
-
-
 
         private async Task<bool> RequireAuthAsync(string actionText, string deniedLogCode)
         {
@@ -406,12 +373,6 @@ namespace PersonalInfoManager
             return false;
         }
 
-
-
-
-
-
-
         private void RefreshAccounts(bool updateStatus = true)
         {
             if (!EnsureActiveSession()) return;
@@ -438,12 +399,10 @@ namespace PersonalInfoManager
                 _original = a
             }).ToList();
 
-
             dgAccounts.ItemsSource = viewList;
 
             if (updateStatus) UpdateStorageInfo();
         }
-
 
         private void TxtSearch_TextChanged(object? sender, TextChangedEventArgs e)
         {
@@ -458,11 +417,9 @@ namespace PersonalInfoManager
             RefreshAccounts();
         }
 
-
         private async void BtnToggleShow_Click(object? sender, RoutedEventArgs e)
         {
             if (!EnsureActiveSession()) return;
-
 
             if (_showPassword)
             {
@@ -476,7 +433,6 @@ namespace PersonalInfoManager
             try
             {
                 string username = SessionService.CurrentUser!.Username;
-
 
                 if (IsAuthFresh())
                 {
@@ -533,8 +489,6 @@ namespace PersonalInfoManager
                 RefreshAccounts();
             }
         }
-
-
 
         private async void BtnEditAccount_Click(object? sender, RoutedEventArgs e)
         {
@@ -621,13 +575,11 @@ namespace PersonalInfoManager
                 string method = "";
                 bool ok = false;
 
-
                 if (IsAuthFresh())
                 {
                     ok = true;
                     method = $"nhớ xác thực ≤{AuthRememberSeconds}s";
                 }
-
 
                 if (!ok)
                 {
@@ -642,7 +594,6 @@ namespace PersonalInfoManager
                         if (ok) { method = "Windows Hello"; MarkAuthenticated(); }
                     }
                 }
-
 
                 if (!ok)
                 {
@@ -702,10 +653,6 @@ namespace PersonalInfoManager
             var prop = item.GetType().GetProperty("_original");
             return prop?.GetValue(item) as SavedAccount;
         }
-
-
-
-
 
         private void RefreshFiles()
         {
@@ -774,10 +721,6 @@ namespace PersonalInfoManager
 
         private void BtnRefreshFiles_Click(object? sender, RoutedEventArgs e) => RefreshFiles();
 
-
-
-
-
         private void LoadProfile()
         {
             var u = SessionService.CurrentUser!;
@@ -825,10 +768,6 @@ namespace PersonalInfoManager
             }
             else { MessageBox.Show(result.message, "Lỗi"); }
         }
-
-
-
-
 
         private async void BtnToggleWindowsHello_Click(object sender, RoutedEventArgs e)
         {
@@ -883,11 +822,6 @@ namespace PersonalInfoManager
             finally { btnToggleWindowsHello.IsEnabled = true; }
         }
 
-
-
-
-
-
         private static void SetCardState(TextBlock label, bool on)
         {
             label.Text = on ? "● Đang bật" : "○ Đang tắt";
@@ -908,11 +842,6 @@ namespace PersonalInfoManager
             try { SetCardState(lblAutoThemeState, AutoThemeService.IsEnabled); } catch { }
         }
 
-
-
-
-
-
         private void Update2FAMenu()
         {
             try
@@ -923,13 +852,10 @@ namespace PersonalInfoManager
                 lbl2FATitle.Text = enabled ? "Tắt xác thực 2 bước" : "Bật xác thực 2 bước";
                 SetCardState(lbl2FAState, enabled);
 
-
                 card2FARegen.Visibility = enabled ? Visibility.Visible : Visibility.Collapsed;
             }
             catch { }
         }
-
-
 
         private void Mnu2FARegen_Click(object? sender, RoutedEventArgs e)
         {
@@ -1018,17 +944,11 @@ namespace PersonalInfoManager
             }
         }
 
-
-
-
-
-
         private async void MnuExportCsv_Click(object? sender, RoutedEventArgs e)
         {
             try
             {
                 string username = SessionService.CurrentUser!.Username;
-
 
                 bool available = await WindowsHelloService.IsAvailableAsync();
                 if (!available)
@@ -1047,7 +967,6 @@ namespace PersonalInfoManager
                     MessageBox.Show("Xác thực thất bại. Đã hủy xuất CSV.", "Từ chối", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
-
 
                 var dlg = new SaveFileDialog
                 {
@@ -1080,8 +999,6 @@ namespace PersonalInfoManager
             }
         }
 
-
-
         private void MnuImportCsv_Click(object? sender, RoutedEventArgs e)
         {
             try
@@ -1102,7 +1019,6 @@ namespace PersonalInfoManager
                 bool confirmed = preview.ShowDialog() == true;
                 if (_isLocked || !confirmed) return;
 
-
                 var list = _vaultService.Load(username);
                 list.AddRange(preview.Result);
                 _vaultService.Save(username, list);
@@ -1116,10 +1032,6 @@ namespace PersonalInfoManager
             }
             catch (Exception ex) { MessageBox.Show($"Lỗi nhập CSV: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error); }
         }
-
-
-
-
 
         private void MnuAdmin_Click(object? sender, RoutedEventArgs e) => new AdminWindow().ShowDialog();
         private void MnuChangePwd_Click(object? sender, RoutedEventArgs e) => new ChangePasswordWindow().ShowDialog();
@@ -1144,10 +1056,6 @@ namespace PersonalInfoManager
             Close();
         }
 
-
-
-
-
         private void MnuToggleTheme_Click(object? sender, RoutedEventArgs e)
         {
             ThemeService.Toggle();
@@ -1164,11 +1072,6 @@ namespace PersonalInfoManager
             }
             catch { }
         }
-
-
-
-
-
 
         private void MnuAutoTheme_Click(object? sender, RoutedEventArgs e)
         {
@@ -1194,10 +1097,6 @@ namespace PersonalInfoManager
             }
             catch (Exception ex) { MessageBox.Show($"Lỗi: {ex.Message}"); }
         }
-
-
-
-
 
         private async void MnuExportVault_Click(object? sender, RoutedEventArgs e)
         {
@@ -1241,10 +1140,6 @@ namespace PersonalInfoManager
             }
             catch (Exception ex) { MessageBox.Show($"Lỗi: {ex.Message}"); }
         }
-
-
-
-
 
         private async void MnuSyncGoogleDrive_Click(object? sender, RoutedEventArgs e)
         {
@@ -1302,8 +1197,6 @@ namespace PersonalInfoManager
                 try { if (tempFile != null && File.Exists(tempFile)) File.Delete(tempFile); } catch { }
             }
         }
-
-
 
         private async void MnuRestoreGoogleDrive_Click(object? sender, RoutedEventArgs e)
         {
@@ -1364,10 +1257,6 @@ namespace PersonalInfoManager
             }
         }
 
-
-
-
-
         private async void MnuBackupPassphrase_Click(object? sender, RoutedEventArgs e)
         {
             try
@@ -1388,7 +1277,6 @@ namespace PersonalInfoManager
             catch (Exception ex) { MessageBox.Show($"Lỗi: {ex.Message}"); }
         }
 
-
         private async Task<bool> SetBackupPassphraseAsync()
         {
             if (!await RequireAuthAsync("đặt hoặc đổi cụm mật khẩu sao lưu", "SET_BACKUP_PASSPHRASE_DENIED")) return false;
@@ -1407,9 +1295,6 @@ namespace PersonalInfoManager
                 "Thành công", MessageBoxButton.OK, MessageBoxImage.Information);
             return true;
         }
-
-
-
 
         private bool TryGetImportPassphrase(string file, out string? passphrase)
         {
@@ -1436,7 +1321,6 @@ namespace PersonalInfoManager
             return false;
         }
 
-
         private async Task OfferSavePassphraseAsync(string? passphrase)
         {
             if (_isLocked || SessionService.CurrentUser is not { } currentUser) return;
@@ -1454,7 +1338,6 @@ namespace PersonalInfoManager
             }
         }
 
-
         private bool ConfirmForeignOwner(string owner)
         {
             string current = SessionService.CurrentUser!.Username;
@@ -1467,8 +1350,6 @@ namespace PersonalInfoManager
                 "Bản sao lưu của người dùng khác",
                 MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) == MessageBoxResult.Yes;
         }
-
-
 
         private async Task OfferAdoptLegacyPassphraseAsync(string username)
         {
@@ -1492,12 +1373,6 @@ namespace PersonalInfoManager
                     "Lỗi", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
-
-
-
-
-
-
 
         private async void MnuSyncFilesGoogleDrive_Click(object? sender, RoutedEventArgs e)
         {
@@ -1589,7 +1464,6 @@ namespace PersonalInfoManager
             }
         }
 
-
         private async void MnuRestoreFilesGoogleDrive_Click(object? sender, RoutedEventArgs e)
         {
             string tempFile = Path.Combine(Path.GetTempPath(), $"files_restore_{DateTime.Now:yyyyMMdd_HHmmss}.tqf");
@@ -1621,7 +1495,6 @@ namespace PersonalInfoManager
                     return;
                 }
 
-
                 string? typed = null;
                 var result = await Task.Run(() => FileBackupService.RestoreFromFile(
                     username, tempFile, null,
@@ -1633,7 +1506,6 @@ namespace PersonalInfoManager
                 if (_isLocked || !EnsureActiveSession()) return;
 
                 MessageBox.Show(result.message, result.ok ? "Thành công" : "Lỗi", MessageBoxButton.OK, result.ok ? MessageBoxImage.Information : MessageBoxImage.Warning);
-
 
                 RefreshFiles();
                 UpdateStorageInfo();
@@ -1658,15 +1530,12 @@ namespace PersonalInfoManager
             }
         }
 
-
-
         private T AskOnUi<T>(Func<T> ask) => Dispatcher.Invoke(() =>
         {
             Mouse.OverrideCursor = null;
             try { return ask(); }
             finally { Mouse.OverrideCursor = Cursors.Wait; }
         });
-
 
         private string? PromptRestorePassphrase(string? previousError)
         {
@@ -1676,10 +1545,6 @@ namespace PersonalInfoManager
             var dlg = new BackupPassphraseWindow(confirmMode: false) { Owner = this };
             return dlg.ShowDialog() == true ? dlg.Passphrase : null;
         }
-
-
-
-
 
         private void MnuCenterWindow_Click(object? sender, RoutedEventArgs e)
         {
@@ -1693,10 +1558,6 @@ namespace PersonalInfoManager
             MessageBox.Show("Đã đưa cửa sổ về giữa màn hình.");
         }
 
-
-
-
-
         private void MnuResetSettings_Click(object? sender, RoutedEventArgs e)
         {
             if (MessageBox.Show("Xóa toàn bộ cài đặt (theme, kích thước, vị trí, user cuối)?\n\nKhởi động lại app để áp dụng toàn bộ.", "Xác nhận Reset", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
@@ -1706,10 +1567,6 @@ namespace PersonalInfoManager
 
             MessageBox.Show("Đã reset cài đặt.\n\nKhởi động lại app để áp dụng toàn bộ.");
         }
-
-
-
-
 
         private void UpdateStorageInfo()
         {

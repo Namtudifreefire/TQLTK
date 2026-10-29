@@ -7,13 +7,6 @@ using System.Text;
 namespace PersonalInfoManager.Services
 {
 
-
-
-
-
-
-
-
     public static class AesCrypto
     {
         private const string V2Prefix = "v2:";
@@ -27,14 +20,8 @@ namespace PersonalInfoManager.Services
 
         private static readonly string KeyFile = Path.Combine(KeyDir, "key.dat");
 
-
         public static bool IsAuthenticatedV2Format(string cipherText)
             => cipherText.TrimStart().StartsWith(V2Prefix, StringComparison.Ordinal);
-
-
-
-
-
 
         private static byte[] GetOrCreateKey()
         {
@@ -65,16 +52,12 @@ namespace PersonalInfoManager.Services
             byte[] protectedNew = ProtectedData.Protect(newKey, null,
                 DataProtectionScope.CurrentUser);
 
-
             string tmp = KeyFile + ".tmp";
             File.WriteAllBytes(tmp, protectedNew);
             File.Move(tmp, KeyFile, overwrite: true);
 
             return newKey;
         }
-
-
-
 
         public static string Encrypt(string plainText)
         {
@@ -105,10 +88,6 @@ namespace PersonalInfoManager.Services
                 CryptographicOperations.ZeroMemory(plain);
             }
         }
-
-
-
-
 
         public static string Decrypt(string cipherText)
         {

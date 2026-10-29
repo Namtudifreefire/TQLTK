@@ -43,8 +43,6 @@ namespace PersonalInfoManager
             catch { txtUsername.Focus(); }
         }
 
-
-
         private void BtnLogin_Click(object? sender, RoutedEventArgs e) => DoLogin();
 
         private void TxtUsername_KeyDown(object? sender, KeyEventArgs e)
@@ -81,16 +79,12 @@ namespace PersonalInfoManager
                 return;
             }
 
-
             CompleteLogin(result.user!, requireTwoFactor: true);
         }
-
-
 
         private async void BtnWindowsHello_Click(object? sender, RoutedEventArgs e)
         {
             lblStatus.Text = "";
-
 
             bool available = await WindowsHelloService.IsAvailableAsync();
             if (!available)
@@ -101,14 +95,12 @@ namespace PersonalInfoManager
                 return;
             }
 
-
             string sid = WindowsHelloService.GetCurrentWindowsSid();
             if (string.IsNullOrWhiteSpace(sid))
             {
                 ShowError("Không lấy được thông tin tài khoản Windows.");
                 return;
             }
-
 
             var user = _userService.FindByWindowsHelloSid(sid);
             if (user == null)
@@ -124,7 +116,6 @@ namespace PersonalInfoManager
                 return;
             }
 
-
             bool verified = await WindowsHelloService.VerifyAsync(
                 this,
                 $"Đăng nhập TQLTK với tài khoản '{user.Username}'");
@@ -135,7 +126,6 @@ namespace PersonalInfoManager
                 return;
             }
 
-
             try
             {
                 ActivityLogger.Log(user.Username, "LOGIN_WINDOWS_HELLO",
@@ -143,15 +133,11 @@ namespace PersonalInfoManager
             }
             catch { }
 
-
             CompleteLogin(user, requireTwoFactor: false);
         }
 
-
-
         private void CompleteLogin(User user, bool requireTwoFactor)
         {
-
 
             if (requireTwoFactor)
             {
@@ -164,7 +150,6 @@ namespace PersonalInfoManager
                     return;
                 }
             }
-
 
             if (user.MustChangePassword)
             {
@@ -191,7 +176,6 @@ namespace PersonalInfoManager
 
             try { RegistryService.SetLastUser(user.Username); } catch { }
 
-
             string? warning = LoginHistory.BuildWarning(user.Username);
 
             try
@@ -200,7 +184,6 @@ namespace PersonalInfoManager
             }
             catch { }
 
-
             if (warning != null)
                 MessageBox.Show(this, warning, "Cảnh báo bảo mật", MessageBoxButton.OK, MessageBoxImage.Warning);
 
@@ -208,13 +191,8 @@ namespace PersonalInfoManager
             Application.Current.MainWindow = main;
             main.Show();
 
-
-
-
             Close();
         }
-
-
 
         private void BtnRegister_Click(object? sender, RoutedEventArgs e)
         {
@@ -233,8 +211,6 @@ namespace PersonalInfoManager
                 lblStatus.Text = "✓ Đăng ký thành công! Vui lòng đăng nhập.";
             }
         }
-
-
 
         private void ShowError(string message)
         {

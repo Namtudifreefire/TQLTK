@@ -9,28 +9,13 @@ using System.Text.RegularExpressions;
 namespace PersonalInfoManager.Services
 {
 
-
-
-
-
-
-
     public static class LoginHistory
     {
         private static readonly Regex LineRx = new(
             @"^\[(?<t>[^\]]+)\] \[(?<u>[^\]]*)\] \[(?<a>[^\]]+)\]",
             RegexOptions.Compiled);
 
-
-
-
-
         private const int IgnoreRecentMinutes = 2;
-
-
-
-
-
 
         public static string? BuildWarning(string username)
         {
@@ -84,7 +69,6 @@ namespace PersonalInfoManager.Services
                         continue;
 
                     string action = ActivityLogger.UnescapeField(m.Groups["a"].Value);
-
 
                     if (action == "LOGIN")
                     {

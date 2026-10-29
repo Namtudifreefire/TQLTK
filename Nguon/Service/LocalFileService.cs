@@ -6,9 +6,6 @@ using System.Linq;
 namespace PersonalInfoManager.Services
 {
 
-
-
-
     public class LocalFileService
     {
         private readonly string _storageRoot;
@@ -21,9 +18,6 @@ namespace PersonalInfoManager.Services
 
             Directory.CreateDirectory(_storageRoot);
         }
-
-
-
 
         public string GetUserFolder(string username)
         {
@@ -57,10 +51,6 @@ namespace PersonalInfoManager.Services
             return folder;
         }
 
-
-
-
-
         public string ImportFile(string username, string sourcePath)
         {
             if (!File.Exists(sourcePath))
@@ -74,9 +64,6 @@ namespace PersonalInfoManager.Services
             return destPath;
         }
 
-
-
-
         public string SaveTextFile(string username, string fileName, string content)
         {
             string userFolder = GetUserFolder(username);
@@ -85,9 +72,6 @@ namespace PersonalInfoManager.Services
             File.WriteAllText(destPath, content, System.Text.Encoding.UTF8);
             return destPath;
         }
-
-
-
 
         public List<FileInfo> ListFiles(string username)
         {
@@ -98,17 +82,11 @@ namespace PersonalInfoManager.Services
                 .ToList();
         }
 
-
-
-
         public void DeleteFile(string filePath)
         {
             if (File.Exists(filePath))
                 File.Delete(filePath);
         }
-
-
-
 
         public void ExportFile(string sourcePath, string destPath)
         {
@@ -118,19 +96,11 @@ namespace PersonalInfoManager.Services
             File.Copy(sourcePath, destPath, overwrite: true);
         }
 
-
-
-
         public long GetUsedBytes(string username)
         {
             string folder = GetUserFolder(username);
             return new DirectoryInfo(folder).GetFiles().Sum(f => f.Length);
         }
-
-
-
-
-
 
         private static string EnsureUniquePath(string path)
         {

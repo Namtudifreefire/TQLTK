@@ -18,7 +18,6 @@ namespace PersonalInfoManager
         {
             InitializeComponent();
 
-
             var existingKeys = new HashSet<string>(
                 existing.Select(a => $"{a.ServiceName.ToLower()}|{a.Username.ToLower()}"));
 
@@ -91,9 +90,6 @@ namespace PersonalInfoManager
             Close();
         }
     }
-
-
-
 
     public class CsvPreviewItem : INotifyPropertyChanged
     {

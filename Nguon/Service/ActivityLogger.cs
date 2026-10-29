@@ -5,10 +5,6 @@ using System.Text;
 namespace PersonalInfoManager.Services
 {
 
-
-
-
-
     public static class ActivityLogger
     {
         private static readonly string _logRoot = Path.Combine(
@@ -16,9 +12,6 @@ namespace PersonalInfoManager.Services
             "PersonalInfoManager", "Logs");
 
         private static readonly object _lock = new();
-
-
-
 
         public static void Log(string username, string action, string detail = "")
         {
@@ -118,9 +111,6 @@ namespace PersonalInfoManager.Services
             return decoded.ToString();
         }
 
-
-
-
         public static string ReadTodayLog()
         {
             try
@@ -139,17 +129,11 @@ namespace PersonalInfoManager.Services
             }
         }
 
-
-
-
         public static string[] ListLogFiles()
         {
             if (!Directory.Exists(_logRoot)) return Array.Empty<string>();
             return Directory.GetFiles(_logRoot, "activity_*.log");
         }
-
-
-
 
         public static void CleanupOldLogs(int keepDays = 30)
         {

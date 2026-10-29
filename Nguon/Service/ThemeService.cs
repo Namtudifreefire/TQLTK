@@ -7,19 +7,12 @@ using System.Windows.Media;
 namespace PersonalInfoManager.Services
 {
 
-
-
-
-
-
     public static class ThemeService
     {
         private const string LightThemePath = "Themes/LightTheme.xaml";
         private const string DarkThemePath  = "Themes/DarkTheme.xaml";
 
         public static bool IsDarkMode { get; private set; } = false;
-
-
 
         public static void Initialize()
         {
@@ -30,8 +23,6 @@ namespace PersonalInfoManager.Services
             else
                 ApplyLight(save: false);
         }
-
-
 
         public static void Toggle()
         {
@@ -54,8 +45,6 @@ namespace PersonalInfoManager.Services
             if (save) { try { RegistryService.SetTheme("Dark"); } catch { } }
             RefreshAllWindows();
         }
-
-
 
         private static void SwapTheme(string newThemePath)
         {
@@ -83,9 +72,6 @@ namespace PersonalInfoManager.Services
             dicts.Insert(0, newDict);
         }
 
-
-
-
         private static void RefreshAllWindows()
         {
             try
@@ -97,9 +83,6 @@ namespace PersonalInfoManager.Services
             }
             catch { }
         }
-
-
-
 
         private static void RefreshWindow(Window w)
         {
@@ -113,14 +96,12 @@ namespace PersonalInfoManager.Services
                     fe.UpdateLayout();
                 }
 
-
                 foreach (var child in FindVisualChildren<FrameworkElement>(w))
                 {
                     try
                     {
 
                         child.InvalidateVisual();
-
 
                         if (child is System.Windows.Controls.Control ctrl)
                         {
@@ -133,9 +114,6 @@ namespace PersonalInfoManager.Services
             }
             catch { }
         }
-
-
-
 
         private static IEnumerable<T> FindVisualChildren<T>(DependencyObject depObj)
             where T : DependencyObject

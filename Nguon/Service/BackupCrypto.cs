@@ -7,20 +7,6 @@ using System.Text;
 namespace PersonalInfoManager.Services
 {
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     public static class BackupCrypto
     {
         public const string Prefix = "v3p:";
@@ -40,20 +26,10 @@ namespace PersonalInfoManager.Services
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "PersonalInfoManager");
 
-
         private static readonly string LegacyPassFile = Path.Combine(PassDir, "backup_pass.dat");
-
-
-
-
-
 
         public static bool IsPassphraseFormat(string text) =>
             text.TrimStart().StartsWith(Prefix, StringComparison.Ordinal);
-
-
-
-
 
         public static string Encrypt(string plainText, string passphrase)
         {
@@ -87,10 +63,6 @@ namespace PersonalInfoManager.Services
                 CryptographicOperations.ZeroMemory(plain);
             }
         }
-
-
-
-
 
         public static string Decrypt(string text, string passphrase)
         {
@@ -146,21 +118,13 @@ namespace PersonalInfoManager.Services
         private static byte[] DeriveKey(string passphrase, ReadOnlySpan<byte> salt, int iterations)
         {
 
-
             string normalized = passphrase.Normalize(NormalizationForm.FormC);
 
             return Rfc2898DeriveBytes.Pbkdf2(
                 normalized.AsSpan(), salt, iterations, HashAlgorithmName.SHA256, KeySize);
         }
 
-
-
-
-
-
-
         private static readonly byte[] BinaryMagic = { (byte)'T', (byte)'Q', (byte)'F', (byte)'B', 1 };
-
 
         public static bool IsBinaryFormat(byte[] data)
         {
@@ -171,9 +135,6 @@ namespace PersonalInfoManager.Services
 
             return true;
         }
-
-
-
 
         public static byte[] EncryptBytes(ReadOnlySpan<byte> plain, string passphrase)
         {
@@ -206,10 +167,6 @@ namespace PersonalInfoManager.Services
                 CryptographicOperations.ZeroMemory(key);
             }
         }
-
-
-
-
 
         public static byte[] DecryptBytes(byte[] data, string passphrase)
         {
@@ -258,15 +215,6 @@ namespace PersonalInfoManager.Services
             }
         }
 
-
-
-
-
-
-
-
-
-
         public static string UserTag(string username)
         {
             string normalized = (username ?? "").Trim().ToLowerInvariant();
@@ -274,13 +222,8 @@ namespace PersonalInfoManager.Services
             return "u" + Convert.ToHexString(hash, 0, 4).ToLowerInvariant();
         }
 
-
-
-
-
         private static string PassFileFor(string username) =>
             Path.Combine(PassDir, $"backup_pass_{UserTag(username)}.dat");
-
 
         public static string? GetStoredPassphrase(string username) => ReadPassFile(PassFileFor(username));
 
@@ -289,12 +232,7 @@ namespace PersonalInfoManager.Services
         public static void SaveStoredPassphrase(string username, string passphrase) =>
             WritePassFile(PassFileFor(username), passphrase);
 
-
         public static bool HasLegacyPassphrase() => File.Exists(LegacyPassFile);
-
-
-
-
 
         public static bool TryAdoptLegacyPassphrase(string username)
         {
@@ -332,7 +270,6 @@ namespace PersonalInfoManager.Services
             try
             {
                 byte[] protectedBytes = ProtectedData.Protect(raw, null, DataProtectionScope.CurrentUser);
-
 
                 string tmp = path + ".tmp";
                 File.WriteAllBytes(tmp, protectedBytes);

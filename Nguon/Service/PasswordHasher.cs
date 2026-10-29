@@ -5,9 +5,6 @@ using System.Security.Cryptography;
 namespace PersonalInfoManager.Services
 {
 
-
-
-
     public static class PasswordHasher
     {
         private const int SaltSize = 16;
@@ -15,9 +12,6 @@ namespace PersonalInfoManager.Services
         private const int Iterations = 600_000;
         private const int MinAcceptedIterations = 100_000;
         private const int MaxAcceptedIterations = 1_000_000;
-
-
-
 
         public static string Hash(string password)
         {
@@ -32,9 +26,6 @@ namespace PersonalInfoManager.Services
             return $"{Iterations}.{Convert.ToBase64String(salt)}.{Convert.ToBase64String(hash)}";
         }
 
-
-
-
         public static bool Verify(string password, string stored)
         {
             try
@@ -46,7 +37,6 @@ namespace PersonalInfoManager.Services
 
                 if (!int.TryParse(parts[0], NumberStyles.None, CultureInfo.InvariantCulture, out int iter))
                     return false;
-
 
                 if (iter < MinAcceptedIterations || iter > MaxAcceptedIterations)
                     return false;
@@ -63,7 +53,6 @@ namespace PersonalInfoManager.Services
                     hashAlgorithm: HashAlgorithmName.SHA256,
                     outputLength: HashSize);
 
-
                 return CryptographicOperations.FixedTimeEquals(actual, expected);
             }
             catch
@@ -71,7 +60,6 @@ namespace PersonalInfoManager.Services
                 return false;
             }
         }
-
 
         public static bool NeedsRehash(string stored)
         {

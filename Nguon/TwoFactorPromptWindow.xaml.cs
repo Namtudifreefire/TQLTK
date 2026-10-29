@@ -11,9 +11,6 @@ namespace PersonalInfoManager
         private readonly Func<string, (bool ok, string message)> _verify;
         private int _attempts;
 
-
-
-
         public TwoFactorPromptWindow(string title, string description, Func<string, (bool ok, string message)> verify)
         {
             InitializeComponent();
@@ -25,15 +22,6 @@ namespace PersonalInfoManager
 
             Loaded += (_, _) => txtCode.Focus();
         }
-
-
-
-
-
-
-
-
-
 
         public static bool AskIfEnabled(Window? owner, string username)
         {
@@ -68,10 +56,6 @@ namespace PersonalInfoManager
             try { ActivityLogger.Log(username, ok ? "LOGIN_2FA_OK" : "LOGIN_2FA_FAILED", ""); } catch { }
             return ok;
         }
-
-
-
-
 
         private void BtnOk_Click(object sender, RoutedEventArgs e)
         {

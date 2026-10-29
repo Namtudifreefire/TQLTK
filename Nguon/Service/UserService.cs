@@ -12,23 +12,11 @@ using PersonalInfoManager.Models;
 namespace PersonalInfoManager.Services
 {
 
-
-
-
     public class UsersFileUnreadableException : Exception
     {
         public UsersFileUnreadableException(string message, Exception? inner = null)
             : base(message, inner) { }
     }
-
-
-
-
-
-
-
-
-
 
     public class UserService
     {
@@ -40,7 +28,6 @@ namespace PersonalInfoManager.Services
         private readonly string _usersFile = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "PersonalInfoManager", "users.json");
-
 
         private const string LegacyDefaultAdminPassword = "admin123";
 
@@ -107,9 +94,7 @@ namespace PersonalInfoManager.Services
             return false;
         }
 
-
         public const int MaxFailedAttempts = 5;
-
 
         public static readonly TimeSpan LockoutDuration = TimeSpan.FromMinutes(5);
 
@@ -123,10 +108,6 @@ namespace PersonalInfoManager.Services
             }
         }
 
-
-
-
-
         private void Reload()
         {
             lock (Sync)
@@ -136,11 +117,6 @@ namespace PersonalInfoManager.Services
                     Save();
             }
         }
-
-
-
-
-
 
         private List<User> ReadUsers(out bool needsProtection)
         {
@@ -161,7 +137,6 @@ namespace PersonalInfoManager.Services
                 needsProtection = true;
                 return bak;
             }
-
 
             try
             {
@@ -282,10 +257,6 @@ namespace PersonalInfoManager.Services
             }
         }
 
-
-
-
-
         private User? FindByUsernameCore(string username)
             => _users.FirstOrDefault(u =>
                 string.Equals(u.Username, username, StringComparison.OrdinalIgnoreCase));
@@ -384,10 +355,6 @@ namespace PersonalInfoManager.Services
             }
         }
 
-
-
-
-
         private static bool IsValidEmail(string email)
         {
             if (string.IsNullOrWhiteSpace(email)) return true;
@@ -471,19 +438,11 @@ namespace PersonalInfoManager.Services
             }
         }
 
-
-
-
-
         public (bool ok, string message) CreateUser(
             string username, string password, UserRole role)
         {
             return CreateUserFull(username, password, role, username, "", "");
         }
-
-
-
-
 
         public (bool ok, string message) CreateInitialAdmin(
             string username, string password, string fullName, string email, string phone)
@@ -580,16 +539,6 @@ namespace PersonalInfoManager.Services
             }
         }
 
-
-
-
-
-
-
-
-
-
-
         public (bool ok, string message, User? user) Authenticate(
             string username, string password)
         {
@@ -618,7 +567,6 @@ namespace PersonalInfoManager.Services
                 if (!user.IsActive)
                     return (false, "Tài khoản đã bị khóa.", null);
 
-
                 if (user.LockedUntil is { } until)
                 {
                     if (until > DateTime.Now)
@@ -628,7 +576,6 @@ namespace PersonalInfoManager.Services
                             $"Nhập sai mật khẩu quá nhiều lần. Tài khoản bị khóa tạm thời, hãy thử lại sau khoảng {mins} phút.",
                             null);
                     }
-
 
                     user.LockedUntil = null;
                     user.FailedLoginCount = 0;
@@ -655,8 +602,6 @@ namespace PersonalInfoManager.Services
                         null);
                 }
 
-
-
                 if (IsDefaultPassword(password))
                     return (false,
                         "Mật khẩu mặc định cũ đã bị vô hiệu hóa. Hãy dùng Windows Hello nếu đã bật " +
@@ -673,10 +618,8 @@ namespace PersonalInfoManager.Services
                 user.FailedLoginCount = 0;
                 user.LockedUntil = null;
 
-
                 if (PasswordHasher.NeedsRehash(user.PasswordHash))
                     user.PasswordHash = PasswordHasher.Hash(password);
-
 
                 if (password.Length < MinimumPasswordLength(user.TwoFactorEnabled))
                     user.MustChangePassword = true;
@@ -686,10 +629,6 @@ namespace PersonalInfoManager.Services
                 return (true, "Đăng nhập thành công.", user);
             }
         }
-
-
-
-
 
         public (bool ok, string message) ChangePassword(
             string username, string oldPwd, string newPwd)
@@ -726,10 +665,6 @@ namespace PersonalInfoManager.Services
             }
         }
 
-
-
-
-
         public (bool ok, string message) ResetPassword(Guid userId, string newPassword)
         {
             lock (Sync)
@@ -755,10 +690,6 @@ namespace PersonalInfoManager.Services
                 return (true, "Đã reset mật khẩu. Người dùng sẽ phải đổi mật khẩu khi đăng nhập lần tới.");
             }
         }
-
-
-
-
 
         public (bool ok, string message) UpdateProfile(
             Guid userId, string fullName, string email, string phone)
@@ -826,11 +757,6 @@ namespace PersonalInfoManager.Services
             }
         }
 
-
-
-
-
-
         public void SetActive(Guid userId, bool active)
         {
             lock (Sync)
@@ -850,14 +776,6 @@ namespace PersonalInfoManager.Services
                 Save();
             }
         }
-
-
-
-
-
-
-
-
 
         public (bool ok, string message) DeleteUser(Guid userId, Guid currentUserId)
         {
@@ -883,14 +801,6 @@ namespace PersonalInfoManager.Services
             }
         }
 
-
-
-
-
-
-
-
-
         public (bool ok, string message) SetRole(Guid userId, UserRole role)
         {
             lock (Sync)
@@ -912,10 +822,6 @@ namespace PersonalInfoManager.Services
                 return (true, "Đã đổi vai trò.");
             }
         }
-
-
-
-
 
         public int CountAdmins() { lock (Sync) { Reload(); return _users.Count(u => u.Role == UserRole.Admin); } }
         public int CountUsers() { lock (Sync) { Reload(); return _users.Count(u => u.Role == UserRole.User); } }
@@ -946,13 +852,6 @@ namespace PersonalInfoManager.Services
             }
         }
 
-
-
-
-
-
-
-
         public (bool ok, string message) SetWindowsHello(
             Guid userId, bool enabled, string sid)
         {
@@ -982,9 +881,6 @@ namespace PersonalInfoManager.Services
             }
         }
 
-
-
-
         public User? FindByWindowsHelloSid(string sid)
         {
             if (string.IsNullOrWhiteSpace(sid)) return null;
@@ -1001,9 +897,6 @@ namespace PersonalInfoManager.Services
                         StringComparison.OrdinalIgnoreCase));
             }
         }
-
-
-
 
         public List<User> GetWindowsHelloUsers()
         {

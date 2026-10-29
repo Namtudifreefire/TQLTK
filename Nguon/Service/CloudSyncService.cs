@@ -27,7 +27,6 @@ namespace PersonalInfoManager.Services
         Files
     }
 
-
     public enum BackupOwner
     {
 
@@ -37,7 +36,6 @@ namespace PersonalInfoManager.Services
 
         Other
     }
-
 
     public sealed class BackupInfo
     {
@@ -68,21 +66,6 @@ namespace PersonalInfoManager.Services
         }
     }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     public class CloudSyncService
     {
         private const string ResourceName = "credentials.json";
@@ -91,7 +74,6 @@ namespace PersonalInfoManager.Services
         private const string FolderMime = "application/vnd.google-apps.folder";
         private const string VaultPrefix = "vault_backup_";
         private const string FilesPrefix = "files_backup_";
-
 
         private static readonly Regex TaggedVaultName =
             new(@"^vault_backup_u[0-9a-f]{8}_", RegexOptions.Compiled);
@@ -108,15 +90,11 @@ namespace PersonalInfoManager.Services
         private readonly string _tag;
         private readonly string _tokenDir;
 
-
         private string MyPrefixOf(BackupKind kind) => $"{PrefixOf(kind)}{_tag}_";
-
 
         public string? LastError { get; private set; }
 
-
         public string? LastUploadedName { get; private set; }
-
 
         public CloudSyncService(string username)
         {
@@ -124,7 +102,6 @@ namespace PersonalInfoManager.Services
                 throw new ArgumentException("Thiếu tên người dùng.", nameof(username));
 
             _tag = BackupCrypto.UserTag(username);
-
 
             _tokenDir = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
@@ -139,25 +116,9 @@ namespace PersonalInfoManager.Services
                        "(Google Cloud Console → OAuth client kiểu Desktop) và đặt cạnh file .csproj.") { }
         }
 
-
-
-
-
-
-
-
-
-
-
         public Task<bool> UploadVaultAsync(
             string localFilePath, int keep = 5, CancellationToken ct = default)
             => UploadAsync(BackupKind.Vault, localFilePath, keep, ct);
-
-
-
-
-
-
 
         public Task<bool> UploadFilesBackupAsync(
             string localFilePath, int keep = 3, CancellationToken ct = default)
@@ -174,8 +135,6 @@ namespace PersonalInfoManager.Services
                 if (!File.Exists(localFilePath))
                     throw new FileNotFoundException("Chưa có file dữ liệu để sao lưu.", localFilePath);
 
-
-
                 using var cts = LinkedWithTimeout(ct, kind == BackupKind.Files ? 20 : 5);
 
                 try
@@ -184,7 +143,6 @@ namespace PersonalInfoManager.Services
                 }
                 catch (TokenResponseException)
                 {
-
 
                     if (Directory.Exists(_tokenDir))
                         Directory.Delete(_tokenDir, recursive: true);
@@ -215,7 +173,6 @@ namespace PersonalInfoManager.Services
                 Parents = new List<string> { folderId }
             };
 
-
             using var stream = new FileStream(
                 filePath, FileMode.Open, FileAccess.Read,
                 FileShare.ReadWrite | FileShare.Delete);
@@ -234,21 +191,9 @@ namespace PersonalInfoManager.Services
             return name;
         }
 
-
-
-
-
-
-
-
-
-
-
-
         public Task<List<BackupInfo>?> ListBackupsAsync(
             bool includeOthers = false, CancellationToken ct = default)
             => ListBackupsAsync(BackupKind.Vault, includeOthers, ct);
-
 
         public async Task<List<BackupInfo>?> ListBackupsAsync(
             BackupKind kind, bool includeOthers = false, CancellationToken ct = default)
@@ -265,14 +210,6 @@ namespace PersonalInfoManager.Services
                 return null;
             }
         }
-
-
-
-
-
-
-
-
 
         public async Task<bool> DownloadBackupAsync(
             string fileId, string destPath, CancellationToken ct = default)
@@ -297,7 +234,6 @@ namespace PersonalInfoManager.Services
             catch (Exception ex)
             {
                 LastError = Explain(ex);
-
 
                 try { if (File.Exists(destPath)) File.Delete(destPath); } catch {   }
 
@@ -358,7 +294,6 @@ namespace PersonalInfoManager.Services
             return BackupOwner.Legacy;
         }
 
-
         private async Task<T> WithAuthRetryAsync<T>(Func<Task<T>> op, CancellationToken ct)
         {
             try
@@ -381,10 +316,6 @@ namespace PersonalInfoManager.Services
             cts.CancelAfter(TimeSpan.FromMinutes(minutes));
             return cts;
         }
-
-
-
-
 
         private async Task<DriveService> GetDriveServiceAsync(CancellationToken ct)
         {
@@ -429,7 +360,6 @@ namespace PersonalInfoManager.Services
             return (await create.ExecuteAsync(ct)).Id;
         }
 
-
         private static async Task<List<DriveFile>> ListBackupFilesAsync(
             DriveService service, string folderId, string prefix, CancellationToken ct)
         {
@@ -458,10 +388,6 @@ namespace PersonalInfoManager.Services
             return all;
         }
 
-
-
-
-
         private async Task TrimOldBackupsAsync(
             DriveService service, string folderId, BackupKind kind, int keep, CancellationToken ct)
         {
@@ -472,13 +398,9 @@ namespace PersonalInfoManager.Services
             var mineFiles = (await ListBackupFilesAsync(service, folderId, PrefixOf(kind), ct))
                 .Where(f => f.Name!.StartsWith(mine, StringComparison.Ordinal));
 
-
             foreach (var old in mineFiles.Skip(keep))
                 await service.Files.Update(new DriveFile { Trashed = true }, old.Id).ExecuteAsync(ct);
         }
-
-
-
 
         public static string Explain(Exception ex)
         {

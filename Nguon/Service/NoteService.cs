@@ -8,19 +8,11 @@ using PersonalInfoManager.Models;
 namespace PersonalInfoManager.Services
 {
 
-
-
-
-
-
     public class NoteService
     {
         private readonly string _dataFile = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "PersonalInfoManager", "notes.json");
-
-
-
 
         public List<Note> Load()
         {
@@ -59,9 +51,6 @@ namespace PersonalInfoManager.Services
                     "Nội dung ghi chú không hợp lệ; file được giữ nguyên.", ex);
             }
         }
-
-
-
 
         public void Save(List<Note> notes)
         {

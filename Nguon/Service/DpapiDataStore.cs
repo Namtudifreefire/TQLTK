@@ -9,10 +9,6 @@ using Google.Apis.Util.Store;
 namespace PersonalInfoManager.Services
 {
 
-
-
-
-
     public sealed class DpapiDataStore : IDataStore
     {
         private static readonly byte[] Entropy = Encoding.UTF8.GetBytes("TQLTK.GoogleTokens.v1");
