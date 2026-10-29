@@ -125,7 +125,7 @@
                     BorderThickness="1"
                     CornerRadius="8">
                 <StackPanel>
-                    <TextBlock Text="Made By 天地と月の造化 - TQLTK v3.6.5 (BETA) | © 2026 All Rights Reserved"
+                    <TextBlock Text="Made By 天地と月の造化 - TQLTK v3.6.5 (BETA) | © 2026 Namtudifreefire | MIT License"
                                FontSize="11"
                                Foreground="{DynamicResource TextSecondaryBrush}"
                                FontStyle="Italic"
