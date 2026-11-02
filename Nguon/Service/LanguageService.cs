@@ -18,6 +18,7 @@ public static class LanguageService
     }
 
     private static readonly ConditionalWeakTable<DependencyObject, Dictionary<DependencyProperty, ObservedValue>> Observed = new();
+    private static readonly ConditionalWeakTable<TextBlock, ObservedValue> LocalizedTextBlocks = new();
     private static string _currentCode = RegistryService.GetLanguage();
 
     public static string CurrentCode => _currentCode;
@@ -202,6 +203,13 @@ public static class LanguageService
         Visit(window, new HashSet<DependencyObject>());
     }
 
+    public static void SetLocalizedText(TextBlock textBlock, string sourceText)
+    {
+        ObservedValue observation = LocalizedTextBlocks.GetValue(textBlock, _ => new());
+        observation.Source = sourceText;
+        RenderLocalizedTextBlock(textBlock, observation);
+    }
+
     private static void Visit(DependencyObject element, HashSet<DependencyObject> visited)
     {
         if (!visited.Add(element)) return;
@@ -210,12 +218,19 @@ public static class LanguageService
             Observe(window, Window.TitleProperty, value => ((Window)value).Title, (value, text) => value.SetCurrentValue(Window.TitleProperty, text ?? ""));
         if (element is TextBlock textBlock)
         {
-            if (textBlock.Inlines.Count == 0 && !IsUserDataTextBlock(textBlock))
-                Observe(textBlock, TextBlock.TextProperty, value => ((TextBlock)value).Text, (value, text) => value.SetCurrentValue(TextBlock.TextProperty, text ?? ""));
-            Inline[] inlines = textBlock.Inlines.ToArray();
-            foreach (Inline inline in inlines)
-                if (inline is Run run)
-                    Observe(run, Run.TextProperty, value => ((Run)value).Text, (value, text) => value.SetCurrentValue(Run.TextProperty, text ?? ""));
+            if (LocalizedTextBlocks.TryGetValue(textBlock, out ObservedValue? localizedText))
+            {
+                RenderLocalizedTextBlock(textBlock, localizedText);
+            }
+            else
+            {
+                if (textBlock.Inlines.Count == 0 && !IsUserDataTextBlock(textBlock))
+                    Observe(textBlock, TextBlock.TextProperty, value => ((TextBlock)value).Text, (value, text) => value.SetCurrentValue(TextBlock.TextProperty, text ?? ""));
+                Inline[] inlines = textBlock.Inlines.ToArray();
+                foreach (Inline inline in inlines)
+                    if (inline is Run run)
+                        Observe(run, Run.TextProperty, value => ((Run)value).Text, (value, text) => value.SetCurrentValue(Run.TextProperty, text ?? ""));
+            }
         }
         if (element is HeaderedContentControl headeredContent)
             Observe(headeredContent, HeaderedContentControl.HeaderProperty, value => ((HeaderedContentControl)value).Header as string,
@@ -241,6 +256,16 @@ public static class LanguageService
 
         foreach (object child in LogicalTreeHelper.GetChildren(element))
             if (child is DependencyObject dependencyChild) Visit(dependencyChild, visited);
+    }
+
+    private static void RenderLocalizedTextBlock(TextBlock textBlock, ObservedValue observation)
+    {
+        string? translated = observation.Source == null ? null : Translate(observation.Source);
+        observation.Rendered = translated;
+        if (translated == null || string.Equals(textBlock.Text, translated, StringComparison.Ordinal)) return;
+        observation.IsUpdating = true;
+        try { textBlock.SetCurrentValue(TextBlock.TextProperty, translated); }
+        finally { observation.IsUpdating = false; }
     }
 
     private static void Observe(

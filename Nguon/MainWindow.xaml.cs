@@ -13,10 +13,8 @@ using PersonalInfoManager.Services;
 
 namespace PersonalInfoManager
 {
-
     public partial class MainWindow : Window
     {
-
         private readonly AccountVaultService _vaultService = new();
         private readonly LocalFileService _fileService = new();
         private readonly UserService _userService = new();
@@ -166,7 +164,6 @@ namespace PersonalInfoManager
 
             anim.Completed += (_, _) =>
             {
-
                 if (_sidebarVisible != show) return;
 
                 panelSidebar.BeginAnimation(WidthProperty, null);
@@ -857,7 +854,6 @@ namespace PersonalInfoManager
 
                 if (!ok)
                 {
-
                     if (!TwoFactorService.IsEnabled(username))
                     {
                         try { ActivityLogger.Log(username, "COPY_PASSWORD_DENIED", "Windows Hello thất bại, chưa bật 2FA"); } catch { }
@@ -1034,15 +1030,15 @@ namespace PersonalInfoManager
             {
                 if (u.WindowsHelloEnabled)
                 {
-                    lblWindowsHelloBtnText.Text = "Tắt Windows Hello";
+                    LanguageService.SetLocalizedText(lblWindowsHelloBtnText, "Tắt Windows Hello");
                     btnToggleWindowsHello.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(239, 68, 68));
-                    lblWindowsHelloStatus.Text = "✓ Đang bật đăng nhập bằng Windows Hello.";
+                    LanguageService.SetLocalizedText(lblWindowsHelloStatus, "✓ Đang bật đăng nhập bằng Windows Hello.");
                 }
                 else
                 {
-                    lblWindowsHelloBtnText.Text = "Bật Windows Hello";
+                    LanguageService.SetLocalizedText(lblWindowsHelloBtnText, "Bật Windows Hello");
                     btnToggleWindowsHello.Foreground = (System.Windows.Media.Brush)FindResource("AccentBrush");
-                    lblWindowsHelloStatus.Text = "Chưa bật đăng nhập bằng Windows Hello.";
+                    LanguageService.SetLocalizedText(lblWindowsHelloStatus, "Chưa bật đăng nhập bằng Windows Hello.");
                 }
             }
             catch { }
@@ -1123,7 +1119,7 @@ namespace PersonalInfoManager
 
         private static void SetCardState(TextBlock label, bool on)
         {
-            label.Text = on ? "● Đang bật" : "○ Đang tắt";
+            LanguageService.SetLocalizedText(label, on ? "● Đang bật" : "○ Đang tắt");
 
             if (on)
             {
@@ -1148,7 +1144,7 @@ namespace PersonalInfoManager
                 string user = SessionService.CurrentUser!.Username;
                 bool enabled = TwoFactorService.IsEnabled(user);
 
-                lbl2FATitle.Text = enabled ? "Tắt xác thực 2 bước" : "Bật xác thực 2 bước";
+                LanguageService.SetLocalizedText(lbl2FATitle, enabled ? "Tắt xác thực 2 bước" : "Bật xác thực 2 bước");
                 SetCardState(lbl2FAState, enabled);
 
                 card2FARegen.Visibility = enabled ? Visibility.Visible : Visibility.Collapsed;
@@ -1210,7 +1206,6 @@ namespace PersonalInfoManager
 
                 if (!TwoFactorService.IsEnabled(username))
                 {
-
                     var setup = new TwoFactorSetupWindow(username) { Owner = this };
                     setup.ShowDialog();
 
@@ -1221,7 +1216,6 @@ namespace PersonalInfoManager
                 }
                 else
                 {
-
                     var dlg = new TwoFactorPromptWindow(
                         "Tắt xác thực 2 bước",
                         "Nhập mã 6 số từ Authenticator (hoặc mã khôi phục) để xác nhận tắt.",
