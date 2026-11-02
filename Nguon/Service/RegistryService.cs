@@ -8,6 +8,28 @@ namespace PersonalInfoManager.Services
     {
         private const string AppKey = @"Software\TQLTK";
 
+        public static string GetLanguage()
+        {
+            try
+            {
+                using var key = Registry.CurrentUser.OpenSubKey(AppKey);
+                return string.Equals(key?.GetValue("Language")?.ToString(), "en", StringComparison.OrdinalIgnoreCase)
+                    ? "en" : "vi";
+            }
+            catch { return "vi"; }
+        }
+
+        public static void SetLanguage(string language)
+        {
+            string normalized = string.Equals(language, "en", StringComparison.OrdinalIgnoreCase) ? "en" : "vi";
+            try
+            {
+                using var key = Registry.CurrentUser.CreateSubKey(AppKey);
+                key?.SetValue("Language", normalized, RegistryValueKind.String);
+            }
+            catch { }
+        }
+
         public static int GetAutoLockMinutes()
         {
             try

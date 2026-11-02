@@ -43,6 +43,13 @@ namespace PersonalInfoManager
         public MainWindow()
         {
             InitializeComponent();
+            cmbLanguageSettings.SelectedValuePath = "Tag";
+            cmbLanguageSettings.SelectedValue = LanguageService.CurrentCode;
+            cmbLanguageSettings.SelectionChanged += (_, _) =>
+            {
+                if (cmbLanguageSettings.SelectedValue is string language)
+                    LanguageService.SetLanguage(language);
+            };
             AutoLockMinutes = RegistryService.GetAutoLockMinutes();
             _lockWhenMinimized = RegistryService.GetLockWhenMinimized();
 

@@ -24,6 +24,7 @@
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
             <TextBlock Grid.Row="0"
@@ -132,6 +133,15 @@
                                Margin="0,4,0,0" />
                 </StackPanel>
             </Border>
+
+            <StackPanel Grid.Row="9" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+                <TextBlock Text="Ngôn ngữ:" VerticalAlignment="Center" Margin="0,0,8,0"
+                           Foreground="{DynamicResource TextSecondaryBrush}" />
+                <ComboBox x:Name="cmbLanguageLogin" Width="120" SelectedValuePath="Tag">
+                    <ComboBoxItem Content="Tiếng Việt" Tag="vi" />
+                    <ComboBoxItem Content="Tiếng Anh" Tag="en" />
+                </ComboBox>
+            </StackPanel>
 
         </Grid>
     </ScrollViewer>

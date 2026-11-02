@@ -781,6 +781,17 @@
                                         </StackPanel>
                                     </Border>
 
+                                    <Border Style="{StaticResource SettingRow}" Margin="0,0,0,14">
+                                        <StackPanel>
+                                            <TextBlock Text="Ngôn ngữ" Style="{StaticResource RowTitle}" />
+                                            <TextBlock Text="Chọn ngôn ngữ hiển thị của ứng dụng." Style="{StaticResource RowDesc}" Margin="0,3,0,8" />
+                                            <ComboBox x:Name="cmbLanguageSettings" Width="180" SelectedValuePath="Tag" HorizontalAlignment="Left">
+                                                <ComboBoxItem Content="Tiếng Việt" Tag="vi" />
+                                                <ComboBoxItem Content="Tiếng Anh" Tag="en" />
+                                            </ComboBox>
+                                        </StackPanel>
+                                    </Border>
+
                                     <Border Style="{StaticResource SettingRow}">
                                         <DockPanel>
                                             <Button DockPanel.Dock="Right" Content="Đổi mật khẩu" Style="{StaticResource RowButton}" Click="MnuChangePwd_Click" />

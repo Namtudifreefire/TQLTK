@@ -15,6 +15,13 @@ namespace PersonalInfoManager
         public LoginWindow()
         {
             InitializeComponent();
+            cmbLanguageLogin.SelectedValuePath = "Tag";
+            cmbLanguageLogin.SelectedValue = LanguageService.CurrentCode;
+            cmbLanguageLogin.SelectionChanged += (_, _) =>
+            {
+                if (cmbLanguageLogin.SelectedValue is string language)
+                    LanguageService.SetLanguage(language);
+            };
             Loaded += LoginWindow_Loaded;
         }
 
