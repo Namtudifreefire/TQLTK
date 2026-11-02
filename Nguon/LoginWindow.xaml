@@ -123,7 +123,8 @@
                                Foreground="{DynamicResource TextSecondaryBrush}"
                                FontStyle="Italic"
                                TextAlignment="Center"
-                               HorizontalAlignment="Center" />
+                               TextWrapping="Wrap"
+                               HorizontalAlignment="Stretch" />
                     <TextBlock Text="🔐 Bật Windows Hello trong Thông tin cá nhân"
                                FontSize="10"
                                Foreground="{DynamicResource TextSecondaryBrush}"
