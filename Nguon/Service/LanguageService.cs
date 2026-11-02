@@ -52,7 +52,7 @@ public static class LanguageService
 
     private static string TranslateLogLine(string line)
     {
-        int timestampEnd = line.IndexOf("] [", 1, StringComparison.Ordinal);
+        int timestampEnd = line.IndexOf("] [", StringComparison.Ordinal);
         if (timestampEnd != 20) return Translate(line);
 
         int usernameEnd = line.IndexOf("] [", timestampEnd + 3, StringComparison.Ordinal);
