@@ -1330,7 +1330,7 @@ namespace PersonalInfoManager
 
         private void MnuAdmin_Click(object? sender, RoutedEventArgs e) => new AdminWindow().ShowDialog();
         private void MnuChangePwd_Click(object? sender, RoutedEventArgs e) => new ChangePasswordWindow().ShowDialog();
-        private void MnuSysInfo_Click(object? sender, RoutedEventArgs e) => MessageBox.Show(SystemInfoService.GetSystemReport(), "Thông tin hệ thống");
+        private void MnuSysInfo_Click(object? sender, RoutedEventArgs e) => MessageBox.Show(SystemInfoService.GetSystemReport(), LanguageService.Translate("Thông tin hệ thống"));
 
         private void MnuLogout_Click(object? sender, RoutedEventArgs e)
         {
