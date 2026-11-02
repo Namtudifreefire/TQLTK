@@ -27,7 +27,6 @@
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-
             <TextBlock x:Name="lblFormTitle"
                        Grid.Row="0"
                        Text="📝 Đăng ký tài khoản"
@@ -45,7 +44,6 @@
                        HorizontalAlignment="Center"
                        Margin="0,0,0,25" />
 
-
             <StackPanel Grid.Row="2">
                 <TextBlock Text="Tên đăng nhập (*):"
                            FontWeight="SemiBold"
@@ -62,7 +60,6 @@
                            Foreground="{DynamicResource TextSecondaryBrush}"
                            Margin="0,4,0,0" />
             </StackPanel>
-
 
             <StackPanel Grid.Row="3" Margin="0,15,0,0">
                 <TextBlock Text="Mật khẩu (*):"
@@ -83,7 +80,6 @@
                            Margin="0,4,0,0" />
             </StackPanel>
 
-
             <StackPanel Grid.Row="4" Margin="0,15,0,0">
                 <TextBlock Text="Xác nhận mật khẩu (*):"
                            FontWeight="SemiBold"
@@ -103,7 +99,6 @@
                            Margin="0,4,0,0" />
             </StackPanel>
 
-
             <StackPanel Grid.Row="5" Margin="0,15,0,0">
                 <TextBlock Text="Họ tên (*):"
                            FontWeight="SemiBold"
@@ -116,7 +111,6 @@
                          Padding="12,10"
                          VerticalContentAlignment="Center" />
             </StackPanel>
-
 
             <StackPanel Grid.Row="6" Margin="0,15,0,0">
                 <TextBlock Text="Gmail:"
@@ -135,7 +129,6 @@
                            Margin="0,4,0,0" />
             </StackPanel>
 
-
             <StackPanel Grid.Row="7" Margin="0,15,0,0">
                 <TextBlock Text="Số điện thoại:"
                            FontWeight="SemiBold"
@@ -148,7 +141,6 @@
                          Padding="12,10"
                          VerticalContentAlignment="Center" />
             </StackPanel>
-
 
             <Grid Grid.Row="8" Margin="0,30,0,0">
                 <Grid.ColumnDefinitions>
@@ -180,7 +172,6 @@
                                HorizontalAlignment="Center" />
                 </Button>
             </Grid>
-
 
             <TextBlock Grid.Row="9"
                        FontSize="12"

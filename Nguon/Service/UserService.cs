@@ -11,14 +11,13 @@ using PersonalInfoManager.Models;
 
 namespace PersonalInfoManager.Services
 {
-
-    public class UsersFileUnreadableException : Exception
+        public class UsersFileUnreadableException : Exception
     {
         public UsersFileUnreadableException(string message, Exception? inner = null)
             : base(message, inner) { }
     }
 
-    public class UserService
+        public class UserService
     {
         private static readonly object Sync = new();
         private static readonly JsonSerializerOptions JsonOpts = new() { WriteIndented = true };
@@ -94,9 +93,9 @@ namespace PersonalInfoManager.Services
             return false;
         }
 
-        public const int MaxFailedAttempts = 5;
+                public const int MaxFailedAttempts = 5;
 
-        public static readonly TimeSpan LockoutDuration = TimeSpan.FromMinutes(5);
+                public static readonly TimeSpan LockoutDuration = TimeSpan.FromMinutes(5);
 
         private List<User> _users = new();
 
@@ -118,7 +117,7 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        private List<User> ReadUsers(out bool needsProtection)
+                private List<User> ReadUsers(out bool needsProtection)
         {
             needsProtection = false;
             if (!File.Exists(_usersFile)) return new List<User>();
@@ -444,7 +443,7 @@ namespace PersonalInfoManager.Services
             return CreateUserFull(username, password, role, username, "", "");
         }
 
-        public (bool ok, string message) CreateInitialAdmin(
+                public (bool ok, string message) CreateInitialAdmin(
             string username, string password, string fullName, string email, string phone)
         {
             lock (Sync)
@@ -539,7 +538,7 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        public (bool ok, string message, User? user) Authenticate(
+                public (bool ok, string message, User? user) Authenticate(
             string username, string password)
         {
             lock (Sync)
@@ -665,7 +664,7 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        public (bool ok, string message) ResetPassword(Guid userId, string newPassword)
+                public (bool ok, string message) ResetPassword(Guid userId, string newPassword)
         {
             lock (Sync)
             {
@@ -757,7 +756,7 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        public void SetActive(Guid userId, bool active)
+                public void SetActive(Guid userId, bool active)
         {
             lock (Sync)
             {
@@ -777,7 +776,7 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        public (bool ok, string message) DeleteUser(Guid userId, Guid currentUserId)
+                public (bool ok, string message) DeleteUser(Guid userId, Guid currentUserId)
         {
             lock (Sync)
             {
@@ -801,7 +800,7 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        public (bool ok, string message) SetRole(Guid userId, UserRole role)
+                public (bool ok, string message) SetRole(Guid userId, UserRole role)
         {
             lock (Sync)
             {
@@ -852,7 +851,7 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        public (bool ok, string message) SetWindowsHello(
+                public (bool ok, string message) SetWindowsHello(
             Guid userId, bool enabled, string sid)
         {
             lock (Sync)
@@ -881,7 +880,7 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        public User? FindByWindowsHelloSid(string sid)
+                public User? FindByWindowsHelloSid(string sid)
         {
             if (string.IsNullOrWhiteSpace(sid)) return null;
 
@@ -898,7 +897,7 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        public List<User> GetWindowsHelloUsers()
+                public List<User> GetWindowsHelloUsers()
         {
             lock (Sync)
             {

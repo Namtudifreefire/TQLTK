@@ -5,8 +5,7 @@ using System.Linq;
 
 namespace PersonalInfoManager.Services
 {
-
-    public static class UserDataCleaner
+        public static class UserDataCleaner
     {
         private static readonly string Root = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
@@ -21,7 +20,7 @@ namespace PersonalInfoManager.Services
             public int FileCount;
         }
 
-        public static List<string> Describe(Guid userId, string username)
+                public static List<string> Describe(Guid userId, string username)
         {
             var warnings = new List<string>();
             var descriptions = BuildItems(userId, username, warnings)
@@ -31,7 +30,7 @@ namespace PersonalInfoManager.Services
             return descriptions;
         }
 
-        public static (List<string> removed, List<string> errors) Delete(Guid userId, string username)
+                public static (List<string> removed, List<string> errors) Delete(Guid userId, string username)
         {
             var removed = new List<string>();
             var errors = new List<string>();
@@ -158,7 +157,7 @@ namespace PersonalInfoManager.Services
             AddIfAny(items, storage);
         }
 
-        private static bool IsDirectChild(string parent, string child)
+                private static bool IsDirectChild(string parent, string child)
         {
             string p = Path.GetFullPath(parent).TrimEnd(Path.DirectorySeparatorChar);
             string c = Path.GetFullPath(child).TrimEnd(Path.DirectorySeparatorChar);

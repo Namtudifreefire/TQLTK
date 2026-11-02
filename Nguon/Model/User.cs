@@ -19,12 +19,12 @@ namespace PersonalInfoManager.Models
         public bool WindowsHelloEnabled { get; set; } = false;
         public string WindowsHelloSid { get; set; } = "";
 
-        public bool TwoFactorEnabled { get; set; } = false;
+                public bool TwoFactorEnabled { get; set; } = false;
 
-        public bool MustChangePassword { get; set; } = false;
+                public bool MustChangePassword { get; set; } = false;
 
-        public int FailedLoginCount { get; set; } = 0;
+                public int FailedLoginCount { get; set; } = 0;
 
-        public DateTime? LockedUntil { get; set; }
+                public DateTime? LockedUntil { get; set; }
     }
 }

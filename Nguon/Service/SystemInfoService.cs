@@ -5,11 +5,9 @@ using System.Text;
 
 namespace PersonalInfoManager.Services
 {
-
-    public static class SystemInfoService
+        public static class SystemInfoService
     {
-
-        public static string GetSystemReport()
+                public static string GetSystemReport()
         {
             var sb = new StringBuilder();
 
@@ -45,7 +43,7 @@ namespace PersonalInfoManager.Services
             return sb.ToString();
         }
 
-        public static bool IsAdmin()
+                public static bool IsAdmin()
         {
             try
             {
@@ -59,7 +57,7 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        public static string GetShortInfo()
+                public static string GetShortInfo()
         {
             return $".NET {Environment.Version} | " +
                    $"{Environment.MachineName} | " +

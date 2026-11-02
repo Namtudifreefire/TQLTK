@@ -79,7 +79,7 @@ namespace PersonalInfoManager
             }
         }
 
-        protected override void OnExit(ExitEventArgs e)
+                protected override void OnExit(ExitEventArgs e)
         {
             try { AutoThemeService.Stop(); } catch { }
 

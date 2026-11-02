@@ -7,14 +7,13 @@ using PersonalInfoManager.Models;
 
 namespace PersonalInfoManager.Services
 {
-
-    public class NoteService
+        public class NoteService
     {
         private readonly string _dataFile = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "PersonalInfoManager", "notes.json");
 
-        public List<Note> Load()
+                public List<Note> Load()
         {
             if (!File.Exists(_dataFile)) return new List<Note>();
 
@@ -52,7 +51,7 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        public void Save(List<Note> notes)
+                public void Save(List<Note> notes)
         {
             if (File.Exists(_dataFile))
             {

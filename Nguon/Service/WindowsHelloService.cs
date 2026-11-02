@@ -8,8 +8,7 @@ using WindowsHello;
 
 namespace PersonalInfoManager.Services
 {
-
-    public static class WindowsHelloService
+        public static class WindowsHelloService
     {
 
         private static void Log(string msg)
@@ -31,7 +30,7 @@ namespace PersonalInfoManager.Services
             catch { }
         }
 
-        public static async Task<bool> IsAvailableAsync()
+                public static async Task<bool> IsAvailableAsync()
         {
             try
             {
@@ -50,7 +49,7 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        public static Task<bool> EnableAsync(Window owner, string message)
+                public static Task<bool> EnableAsync(Window owner, string message)
         {
             try
             {
@@ -88,7 +87,7 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        public static Task<bool> VerifyAsync(Window owner, string message)
+                public static Task<bool> VerifyAsync(Window owner, string message)
         {
             try
             {

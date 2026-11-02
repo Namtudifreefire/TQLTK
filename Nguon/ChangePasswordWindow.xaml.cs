@@ -11,11 +11,11 @@ namespace PersonalInfoManager
         private readonly UserService _userService = new();
         private readonly bool _forced;
 
-        public bool Changed { get; private set; }
+                public bool Changed { get; private set; }
 
         public ChangePasswordWindow() : this(false) { }
 
-        public ChangePasswordWindow(bool forced)
+                public ChangePasswordWindow(bool forced)
         {
             InitializeComponent();
             _forced = forced;
@@ -41,13 +41,13 @@ namespace PersonalInfoManager
                 return;
             }
 
-            int score = CalculateStrength(pwd);
+            int score = PasswordStrengthService.CalculateScore(pwd);
             (string text, Brush color) = score switch
             {
-                <= 2 => ("Yếu", Brushes.Red),
-                3 => ("Trung bình", Brushes.Orange),
-                4 => ("Mạnh", Brushes.Green),
-                _ => ("Rất mạnh", Brushes.DarkGreen)
+                <= 2 => (PasswordStrengthService.GetLabel(score), Brushes.Red),
+                3 => (PasswordStrengthService.GetLabel(score), Brushes.Orange),
+                4 => (PasswordStrengthService.GetLabel(score), Brushes.Green),
+                _ => (PasswordStrengthService.GetLabel(score), Brushes.DarkGreen)
             };
 
             lblStrength.Text = $"Độ mạnh: {text}";
@@ -72,17 +72,6 @@ namespace PersonalInfoManager
                 lblConfirm.Text = "✗ Mật khẩu không khớp";
                 lblConfirm.Foreground = Brushes.Red;
             }
-        }
-
-        private static int CalculateStrength(string pwd)
-        {
-            int score = 0;
-            if (pwd.Length >= 8) score++;
-            if (pwd.Length >= 12) score++;
-            if (pwd.Any(char.IsUpper) && pwd.Any(char.IsLower)) score++;
-            if (pwd.Any(char.IsDigit)) score++;
-            if (pwd.Any(c => !char.IsLetterOrDigit(c))) score++;
-            return score;
         }
 
         private void BtnOk_Click(object sender, RoutedEventArgs e)

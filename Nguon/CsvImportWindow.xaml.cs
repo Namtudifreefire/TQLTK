@@ -91,7 +91,7 @@ namespace PersonalInfoManager
         }
     }
 
-    public class CsvPreviewItem : INotifyPropertyChanged
+        public class CsvPreviewItem : INotifyPropertyChanged
     {
         private bool _isSelected;
 

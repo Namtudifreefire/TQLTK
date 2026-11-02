@@ -4,8 +4,7 @@ using System.Security.Cryptography;
 
 namespace PersonalInfoManager.Services
 {
-
-    public static class PasswordHasher
+        public static class PasswordHasher
     {
         private const int SaltSize = 16;
         private const int HashSize = 32;
@@ -13,7 +12,7 @@ namespace PersonalInfoManager.Services
         private const int MinAcceptedIterations = 100_000;
         private const int MaxAcceptedIterations = 1_000_000;
 
-        public static string Hash(string password)
+                public static string Hash(string password)
         {
             byte[] salt = RandomNumberGenerator.GetBytes(SaltSize);
             byte[] hash = Rfc2898DeriveBytes.Pbkdf2(
@@ -26,7 +25,7 @@ namespace PersonalInfoManager.Services
             return $"{Iterations}.{Convert.ToBase64String(salt)}.{Convert.ToBase64String(hash)}";
         }
 
-        public static bool Verify(string password, string stored)
+                public static bool Verify(string password, string stored)
         {
             try
             {
@@ -61,7 +60,7 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        public static bool NeedsRehash(string stored)
+                public static bool NeedsRehash(string stored)
         {
             if (string.IsNullOrWhiteSpace(stored)) return false;
 

@@ -2,11 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
+using System.Security.Cryptography;
+using System.Threading;
 
 namespace PersonalInfoManager.Services
 {
-
-    public class LocalFileService
+        public class LocalFileService
     {
         private readonly string _storageRoot;
 
@@ -15,11 +17,9 @@ namespace PersonalInfoManager.Services
             _storageRoot = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                 "PersonalInfoManager", "Storage");
-
-            Directory.CreateDirectory(_storageRoot);
         }
 
-        public string GetUserFolder(string username)
+                public string GetUserFolder(string username)
         {
             var userService = new UserService();
             var user = userService.FindByUsername(username)
@@ -51,7 +51,31 @@ namespace PersonalInfoManager.Services
             return folder;
         }
 
-        public string ImportFile(string username, string sourcePath)
+        public string GetExistingUserFolderReadOnly(string username)
+        {
+            var userService = new UserService();
+            var user = userService.FindByUsername(username)
+                ?? throw new InvalidOperationException("Không tìm thấy tài khoản để xác định kho file riêng.");
+
+            string currentFolder = Path.Combine(_storageRoot, UserStorageIdentity.GetDirectoryName(user.Id));
+            string legacyFolder = UserStorageIdentity.GetLegacyPath(
+                Path.GetDirectoryName(_storageRoot)!, user.Username, LegacyUserStorageKind.LocalFiles);
+
+            if (!string.Equals(currentFolder, legacyFolder, StringComparison.OrdinalIgnoreCase) &&
+                Directory.Exists(legacyFolder) &&
+                userService.HasLegacyStoragePathCollision(
+                    user.Id, user.Username, LegacyUserStorageKind.LocalFiles))
+                throw new AmbiguousLegacyUserStorageException(
+                    "Thư mục file cũ trùng đường dẫn với tài khoản khác. Không thể xem trước khôi phục an toàn.");
+
+            if (Directory.Exists(currentFolder)) return currentFolder;
+            if (Directory.Exists(legacyFolder))
+                return legacyFolder;
+
+            return currentFolder;
+        }
+
+                public string ImportFile(string username, string sourcePath)
         {
             if (!File.Exists(sourcePath))
                 throw new FileNotFoundException("File nguồn không tồn tại.", sourcePath);
@@ -60,49 +84,158 @@ namespace PersonalInfoManager.Services
             string fileName = Path.GetFileName(sourcePath);
             string destPath = EnsureUniquePath(Path.Combine(userFolder, fileName));
 
-            File.Copy(sourcePath, destPath, overwrite: false);
+            LocalFileEncryptionService.EncryptFileAtomic(sourcePath, destPath, overwrite: false);
             return destPath;
         }
 
-        public string SaveTextFile(string username, string fileName, string content)
+        public string ImportStream(
+            string username, string fileName, Stream plaintext, long plaintextLength,
+            DateTime? lastWriteTimeUtc = null, CancellationToken cancellationToken = default)
+        {
+            string userFolder = GetUserFolder(username);
+            string safeName = Path.GetFileName(fileName);
+            if (string.IsNullOrWhiteSpace(safeName) || safeName != fileName)
+                throw new InvalidDataException("Tên file không hợp lệ.");
+
+            string destPath = EnsureUniquePath(Path.Combine(userFolder, safeName));
+            LocalFileEncryptionService.EncryptStreamAtomic(
+                plaintext, plaintextLength, destPath, overwrite: false,
+                lastWriteTimeUtc: lastWriteTimeUtc, cancellationToken: cancellationToken);
+            return destPath;
+        }
+
+                public string SaveTextFile(string username, string fileName, string content)
         {
             string userFolder = GetUserFolder(username);
             string destPath = EnsureUniquePath(Path.Combine(userFolder, fileName));
 
-            File.WriteAllText(destPath, content, System.Text.Encoding.UTF8);
+            byte[] plaintext = Encoding.UTF8.GetBytes(content);
+            try
+            {
+                using var input = new MemoryStream(plaintext, writable: false);
+                LocalFileEncryptionService.EncryptStreamAtomic(input, destPath, overwrite: false);
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(plaintext);
+            }
+
             return destPath;
         }
 
-        public List<FileInfo> ListFiles(string username)
+                public List<FileInfo> ListFiles(string username, CancellationToken cancellationToken = default)
         {
             string userFolder = GetUserFolder(username);
-            return new DirectoryInfo(userFolder)
-                .GetFiles()
-                .OrderByDescending(f => f.LastWriteTime)
-                .ToList();
+            var directory = new DirectoryInfo(userFolder);
+            foreach (var file in GetStoredFiles(directory))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (IsTemporaryFile(file.Name)) continue;
+
+                if (!LocalFileEncryptionService.IsEncryptedFile(file.FullName))
+                    LocalFileEncryptionService.EncryptFileAtomic(
+                        file.FullName, file.FullName, overwrite: true, cancellationToken: cancellationToken);
+                else
+                {
+                    try { _ = LocalFileEncryptionService.GetPlaintextLength(file.FullName); }
+                    catch (Exception ex) when (ex is CryptographicException || ex is IOException) { }
+                }
+            }
+
+            return GetStoredFiles(directory).Where(f => !IsTemporaryFile(f.Name))
+                .OrderByDescending(f => f.LastWriteTime).ToList();
         }
 
-        public void DeleteFile(string filePath)
+        public (int total, int encrypted, int legacy, int invalid) GetEncryptionStatus(string username)
+        {
+            string userFolder = GetUserFolder(username);
+            var files = GetStoredFiles(new DirectoryInfo(userFolder))
+                .Where(f => !IsTemporaryFile(f.Name)).ToList();
+            int encrypted = 0, legacy = 0, invalid = 0;
+            foreach (var file in files)
+            {
+                if (!LocalFileEncryptionService.IsEncryptedFile(file.FullName))
+                {
+                    legacy++;
+                    continue;
+                }
+
+                try
+                {
+                    _ = LocalFileEncryptionService.GetPlaintextLength(file.FullName);
+                    encrypted++;
+                }
+                catch (Exception ex) when (ex is CryptographicException || ex is IOException)
+                {
+                    invalid++;
+                }
+            }
+
+            return (files.Count, encrypted, legacy, invalid);
+        }
+
+        public long GetPlaintextLength(string storedPath) =>
+            LocalFileEncryptionService.GetPlaintextLength(storedPath);
+
+        public void CopyToPlaintext(string storedPath, Stream destination)
+        {
+            EnsureEncrypted(storedPath);
+            LocalFileEncryptionService.CopyToPlaintext(storedPath, destination);
+        }
+
+        public bool ContentEquals(
+            string storedPath, Stream plaintext, long plaintextLength,
+            CancellationToken cancellationToken = default)
+        {
+            EnsureEncrypted(storedPath, cancellationToken);
+            return LocalFileEncryptionService.ContentEqualsStored(
+                storedPath, plaintext, plaintextLength, cancellationToken);
+        }
+
+        public bool ContentEqualsReadOnly(
+            string storedPath, Stream plaintext, long plaintextLength,
+            CancellationToken cancellationToken = default) =>
+            LocalFileEncryptionService.ContentEqualsReadOnly(
+                storedPath, plaintext, plaintextLength, cancellationToken);
+
+                public void DeleteFile(string filePath)
         {
             if (File.Exists(filePath))
                 File.Delete(filePath);
         }
 
-        public void ExportFile(string sourcePath, string destPath)
+                public void ExportFile(string sourcePath, string destPath)
         {
             if (!File.Exists(sourcePath))
                 throw new FileNotFoundException("File nguồn không tồn tại.", sourcePath);
 
-            File.Copy(sourcePath, destPath, overwrite: true);
+            EnsureEncrypted(sourcePath);
+            LocalFileEncryptionService.DecryptFileAtomic(sourcePath, destPath, overwrite: true);
         }
 
-        public long GetUsedBytes(string username)
+                public long GetUsedBytes(string username)
         {
             string folder = GetUserFolder(username);
-            return new DirectoryInfo(folder).GetFiles().Sum(f => f.Length);
+            return GetStoredFiles(new DirectoryInfo(folder)).Where(f => !IsTemporaryFile(f.Name)).Sum(f => f.Length);
         }
 
-        private static string EnsureUniquePath(string path)
+        private static void EnsureEncrypted(string path, CancellationToken cancellationToken = default)
+        {
+            if (!File.Exists(path)) throw new FileNotFoundException("File không tồn tại trong kho.", path);
+            if (!LocalFileEncryptionService.IsEncryptedFile(path))
+                LocalFileEncryptionService.EncryptFileAtomic(
+                    path, path, overwrite: true, cancellationToken: cancellationToken);
+            else
+                _ = LocalFileEncryptionService.GetPlaintextLength(path);
+        }
+
+        private static FileInfo[] GetStoredFiles(DirectoryInfo directory) => directory.GetFiles();
+
+        private static bool IsTemporaryFile(string name) =>
+            name.StartsWith(".tqltk-encrypted-", StringComparison.OrdinalIgnoreCase) ||
+            name.StartsWith(".tqltk-decrypted-", StringComparison.OrdinalIgnoreCase);
+
+                private static string EnsureUniquePath(string path)
         {
             if (!File.Exists(path)) return path;
 

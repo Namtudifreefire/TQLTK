@@ -4,12 +4,55 @@ using Microsoft.Win32;
 
 namespace PersonalInfoManager.Services
 {
-
-    public static class RegistryService
+        public static class RegistryService
     {
         private const string AppKey = @"Software\TQLTK";
 
-        public static string GetTheme()
+        public static int GetAutoLockMinutes()
+        {
+            try
+            {
+                using var key = Registry.CurrentUser.OpenSubKey(AppKey);
+                object? value = key?.GetValue("AutoLockMinutes");
+                if (int.TryParse(value?.ToString(), out int minutes) && minutes is 1 or 5 or 10 or 15)
+                    return minutes;
+            }
+            catch { }
+            return 5;
+        }
+
+        public static void SetAutoLockMinutes(int minutes)
+        {
+            if (minutes is not (1 or 5 or 10 or 15)) throw new ArgumentOutOfRangeException(nameof(minutes));
+            try
+            {
+                using var key = Registry.CurrentUser.CreateSubKey(AppKey);
+                key?.SetValue("AutoLockMinutes", minutes, RegistryValueKind.DWord);
+            }
+            catch { }
+        }
+
+        public static bool GetLockWhenMinimized()
+        {
+            try
+            {
+                using var key = Registry.CurrentUser.OpenSubKey(AppKey);
+                return bool.TryParse(key?.GetValue("LockWhenMinimized")?.ToString(), out bool value) && value;
+            }
+            catch { return false; }
+        }
+
+        public static void SetLockWhenMinimized(bool enabled)
+        {
+            try
+            {
+                using var key = Registry.CurrentUser.CreateSubKey(AppKey);
+                key?.SetValue("LockWhenMinimized", enabled.ToString());
+            }
+            catch { }
+        }
+
+                public static string GetTheme()
         {
             try
             {
@@ -22,7 +65,7 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        public static void SetTheme(string theme)
+                public static void SetTheme(string theme)
         {
             try
             {
@@ -32,7 +75,7 @@ namespace PersonalInfoManager.Services
             catch { }
         }
 
-        public static string GetLastUser()
+                public static string GetLastUser()
         {
             try
             {
@@ -45,7 +88,7 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        public static void SetLastUser(string username)
+                public static void SetLastUser(string username)
         {
             try
             {
@@ -55,7 +98,7 @@ namespace PersonalInfoManager.Services
             catch { }
         }
 
-        public static void ClearLastUser()
+                public static void ClearLastUser()
         {
             try
             {
@@ -65,7 +108,7 @@ namespace PersonalInfoManager.Services
             catch { }
         }
 
-        public static (double width, double height) GetWindowSize(
+                public static (double width, double height) GetWindowSize(
             double defaultW = 1100, double defaultH = 700)
         {
             try
@@ -92,7 +135,7 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        public static void SetWindowSize(double width, double height)
+                public static void SetWindowSize(double width, double height)
         {
             try
             {
@@ -103,7 +146,7 @@ namespace PersonalInfoManager.Services
             catch { }
         }
 
-        public static (double left, double top) GetWindowPosition()
+                public static (double left, double top) GetWindowPosition()
         {
             try
             {
@@ -132,7 +175,7 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        public static void SetWindowPosition(double left, double top)
+                public static void SetWindowPosition(double left, double top)
         {
             try
             {
@@ -143,7 +186,7 @@ namespace PersonalInfoManager.Services
             catch { }
         }
 
-        public static void ClearWindowPosition()
+                public static void ClearWindowPosition()
         {
             try
             {
@@ -154,7 +197,7 @@ namespace PersonalInfoManager.Services
             catch { }
         }
 
-        public static bool GetAutoThemeEnabled()
+                public static bool GetAutoThemeEnabled()
         {
             try
             {
@@ -168,7 +211,7 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        public static void SetAutoThemeEnabled(bool enabled)
+                public static void SetAutoThemeEnabled(bool enabled)
         {
             try
             {
@@ -178,7 +221,7 @@ namespace PersonalInfoManager.Services
             catch { }
         }
 
-        public static void Clear()
+                public static void Clear()
         {
             try
             {
@@ -188,7 +231,7 @@ namespace PersonalInfoManager.Services
             catch { }
         }
 
-        public static bool Exists()
+                public static bool Exists()
         {
             try
             {
@@ -201,7 +244,7 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        public static string DumpAll()
+                public static string DumpAll()
         {
             try
             {

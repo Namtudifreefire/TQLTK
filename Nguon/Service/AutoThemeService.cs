@@ -4,16 +4,15 @@ using System.Windows.Threading;
 
 namespace PersonalInfoManager.Services
 {
-
-    public static class AutoThemeService
+        public static class AutoThemeService
     {
         public static bool IsEnabled { get; private set; } = false;
 
         private static DispatcherTimer? _timer;
 
-        public static int LightStartHour { get; set; } = 6;
+                public static int LightStartHour { get; set; } = 6;
 
-        public static int DarkStartHour { get; set; } = 18;
+                public static int DarkStartHour { get; set; } = 18;
 
         public static void Start()
         {
@@ -56,7 +55,7 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        private static void LogAutoSwitch(string themeName)
+                private static void LogAutoSwitch(string themeName)
         {
             try
             {

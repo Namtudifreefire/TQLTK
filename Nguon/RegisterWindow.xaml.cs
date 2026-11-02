@@ -12,7 +12,7 @@ namespace PersonalInfoManager
         private readonly UserService _userService = new();
         private readonly bool _isInitialAdmin;
 
-        public string RegisteredUsername { get; private set; } = "";
+                public string RegisteredUsername { get; private set; } = "";
 
         public RegisterWindow() : this(false) { }
 

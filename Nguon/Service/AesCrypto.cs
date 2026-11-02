@@ -6,8 +6,7 @@ using System.Text;
 
 namespace PersonalInfoManager.Services
 {
-
-    public static class AesCrypto
+        public static class AesCrypto
     {
         private const string V2Prefix = "v2:";
         private const int KeySize = 32;
@@ -20,10 +19,10 @@ namespace PersonalInfoManager.Services
 
         private static readonly string KeyFile = Path.Combine(KeyDir, "key.dat");
 
-        public static bool IsAuthenticatedV2Format(string cipherText)
+                public static bool IsAuthenticatedV2Format(string cipherText)
             => cipherText.TrimStart().StartsWith(V2Prefix, StringComparison.Ordinal);
 
-        private static byte[] GetOrCreateKey()
+                private static byte[] GetOrCreateKey()
         {
             Directory.CreateDirectory(KeyDir);
 
@@ -59,7 +58,7 @@ namespace PersonalInfoManager.Services
             return newKey;
         }
 
-        public static string Encrypt(string plainText)
+                public static string Encrypt(string plainText)
         {
             byte[] key = GetOrCreateKey();
             byte[] plain = Encoding.UTF8.GetBytes(plainText);
@@ -89,7 +88,7 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        public static string Decrypt(string cipherText)
+                public static string Decrypt(string cipherText)
         {
             string text = cipherText.Trim();
             if (!IsAuthenticatedV2Format(text))

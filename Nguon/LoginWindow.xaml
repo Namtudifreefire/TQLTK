@@ -26,7 +26,6 @@
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-
             <TextBlock Grid.Row="0"
                        Text="🔐 Đăng nhập"
                        FontSize="28" FontWeight="Bold"
@@ -41,7 +40,6 @@
                        HorizontalAlignment="Center"
                        Margin="0,0,0,25" />
 
-
             <StackPanel Grid.Row="2">
                 <TextBlock Text="Tên đăng nhập:"
                            FontWeight="SemiBold" FontSize="13"
@@ -53,7 +51,6 @@
                          VerticalContentAlignment="Center"
                          KeyDown="TxtUsername_KeyDown" />
             </StackPanel>
-
 
             <StackPanel Grid.Row="3" Margin="0,15,0,0">
                 <TextBlock Text="Mật khẩu:"
@@ -67,7 +64,6 @@
                              KeyDown="TxtPassword_KeyDown" />
             </StackPanel>
 
-
             <Button Grid.Row="4"
                     Height="50"
                     Margin="0,25,0,0"
@@ -78,7 +74,6 @@
                            Foreground="White"
                            VerticalAlignment="Center" />
             </Button>
-
 
             <Button Grid.Row="5"
                     Height="50"
@@ -95,7 +90,6 @@
                 </StackPanel>
             </Button>
 
-
             <Button Grid.Row="6"
                     Height="46"
                     Margin="0,10,0,0"
@@ -106,7 +100,6 @@
                            VerticalAlignment="Center" />
             </Button>
 
-
             <TextBlock Grid.Row="7"
                        x:Name="lblStatus"
                        Foreground="#EF4444"
@@ -116,7 +109,6 @@
                        HorizontalAlignment="Center"
                        Margin="0,15,0,0" />
 
-
             <Border Grid.Row="8"
                     Margin="0,20,0,0"
                     Padding="16,14"
@@ -125,7 +117,7 @@
                     BorderThickness="1"
                     CornerRadius="8">
                 <StackPanel>
-                    <TextBlock Text="Made By 天地と月の造化 - TQLTK v3.6.5 (BETA) | © 2026 Namtudifreefire | MIT License"
+                    <TextBlock Text="Made By 天地と月の造化 - TQLTK v3.6.6 (BETA) | © 2026 Namtudifreefire | MIT License"
                                FontSize="11"
                                Foreground="{DynamicResource TextSecondaryBrush}"
                                FontStyle="Italic"

@@ -12,8 +12,7 @@ using PersonalInfoManager.Services;
 
 namespace PersonalInfoManager
 {
-
-    public partial class MainWindow
+        public partial class MainWindow
     {
 
         private Dictionary<string, FrameworkElement> _pages = new();
@@ -64,11 +63,12 @@ namespace PersonalInfoManager
             if (isSettings) _currentSettingsTag = tag;
 
             if (tag == "files") RefreshFiles();
+            if (tag == "security") RefreshSecurityOverview();
         }
 
         private DateTime _userMenuClosedAt = DateTime.MinValue;
 
-        private void UpdateUserChip()
+                private void UpdateUserChip()
         {
             var u = SessionService.CurrentUser;
             if (u == null) return;
@@ -130,7 +130,7 @@ namespace PersonalInfoManager
         private bool _settingsOpen;
         private Dictionary<string, string>? _settingsIndex;
 
-        private void OpenSettings(string tag = "profile")
+                private void OpenSettings(string tag = "profile")
         {
             if (_isLocked || !SessionService.IsLoggedIn || _pages.Count == 0) return;
 
@@ -201,7 +201,7 @@ namespace PersonalInfoManager
             ApplySettingsFilter();
         }
 
-        private void ApplySettingsFilter()
+                private void ApplySettingsFilter()
         {
             if (_pages.Count == 0) return;
 
@@ -279,7 +279,7 @@ namespace PersonalInfoManager
             }
         }
 
-        private static string Fold(string s)
+                private static string Fold(string s)
         {
             string decomposed = s.Normalize(NormalizationForm.FormD);
             var sb = new StringBuilder(decomposed.Length);

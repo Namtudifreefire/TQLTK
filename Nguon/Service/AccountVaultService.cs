@@ -8,15 +8,15 @@ using PersonalInfoManager.Models;
 
 namespace PersonalInfoManager.Services
 {
-
-    public class VaultUnreadableException : Exception
+        public class VaultUnreadableException : Exception
     {
         public VaultUnreadableException(string message, Exception? inner = null)
             : base(message, inner) { }
     }
 
-    public class AccountVaultService
+        public class AccountVaultService
     {
+        public const int TrashRetentionDays = 30;
         private static readonly JsonSerializerOptions JsonOpts =
             new JsonSerializerOptions { WriteIndented = true };
 
@@ -70,7 +70,7 @@ namespace PersonalInfoManager.Services
             return isolatedPath;
         }
 
-        public static void ClearCache()
+                public static void ClearCache()
         {
             lock (CacheLock) Cache.Clear();
         }
@@ -96,7 +96,7 @@ namespace PersonalInfoManager.Services
             lock (CacheLock) Cache.Remove(file);
         }
 
-        private static List<SavedAccount>? TryRead(string file, out Exception? error)
+                private static List<SavedAccount>? TryRead(string file, out Exception? error)
         {
             error = null;
 
@@ -121,7 +121,7 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        private List<SavedAccount> LoadShared(string username)
+                private List<SavedAccount> LoadShared(string username)
         {
             string file = GetVaultFile(username);
 
@@ -165,9 +165,26 @@ namespace PersonalInfoManager.Services
                 mainError);
         }
 
-        public List<SavedAccount> Load(string username) => CloneAll(LoadShared(username));
+                public List<SavedAccount> Load(string username) => CloneAll(LoadShared(username));
 
-        public void Save(string username, List<SavedAccount> accounts)
+        public int PurgeExpiredTrash(string username)
+        {
+            var accounts = Load(username);
+            DateTime cutoffUtc = DateTime.UtcNow.AddDays(-TrashRetentionDays);
+            int removed = accounts.RemoveAll(account => account.IsDeleted &&
+                account.DeletedAt.HasValue && account.DeletedAt.Value.ToUniversalTime() <= cutoffUtc);
+
+            foreach (var account in accounts)
+            {
+                account.DeletedNotes ??= new List<DeletedNoteEntry>();
+                removed += account.DeletedNotes.RemoveAll(note => note.DeletedAt.ToUniversalTime() <= cutoffUtc);
+            }
+
+            if (removed > 0) Save(username, accounts);
+            return removed;
+        }
+
+                public void Save(string username, List<SavedAccount> accounts)
         {
             Directory.CreateDirectory(_root);
             string file = GetVaultFile(username);
@@ -222,19 +239,26 @@ namespace PersonalInfoManager.Services
         public List<SavedAccount> Search(string username, string keyword)
         {
             var all = LoadShared(username);
-            if (string.IsNullOrWhiteSpace(keyword)) return CloneAll(all);
+            if (string.IsNullOrWhiteSpace(keyword)) return CloneAll(all.Where(a => !a.IsDeleted));
 
             keyword = keyword.Trim().ToLower();
-            return CloneAll(all.Where(a =>
+            return CloneAll(all.Where(a => !a.IsDeleted && (
                 (a.ServiceName ?? "").ToLower().Contains(keyword) ||
                 (a.Username ?? "").ToLower().Contains(keyword) ||
-                (a.Note ?? "").ToLower().Contains(keyword)
+                (a.Note ?? "").ToLower().Contains(keyword) ||
+                (a.WebsiteUrl ?? "").ToLower().Contains(keyword) ||
+                (a.Folder ?? "").ToLower().Contains(keyword) ||
+                (a.Tags ?? new List<string>()).Any(tag => (tag ?? "").ToLower().Contains(keyword)) ||
+                (a.CustomFields ?? new List<AccountCustomField>()).Any(field =>
+                    field != null && ((field.Name ?? "").ToLower().Contains(keyword) ||
+                    (!field.IsSensitive && (field.Value ?? "").ToLower().Contains(keyword))))
+                )
             ));
         }
 
-        public int Count(string username) => LoadShared(username).Count;
+                public int Count(string username) => LoadShared(username).Count(account => !account.IsDeleted);
 
-        public DateTime? GetLastWriteUtc(string username)
+                public DateTime? GetLastWriteUtc(string username)
         {
             var info = new FileInfo(GetVaultFile(username));
             return info.Exists ? info.LastWriteTimeUtc : null;
