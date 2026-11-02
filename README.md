@@ -8,7 +8,7 @@ TQLTK is a local account and password manager for Windows. It stores logins in a
 
 > The latest published build is **v3.6.5 (BETA)**. Download [PersonalInfoManager-3.6.5-win-x64.zip](https://github.com/Namtudifreefire/TQLTK/releases/download/v3.6.5/PersonalInfoManager-3.6.5-win-x64.zip) or browse the [Releases page](https://github.com/Namtudifreefire/TQLTK/releases).
 >
-> The application interface is currently **Vietnamese only**. A Vietnamese summary is at the bottom of this page.
+> The `main` branch includes Vietnamese and English interface switching for v3.6.6. The published download above remains v3.6.5 until v3.6.6 is released.
 
 TQLTK is a personal project maintained by one developer. It has not been independently security-audited. Read the [Security notes](#security-notes) before storing important credentials.
 
@@ -23,6 +23,7 @@ TQLTK is a personal project maintained by one developer. It has not been indepen
 - **Google Drive backup and restore** *(beta):* encrypted backups in a `TQLTK Backup` folder on your own Drive. A backup passphrase can be used to restore on another PC.
 - **Multiple users:** separate accounts on one PC, an admin role and an activity log.
 - **Personal files** tab and light, dark or automatic themes.
+- **Interface languages:** switch between Vietnamese and English from the sign-in window or Settings; the preference is saved locally.
 
 ## Requirements
 
@@ -69,6 +70,10 @@ Google Drive features need your own OAuth client. In Google Cloud Console, creat
 
 See the [Releases page](https://github.com/Namtudifreefire/TQLTK/releases) for downloadable builds and the full release history.
 
+### v3.6.6 (in development)
+
+- Add English interface support alongside Vietnamese. Switch languages from the sign-in window or Settings; the preference is saved locally.
+
 ### v3.6.5 (BETA)
 
 - Strengthen account and session checks around sensitive vault, backup and Google Drive operations.
@@ -95,9 +100,9 @@ TQLTK is distributed under the [MIT License](LICENSE). Copyright © 2026 Namtudi
 
 > Bản mới nhất đã phát hành là **v3.6.5 (BETA)**. Tải [PersonalInfoManager-3.6.5-win-x64.zip](https://github.com/Namtudifreefire/TQLTK/releases/download/v3.6.5/PersonalInfoManager-3.6.5-win-x64.zip) hoặc xem [trang Releases](https://github.com/Namtudifreefire/TQLTK/releases).
 
-Giao diện ứng dụng hiện chỉ có tiếng Việt.
+Giao diện ứng dụng hỗ trợ tiếng Việt và tiếng Anh. Tính năng này có trên nhánh `main` cho v3.6.6; bản tải xuống mới nhất vẫn là v3.6.5.
 
-**Tính năng:** lưu và tìm kiếm tài khoản, tạo mật khẩu ngẫu nhiên; mã hóa vault AES-256-GCM với khóa được bảo vệ bằng Windows DPAPI; TOTP kèm 8 mã khôi phục; Windows Hello (BETA, có thể dùng thay TOTP khi được cấu hình); tự khóa sau 5 phút không hoạt động và ẩn mật khẩu đang hiện sau 30 giây; nhập/xuất CSV và file `.vault` mã hóa; sao lưu và khôi phục Google Drive (BETA) bằng cụm mật khẩu sao lưu; nhiều người dùng và quyền admin; tab File cá nhân; giao diện sáng/tối/tự động.
+**Tính năng:** lưu và tìm kiếm tài khoản, tạo mật khẩu ngẫu nhiên; mã hóa vault AES-256-GCM với khóa được bảo vệ bằng Windows DPAPI; TOTP kèm 8 mã khôi phục; Windows Hello (BETA, có thể dùng thay TOTP khi được cấu hình); tự khóa sau 5 phút không hoạt động và ẩn mật khẩu đang hiện sau 30 giây; nhập/xuất CSV và file `.vault` mã hóa; sao lưu và khôi phục Google Drive (BETA) bằng cụm mật khẩu sao lưu; nhiều người dùng và quyền admin; tab File cá nhân; giao diện sáng/tối/tự động; đổi ngôn ngữ giữa tiếng Việt và tiếng Anh từ màn hình đăng nhập hoặc Cài đặt, lựa chọn được lưu cho lần mở tiếp theo.
 
 **Cài đặt:** tải file [PersonalInfoManager-3.6.5-win-x64.zip](https://github.com/Namtudifreefire/TQLTK/releases/download/v3.6.5/PersonalInfoManager-3.6.5-win-x64.zip) ở trang [Releases](https://github.com/Namtudifreefire/TQLTK/releases), giải nén rồi chạy `PersonalInfoManager.exe`. File chạy sau khi giải nén khoảng 190 MB. Xóa thư mục đã giải nén để gỡ ứng dụng; dữ liệu trong `%AppData%\PersonalInfoManager` vẫn được giữ lại.
 
@@ -115,6 +120,10 @@ winget install --id Namtudifreefire.TQLTK --exact
 - Quên cụm mật khẩu sao lưu thì không thể khôi phục bản sao lưu đó trên máy khác.
 - Dự án chưa được kiểm toán bảo mật độc lập; không nên dùng làm bản lưu duy nhất cho thông tin đăng nhập quan trọng.
 - Tính năng Windows Hello và Google Drive đang ở giai đoạn BETA.
+
+### v3.6.6 (đang phát triển)
+
+- Thêm giao diện tiếng Anh bên cạnh tiếng Việt. Có thể đổi ngôn ngữ ở màn hình đăng nhập hoặc Cài đặt; lựa chọn được lưu cho lần mở sau.
 
 ### v3.6.5 (BETA)
 
