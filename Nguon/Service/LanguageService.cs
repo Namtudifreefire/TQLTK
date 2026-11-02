@@ -189,7 +189,8 @@ public static class LanguageService
         {
             if (textBlock.Inlines.Count == 0 && !IsUserDataTextBlock(textBlock))
                 Observe(textBlock, TextBlock.TextProperty, value => ((TextBlock)value).Text, (value, text) => value.SetCurrentValue(TextBlock.TextProperty, text ?? ""));
-            foreach (Inline inline in textBlock.Inlines)
+            Inline[] inlines = textBlock.Inlines.ToArray();
+            foreach (Inline inline in inlines)
                 if (inline is Run run)
                     Observe(run, Run.TextProperty, value => ((Run)value).Text, (value, text) => value.SetCurrentValue(Run.TextProperty, text ?? ""));
         }
