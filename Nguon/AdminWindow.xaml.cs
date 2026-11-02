@@ -273,7 +273,7 @@ namespace PersonalInfoManager
 
         private void BtnViewLog_Click(object sender, RoutedEventArgs e)
         {
-            string log = ActivityLogger.ReadTodayLog();
+            string log = LanguageService.TranslateLogContent(ActivityLogger.ReadTodayLog());
 
             var dlg = new Window
             {

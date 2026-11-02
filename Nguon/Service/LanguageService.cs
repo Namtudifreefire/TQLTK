@@ -42,6 +42,29 @@ public static class LanguageService
         return Translate(value, _currentCode);
     }
 
+    public static string TranslateLogContent(string content)
+    {
+        if (!IsEnglish || string.IsNullOrEmpty(content)) return content;
+
+        string normalized = content.Replace("\r\n", "\n", StringComparison.Ordinal);
+        return string.Join(Environment.NewLine, normalized.Split('\n').Select(TranslateLogLine));
+    }
+
+    private static string TranslateLogLine(string line)
+    {
+        int timestampEnd = line.IndexOf("] [", 1, StringComparison.Ordinal);
+        if (timestampEnd != 20) return Translate(line);
+
+        int usernameEnd = line.IndexOf("] [", timestampEnd + 3, StringComparison.Ordinal);
+        if (usernameEnd < 0) return Translate(line);
+
+        int actionEnd = line.IndexOf("] ", usernameEnd + 3, StringComparison.Ordinal);
+        if (actionEnd < 0) return Translate(line);
+
+        int detailStart = actionEnd + 2;
+        return line[..detailStart] + Translate(line[detailStart..]);
+    }
+
     public static string Translate(string value, string languageCode)
     {
         if (!string.Equals(languageCode, "en", StringComparison.OrdinalIgnoreCase) || string.IsNullOrEmpty(value)) return value;

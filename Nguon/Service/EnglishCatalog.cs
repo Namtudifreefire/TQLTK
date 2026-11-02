@@ -697,6 +697,7 @@ internal static class EnglishCatalog
         Add("Made by 天地と月の造化 - TQLTK v3.6.6 (BETA) | © 2026 Namtudifreefire | MIT License", "Made by 天地と月の造化 - TQLTK v3.6.6 (BETA) | © 2026 Namtudifreefire | MIT License");
         Add("Độ dài", "Length");
         Add("Log hôm nay", "Today's log");
+        Add("Xem Log", "View Log");
         Add("Ảnh QR (*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.tif)|*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.tif|Tất cả file (*.*)|*.*", "QR images (*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.tif)|*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.tif|All files (*.*)|*.*");
         Add("Không chỉnh sửa thủ công nội dung file đã mã hóa.\n\n", "Do not edit the contents of an encrypted file manually.\n\n");
         Add("không rõ người tạo", "unknown creator");
@@ -872,6 +873,7 @@ internal static class EnglishCatalog
         new KeyValuePair<string, string>(" mục trùng.\n\n", " duplicate entries.\n\n"),
         new KeyValuePair<string, string>(" tài khoản ra:\n\n", " accounts to:\n\n"),
         new KeyValuePair<string, string>("' (>= 6 ký tự):\n\n", "' (at least 6 characters):\n\n"),
+        new KeyValuePair<string, string>("OnExit đã chạy, mã thoát ", "OnExit ran; exit code "),
         new KeyValuePair<string, string>("Người tạo: ", "Created by: "),
         new KeyValuePair<string, string>("Nhập mật khẩu mới cho '", "Enter a new password for '"),
         new KeyValuePair<string, string>("Nhập sai mã 2FA quá nhiều lần. Hãy thử lại sau khoảng ", "Too many incorrect 2FA codes. Try again in about "),
