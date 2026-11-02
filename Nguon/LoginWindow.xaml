@@ -124,6 +124,7 @@
                                FontStyle="Italic"
                                TextAlignment="Center"
                                TextWrapping="Wrap"
+                               Margin="1,0"
                                HorizontalAlignment="Stretch" />
                     <TextBlock Text="🔐 Bật Windows Hello trong Thông tin cá nhân"
                                FontSize="10"
