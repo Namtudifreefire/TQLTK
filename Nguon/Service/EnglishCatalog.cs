@@ -590,6 +590,7 @@ internal static class EnglishCatalog
         Add("Xem trước khôi phục File cá nhân", "Preview personal file restore");
         Add("Xem trước khôi phục vault", "Preview vault restore");
         Add("Xem trước nhập vault", "Preview vault import");
+        Add("Xem", "View");
         Add("Xuất vault", "Export vault");
         Add("Xác nhận bật Windows Hello", "Confirm enabling Windows Hello");
         Add("Xác nhận để copy mật khẩu", "Confirm to copy password");

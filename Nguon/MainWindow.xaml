@@ -584,7 +584,7 @@
 
             <Border Background="#99000000" MouseLeftButtonDown="SettingsScrim_MouseDown" />
 
-            <Border MaxWidth="960" MaxHeight="660" Margin="40"
+            <Border MaxWidth="960" MaxHeight="660" Margin="24"
                     Background="{DynamicResource SurfaceBrush}"
                     BorderBrush="{DynamicResource BorderBrush}"
                     BorderThickness="1"
@@ -747,13 +747,11 @@
 
                                     <Border Style="{StaticResource SettingRow}" Margin="0,0,0,14">
                                         <StackPanel>
-                                            <DockPanel Margin="0,0,0,8">
-                                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                                                    <Button Content="Kiểm tra mật khẩu rò rỉ" Style="{StaticResource RowButton}" Click="BtnCheckPwnedPasswords_Click" />
-                                                    <Button Content="Cập nhật" Margin="8,0,0,0" Style="{StaticResource RowButton}" Click="BtnRefreshSecurityOverview_Click" />
-                                                </StackPanel>
-                                                <TextBlock Text="Tổng quan bảo mật" Style="{StaticResource RowTitle}" />
-                                            </DockPanel>
+                                            <WrapPanel Margin="0,0,0,8">
+                                                <TextBlock Text="Tổng quan bảo mật" Style="{StaticResource RowTitle}" Margin="0,0,16,8" VerticalAlignment="Center" />
+                                                <Button Content="Kiểm tra mật khẩu rò rỉ" Style="{StaticResource RowButton}" Margin="0,0,8,8" Click="BtnCheckPwnedPasswords_Click" />
+                                                <Button Content="Cập nhật" Style="{StaticResource RowButton}" Margin="0,0,0,8" Click="BtnRefreshSecurityOverview_Click" />
+                                            </WrapPanel>
                                             <TextBlock x:Name="lblSecurityPasswordAudit" Style="{StaticResource RowDesc}" Margin="0,3" />
                                             <TextBlock x:Name="lblSecurity2FAAudit" Style="{StaticResource RowDesc}" Margin="0,3" />
                                             <TextBlock x:Name="lblSecurityBackupAudit" Style="{StaticResource RowDesc}" Margin="0,3" />
