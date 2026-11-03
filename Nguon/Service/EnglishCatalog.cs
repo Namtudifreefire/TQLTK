@@ -555,6 +555,10 @@ internal static class EnglishCatalog
         Add("QR không chứa mục TOTP được hỗ trợ. Mã HOTP hoặc MD5 không được nhập.", "The QR code contains no supported TOTP entries. HOTP or MD5 codes cannot be imported.");
         Add("Reset mật khẩu", "Reset password");
         Add("Rất mạnh", "Very strong");
+        Add("Độ mạnh: Yếu", "Strength: Weak");
+        Add("Độ mạnh: Trung bình", "Strength: Medium");
+        Add("Độ mạnh: Mạnh", "Strength: Strong");
+        Add("Độ mạnh: Rất mạnh", "Strength: Very strong");
         Add("Sai mã hoặc hủy xác thực 2 bước", "Incorrect code or cancelled two-factor authentication");
         Add("Số từ", "Word count");
         Add("Số từ phải từ 6 đến 12.", "The word count must be between 6 and 12.");
