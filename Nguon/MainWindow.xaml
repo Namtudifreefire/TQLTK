@@ -426,7 +426,7 @@
                                 <DataGrid x:Name="dgAccounts"
                                           Style="{StaticResource FadeInDataGrid}"
                                           CanUserResizeColumns="True"
-                                          HorizontalScrollBarVisibility="Auto"
+                                          HorizontalScrollBarVisibility="Visible"
                                           VerticalScrollBarVisibility="Auto"
                                           EnableRowVirtualization="True"
                                           VirtualizingPanel.IsVirtualizing="True"
