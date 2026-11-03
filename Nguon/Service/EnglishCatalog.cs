@@ -46,6 +46,8 @@ internal static class EnglishCatalog
         Add("🔐 Thêm tài khoản mới", "🔐 Add new account");
         Add("🔑 8 mã khôi phục mới", "🔑 8 new recovery codes");
         Add("🔑 Bật xác thực 2 bước", "🔑 Enable two-factor authentication");
+        Add("🔑 Tắt xác thực 2 bước", "🔑 Disable two-factor authentication");
+        Add("🔑 Tạo lại mã khôi phục", "🔑 Regenerate recovery codes");
         Add("🔑 Xác thực 2 bước", "🔑 Two-factor authentication");
         Add("🔓  Đăng nhập", "🔓  Sign in");
         Add("🚪  Đăng xuất", "🚪  Sign out");
