@@ -176,7 +176,7 @@
 
         <Style x:Key="RowButton" TargetType="Button" BasedOn="{StaticResource OutlineButton}">
             <Setter Property="MinWidth" Value="100" />
-            <Setter Property="Height" Value="34" />
+            <Setter Property="Height" Value="44" />
             <Setter Property="Padding" Value="14,6" />
             <Setter Property="Margin" Value="16,0,0,0" />
             <Setter Property="VerticalAlignment" Value="Center" />
