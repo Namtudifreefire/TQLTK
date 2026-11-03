@@ -98,6 +98,8 @@ See the [Releases page](https://github.com/Namtudifreefire/TQLTK/releases) for d
 - Separate backup data and Google sign-in for each app user.
 - Improve account-data isolation and protection against reuse of 2FA and recovery codes across app instances.
 
+> Note: Only v3.6.6 (BETA) has support English and Vietnamese interface. Earlier versions are Vietnamese-only.
+
 ## License
 
 TQLTK is distributed under the [MIT License](LICENSE). Copyright © 2026 Namtudifreefire.
