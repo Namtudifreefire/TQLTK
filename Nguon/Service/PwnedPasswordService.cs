@@ -78,7 +78,7 @@ namespace PersonalInfoManager.Services
                 using var request = new HttpRequestMessage(
                     HttpMethod.Get,
                     $"https://api.pwnedpasswords.com/range/{prefix}");
-                request.Headers.UserAgent.ParseAdd("PersonalInfoManager/3.6.6 (Pwned Passwords audit)");
+                request.Headers.UserAgent.ParseAdd("PersonalInfoManager/3.6.7 (Pwned Passwords audit)");
                 request.Headers.TryAddWithoutValidation("Add-Padding", "true");
 
                 using HttpResponseMessage response = await Client.SendAsync(

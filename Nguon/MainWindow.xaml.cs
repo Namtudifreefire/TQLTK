@@ -13,13 +13,23 @@ using PersonalInfoManager.Services;
 
 namespace PersonalInfoManager
 {
+
     public partial class MainWindow : Window
     {
+
         private readonly AccountVaultService _vaultService = new();
         private readonly LocalFileService _fileService = new();
         private readonly UserService _userService = new();
+
         private List<SavedAccount> _accounts = new();
         private bool _showPassword = false;
+        private bool _pwnedCheckCompleted;
+        private bool _pwnedResultsAreCurrent;
+        private readonly HashSet<Guid> _pwnedBreachedAccountIds = new();
+        private readonly Dictionary<Guid, DateTime> _pwnedCheckedAccountVersions = new();
+
+        private sealed record SecurityFindingViewItem(Guid AccountId, string Description);
+
         private int AutoLockMinutes = 5;
         private bool _lockWhenMinimized;
         private const int AutoHidePasswordSeconds = 30;
@@ -27,12 +37,15 @@ namespace PersonalInfoManager
 
         private readonly DispatcherTimer _idleTimer = new() { Interval = TimeSpan.FromSeconds(5) };
         private readonly DispatcherTimer _hidePasswordTimer = new() { Interval = TimeSpan.FromSeconds(AutoHidePasswordSeconds) };
+
         private readonly DispatcherTimer _searchTimer = new() { Interval = TimeSpan.FromMilliseconds(250) };
         private DateTime _lastActivity = DateTime.UtcNow;
         private DateTime _lastAuthTime = DateTime.MinValue;
         private bool _isLocked = false;
         private readonly CancellationTokenSource _sessionRevocationCts = new();
+
         private readonly DispatcherTimer _saveStateTimer;
+
         public MainWindow()
         {
             InitializeComponent();
@@ -44,7 +57,10 @@ namespace PersonalInfoManager
                 {
                     LanguageService.SetLanguage(language);
                     if (SessionService.IsLoggedIn)
+                    {
                         RefreshAccounts(updateStatus: false);
+                        RefreshSecurityOverview();
+                    }
                 }
             };
             AutoLockMinutes = RegistryService.GetAutoLockMinutes();
@@ -83,6 +99,7 @@ namespace PersonalInfoManager
                 _searchTimer.Stop();
                 if (SessionService.IsLoggedIn) RefreshAccounts(updateStatus: false);
             };
+
             PreviewKeyDown += (_, e) =>
             {
                 if (e.Key == Key.B && Keyboard.Modifiers == ModifierKeys.Control)
@@ -98,6 +115,7 @@ namespace PersonalInfoManager
             SizeChanged += MainWindow_SizeChanged;
             StateChanged += MainWindow_StateChanged;
         }
+
         private async void MainWindow_Loaded(object? sender, RoutedEventArgs e)
         {
             if (!SessionService.IsLoggedIn)
@@ -121,6 +139,7 @@ namespace PersonalInfoManager
 
             BuildPages();
             LoadLockSettingsUi();
+
             navAdmin.Visibility = SessionService.IsAdmin ? Visibility.Visible : Visibility.Collapsed;
 
             UpdateUserChip();
@@ -139,6 +158,7 @@ namespace PersonalInfoManager
 
             navAccounts.IsChecked = true;
         }
+
         private const double SidebarWidth = 250;
         private bool _sidebarVisible = true;
 
@@ -159,6 +179,7 @@ namespace PersonalInfoManager
 
             anim.Completed += (_, _) =>
             {
+
                 if (_sidebarVisible != show) return;
 
                 panelSidebar.BeginAnimation(WidthProperty, null);
@@ -168,7 +189,9 @@ namespace PersonalInfoManager
 
             panelSidebar.BeginAnimation(WidthProperty, anim);
         }
+
         private void GoProfile_Click(object sender, RoutedEventArgs e) => navProfile.IsChecked = true;
+
         private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
         {
             StopAutoLock();
@@ -217,6 +240,7 @@ namespace PersonalInfoManager
             }
             catch { }
         }
+
         private void StartAutoLock()
         {
             _lastActivity = DateTime.UtcNow;
@@ -233,12 +257,14 @@ namespace PersonalInfoManager
             _hidePasswordTimer.Stop();
             _searchTimer.Stop();
         }
+
         private void OnPreProcessInput(object sender, PreProcessInputEventArgs e)
         {
             var input = e.StagingItem.Input;
             if (input is MouseEventArgs || input is KeyboardEventArgs)
                 _lastActivity = DateTime.UtcNow;
         }
+
         private void OnSessionSwitch(object sender, SessionSwitchEventArgs e)
         {
             if (e.Reason is SessionSwitchReason.SessionLock
@@ -309,6 +335,7 @@ namespace PersonalInfoManager
             LockNow("Tài khoản đã bị khóa hoặc không thể xác minh trạng thái.");
             return false;
         }
+
         private void LockNow(string? reason = null)
         {
             if (_isLocked) return;
@@ -323,6 +350,7 @@ namespace PersonalInfoManager
             try { ClipboardGuard.ClearNow(); } catch { }
             try { AccountVaultService.ClearCache(); } catch { }
             try { ActivityLogger.Log(username, "AUTO_LOCK", reason ?? $"Không hoạt động {AutoLockMinutes} phút"); } catch { }
+
             var others = Application.Current.Windows.Cast<Window>()
                 .Where(w => w != this && w.IsVisible).ToList();
 
@@ -335,6 +363,7 @@ namespace PersonalInfoManager
             foreach (var w in others) { try { w.Close(); } catch { } }
             Close();
         }
+
         private void RefreshAccountsKeepSelection()
         {
             var selectedId = GetSelectedAccount()?.Id;
@@ -367,11 +396,13 @@ namespace PersonalInfoManager
             _showPassword = false;
             RefreshAccountsKeepSelection();
         }
+
         private bool IsAuthFresh() =>
             _lastAuthTime != DateTime.MinValue &&
             (DateTime.UtcNow - _lastAuthTime).TotalSeconds < AuthRememberSeconds;
 
         private void MarkAuthenticated() => _lastAuthTime = DateTime.UtcNow;
+
         private async Task<bool> RequireAuthAsync(string actionText, string deniedLogCode)
         {
             if (!EnsureActiveSession()) return false;
@@ -410,6 +441,7 @@ namespace PersonalInfoManager
             MessageBox.Show("Xác thực thất bại.", "Từ chối", MessageBoxButton.OK, MessageBoxImage.Warning);
             return false;
         }
+
         private void RefreshAccounts(bool updateStatus = true)
         {
             if (!EnsureActiveSession()) return;
@@ -443,12 +475,14 @@ namespace PersonalInfoManager
                 TotpState = string.IsNullOrWhiteSpace(a.TotpSecret) ? "—" : "Có",
                 _original = a
             }).ToList();
+
             dgAccounts.ItemsSource = chkFavoritesOnly.IsChecked == true
                 ? viewList.Where(item => item._original.IsFavorite).ToList()
                 : viewList;
 
             if (updateStatus) UpdateStorageInfo();
         }
+
         private void TxtSearch_TextChanged(object? sender, TextChangedEventArgs e)
         {
             _searchTimer.Stop();
@@ -466,9 +500,11 @@ namespace PersonalInfoManager
             _searchTimer.Stop();
             RefreshAccounts();
         }
+
         private async void BtnToggleShow_Click(object? sender, RoutedEventArgs e)
         {
             if (!EnsureActiveSession()) return;
+
             if (_showPassword)
             {
                 HidePasswordNow();
@@ -481,6 +517,7 @@ namespace PersonalInfoManager
             try
             {
                 string username = SessionService.CurrentUser!.Username;
+
                 if (IsAuthFresh())
                 {
                     ShowPasswordNow();
@@ -536,6 +573,7 @@ namespace PersonalInfoManager
                 RefreshAccounts();
             }
         }
+
         private async void BtnEditAccount_Click(object? sender, RoutedEventArgs e)
         {
             var selected = GetSelectedAccount();
@@ -810,11 +848,13 @@ namespace PersonalInfoManager
                 string username = SessionService.CurrentUser!.Username;
                 string method = "";
                 bool ok = false;
+
                 if (IsAuthFresh())
                 {
                     ok = true;
                     method = $"nhớ xác thực ≤{AuthRememberSeconds}s";
                 }
+
                 if (!ok)
                 {
                     bool helloAvailable = false;
@@ -828,8 +868,10 @@ namespace PersonalInfoManager
                         if (ok) { method = "Windows Hello"; MarkAuthenticated(); }
                     }
                 }
+
                 if (!ok)
                 {
+
                     if (!TwoFactorService.IsEnabled(username))
                     {
                         try { ActivityLogger.Log(username, "COPY_PASSWORD_DENIED", "Windows Hello thất bại, chưa bật 2FA"); } catch { }
@@ -885,6 +927,7 @@ namespace PersonalInfoManager
             var prop = item.GetType().GetProperty("_original");
             return prop?.GetValue(item) as SavedAccount;
         }
+
         private void RefreshFiles()
         {
             if (!EnsureActiveSession()) return;
@@ -993,6 +1036,7 @@ namespace PersonalInfoManager
         }
 
         private void BtnRefreshFiles_Click(object? sender, RoutedEventArgs e) => RefreshFiles();
+
         private void LoadProfile()
         {
             var u = SessionService.CurrentUser!;
@@ -1040,6 +1084,7 @@ namespace PersonalInfoManager
             }
             else { MessageBox.Show(result.message, "Lỗi"); }
         }
+
         private async void BtnToggleWindowsHello_Click(object sender, RoutedEventArgs e)
         {
             var u = SessionService.CurrentUser!;
@@ -1092,6 +1137,7 @@ namespace PersonalInfoManager
             catch (Exception ex) { MessageBox.Show($"Lỗi: {ex.Message}"); }
             finally { btnToggleWindowsHello.IsEnabled = true; }
         }
+
         private static void SetCardState(TextBlock label, bool on)
         {
             LanguageService.SetLocalizedText(label, on ? "● Đang bật" : "○ Đang tắt");
@@ -1111,6 +1157,7 @@ namespace PersonalInfoManager
         {
             try { SetCardState(lblAutoThemeState, AutoThemeService.IsEnabled); } catch { }
         }
+
         private void Update2FAMenu()
         {
             try
@@ -1120,10 +1167,12 @@ namespace PersonalInfoManager
 
                 LanguageService.SetLocalizedText(lbl2FATitle, enabled ? "Tắt xác thực 2 bước" : "Bật xác thực 2 bước");
                 SetCardState(lbl2FAState, enabled);
+
                 card2FARegen.Visibility = enabled ? Visibility.Visible : Visibility.Collapsed;
             }
             catch { }
         }
+
         private void Mnu2FARegen_Click(object? sender, RoutedEventArgs e)
         {
             try
@@ -1178,6 +1227,7 @@ namespace PersonalInfoManager
 
                 if (!TwoFactorService.IsEnabled(username))
                 {
+
                     var setup = new TwoFactorSetupWindow(username) { Owner = this };
                     setup.ShowDialog();
 
@@ -1188,6 +1238,7 @@ namespace PersonalInfoManager
                 }
                 else
                 {
+
                     var dlg = new TwoFactorPromptWindow(
                         "Tắt xác thực 2 bước",
                         "Nhập mã 6 số từ Authenticator (hoặc mã khôi phục) để xác nhận tắt.",
@@ -1208,11 +1259,13 @@ namespace PersonalInfoManager
                 MessageBox.Show($"Lỗi: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
+
         private async void MnuExportCsv_Click(object? sender, RoutedEventArgs e)
         {
             try
             {
                 string username = SessionService.CurrentUser!.Username;
+
                 bool available = await WindowsHelloService.IsAvailableAsync();
                 if (!available)
                 {
@@ -1231,6 +1284,7 @@ namespace PersonalInfoManager
                     MessageBox.Show("Xác thực thất bại. Đã hủy xuất CSV.", "Từ chối", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
+
                 var dlg = new SaveFileDialog
                 {
                     Title = "Xuất CSV",
@@ -1262,6 +1316,7 @@ namespace PersonalInfoManager
                 MessageBox.Show($"Lỗi xuất CSV: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
+
         private void MnuImportCsv_Click(object? sender, RoutedEventArgs e)
         {
             try
@@ -1283,6 +1338,7 @@ namespace PersonalInfoManager
                     _vaultService.Load(username).Where(account => !account.IsDeleted).ToList()) { Owner = this };
                 bool confirmed = preview.ShowDialog() == true;
                 if (_isLocked || !confirmed) return;
+
                 var list = _vaultService.Load(username);
                 list.AddRange(preview.Result);
                 _vaultService.Save(username, list);
@@ -1296,6 +1352,7 @@ namespace PersonalInfoManager
             }
             catch (Exception ex) { MessageBox.Show($"Lỗi nhập CSV: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error); }
         }
+
         private void MnuAdmin_Click(object? sender, RoutedEventArgs e) => new AdminWindow().ShowDialog();
         private void MnuChangePwd_Click(object? sender, RoutedEventArgs e) => new ChangePasswordWindow().ShowDialog();
         private void MnuSysInfo_Click(object? sender, RoutedEventArgs e) => MessageBox.Show(SystemInfoService.GetSystemReport(), LanguageService.Translate("Thông tin hệ thống"));
@@ -1318,6 +1375,7 @@ namespace PersonalInfoManager
             try { ActivityLogger.Log(u?.Username ?? "SYSTEM", "EXIT_APP"); } catch { }
             Close();
         }
+
         private void MnuToggleTheme_Click(object? sender, RoutedEventArgs e)
         {
             ThemeService.Toggle();
@@ -1334,6 +1392,7 @@ namespace PersonalInfoManager
             }
             catch { }
         }
+
         private void MnuAutoTheme_Click(object? sender, RoutedEventArgs e)
         {
             try
@@ -1358,6 +1417,7 @@ namespace PersonalInfoManager
             }
             catch (Exception ex) { MessageBox.Show($"Lỗi: {ex.Message}"); }
         }
+
         private async void MnuExportVault_Click(object? sender, RoutedEventArgs e)
         {
             try
@@ -1495,6 +1555,96 @@ namespace PersonalInfoManager
                 Mouse.OverrideCursor = null;
             }
         }
+
+        private void RefreshDriveTokenStatus()
+        {
+            try
+            {
+                string username = SessionService.CurrentUser?.Username ?? "";
+                bool hasToken = !string.IsNullOrWhiteSpace(username) &&
+                    new CloudSyncService(username).HasLocallyStoredDriveToken;
+                LanguageService.SetLocalizedText(
+                    lblGoogleDriveAccountStatus,
+                    hasToken
+                        ? "Đã tìm thấy thông tin đăng nhập Drive trên máy này. Nhấn Kiểm tra tài khoản để xem tài khoản Google."
+                        : "Chưa lưu tài khoản Google Drive trên máy này.");
+            }
+            catch
+            {
+                LanguageService.SetLocalizedText(lblGoogleDriveAccountStatus,
+                    "Không thể đọc trạng thái token Google Drive trên máy này.");
+            }
+        }
+
+        private async void BtnCheckGoogleDriveAccount_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (!await RequireAuthAsync("kiểm tra tài khoản Google Drive đã liên kết", "CHECK_GOOGLE_DRIVE_ACCOUNT_DENIED")) return;
+                string username = SessionService.CurrentUser!.Username;
+                var syncService = new CloudSyncService(username);
+                LanguageService.SetLocalizedText(lblGoogleDriveAccountStatus, "Đang kiểm tra tài khoản Google Drive...");
+                Mouse.OverrideCursor = Cursors.Wait;
+                var result = await syncService.GetLinkedAccountAsync(_sessionRevocationCts.Token);
+                Mouse.OverrideCursor = null;
+                if (_isLocked || !EnsureActiveSession()) return;
+
+                if (result.hasLocalToken && result.account != null)
+                {
+                    LanguageService.SetLocalizedFormattedText(
+                        lblGoogleDriveAccountStatus,
+                        "Tài khoản Google Drive đã liên kết: {0}.",
+                        () => new object?[] { result.account });
+                }
+                else
+                {
+                    LanguageService.SetLocalizedText(lblGoogleDriveAccountStatus, result.message);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                LanguageService.SetLocalizedText(lblGoogleDriveAccountStatus, "Đã hủy kiểm tra tài khoản Google Drive.");
+            }
+            catch (Exception ex)
+            {
+                Mouse.OverrideCursor = null;
+                if (!_isLocked)
+                    LanguageService.SetLocalizedFormattedText(
+                        lblGoogleDriveAccountStatus,
+                        "Không thể kiểm tra tài khoản Google Drive: {0}",
+                        () => new object?[] { ex.Message });
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+            }
+        }
+
+        private async void BtnDisconnectGoogleDrive_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (!await RequireAuthAsync("ngắt kết nối Google Drive trên máy này", "DISCONNECT_GOOGLE_DRIVE_DENIED")) return;
+                if (!EnsureActiveSession()) return;
+
+                var answer = MessageBox.Show(
+                    "Xóa token Google Drive đã mã hóa đang lưu trên máy này? Bản sao lưu trên Drive không bị xóa. " +
+                    "Quyền ứng dụng trong tài khoản Google vẫn còn và cần thu hồi riêng nếu bạn muốn.",
+                    "Ngắt kết nối Google Drive", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+                if (answer != MessageBoxResult.Yes || !EnsureActiveSession()) return;
+
+                new CloudSyncService(SessionService.CurrentUser!.Username).DisconnectDriveLocally();
+                try { ActivityLogger.Log(SessionService.CurrentUser!.Username, "DISCONNECT_GOOGLE_DRIVE", ""); } catch { }
+                LanguageService.SetLocalizedText(lblGoogleDriveAccountStatus,
+                    "Đã ngắt kết nối Drive trên máy này. Bản sao lưu trên Drive không bị xóa; quyền Google vẫn có thể được thu hồi riêng.");
+            }
+            catch (Exception ex)
+            {
+                if (!_isLocked)
+                    MessageBox.Show($"Không thể ngắt kết nối Google Drive: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+
         private async void MnuSyncGoogleDrive_Click(object? sender, RoutedEventArgs e)
         {
             string? tempFile = null;
@@ -1551,6 +1701,7 @@ namespace PersonalInfoManager
                 try { if (tempFile != null && File.Exists(tempFile)) File.Delete(tempFile); } catch { }
             }
         }
+
         private async void MnuRestoreGoogleDrive_Click(object? sender, RoutedEventArgs e)
         {
             string tempFile = Path.Combine(Path.GetTempPath(), $"vault_restore_{DateTime.Now:yyyyMMdd_HHmmss}.vault");
@@ -1629,6 +1780,7 @@ namespace PersonalInfoManager
                 try { if (File.Exists(tempFile)) File.Delete(tempFile); } catch { }
             }
         }
+
         private async void MnuBackupPassphrase_Click(object? sender, RoutedEventArgs e)
         {
             try
@@ -1648,6 +1800,7 @@ namespace PersonalInfoManager
             }
             catch (Exception ex) { MessageBox.Show($"Lỗi: {ex.Message}"); }
         }
+
         private async Task<bool> SetBackupPassphraseAsync()
         {
             if (!await RequireAuthAsync("đặt hoặc đổi cụm mật khẩu sao lưu", "SET_BACKUP_PASSPHRASE_DENIED")) return false;
@@ -1666,6 +1819,7 @@ namespace PersonalInfoManager
                 "Thành công", MessageBoxButton.OK, MessageBoxImage.Information);
             return true;
         }
+
         private bool TryGetImportPassphrase(string file, out string? passphrase)
         {
             passphrase = null;
@@ -1690,6 +1844,7 @@ namespace PersonalInfoManager
 
             return false;
         }
+
         private async Task OfferSavePassphraseAsync(string? passphrase)
         {
             if (_isLocked || SessionService.CurrentUser is not { } currentUser) return;
@@ -1706,6 +1861,7 @@ namespace PersonalInfoManager
                 BackupCrypto.SaveStoredPassphrase(username, passphrase);
             }
         }
+
         private bool ConfirmForeignOwner(string owner)
         {
             string current = SessionService.CurrentUser!.Username;
@@ -1718,6 +1874,7 @@ namespace PersonalInfoManager
                 "Bản sao lưu của người dùng khác",
                 MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) == MessageBoxResult.Yes;
         }
+
         private async Task OfferAdoptLegacyPassphraseAsync(string username)
         {
             if (BackupCrypto.HasStoredPassphrase(username) || !BackupCrypto.HasLegacyPassphrase()) return;
@@ -1740,6 +1897,7 @@ namespace PersonalInfoManager
                     "Lỗi", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
+
         private async void MnuSyncFilesGoogleDrive_Click(object? sender, RoutedEventArgs e)
         {
             string tempFile = Path.Combine(Path.GetTempPath(), $"files_backup_{DateTime.Now:yyyyMMdd_HHmmss}.tqf");
@@ -1829,6 +1987,7 @@ namespace PersonalInfoManager
                 try { if (File.Exists(tempFile)) File.Delete(tempFile); } catch { }
             }
         }
+
         private async void MnuRestoreFilesGoogleDrive_Click(object? sender, RoutedEventArgs e)
         {
             string tempFile = Path.Combine(Path.GetTempPath(), $"files_restore_{DateTime.Now:yyyyMMdd_HHmmss}.tqf");
@@ -1900,6 +2059,7 @@ namespace PersonalInfoManager
 
                 if (preview.Owner.Length > 0 && !string.Equals(preview.Owner, username, StringComparison.OrdinalIgnoreCase) &&
                     !ConfirmForeignOwner(preview.Owner)) return;
+
                 var result = await Task.Run(() => FileBackupService.RestoreFromFile(
                     username, tempFile, typed,
                     err => typed ??= AskOnUi(() => PromptRestorePassphrase(err)),
@@ -1912,6 +2072,7 @@ namespace PersonalInfoManager
                 if (_isLocked || !EnsureActiveSession()) return;
 
                 MessageBox.Show(result.message, result.ok ? "Thành công" : "Lỗi", MessageBoxButton.OK, result.ok ? MessageBoxImage.Information : MessageBoxImage.Warning);
+
                 RefreshFiles();
                 UpdateStorageInfo();
 
@@ -1934,12 +2095,14 @@ namespace PersonalInfoManager
                 try { if (File.Exists(tempFile)) File.Delete(tempFile); } catch { }
             }
         }
+
         private T AskOnUi<T>(Func<T> ask) => Dispatcher.Invoke(() =>
         {
             Mouse.OverrideCursor = null;
             try { return ask(); }
             finally { Mouse.OverrideCursor = Cursors.Wait; }
         });
+
         private string? PromptRestorePassphrase(string? previousError)
         {
             if (previousError != null)
@@ -1948,6 +2111,7 @@ namespace PersonalInfoManager
             var dlg = new BackupPassphraseWindow(confirmMode: false) { Owner = this };
             return dlg.ShowDialog() == true ? dlg.Passphrase : null;
         }
+
         private void MnuCenterWindow_Click(object? sender, RoutedEventArgs e)
         {
             WindowStartupLocation = WindowStartupLocation.CenterScreen;
@@ -1959,6 +2123,7 @@ namespace PersonalInfoManager
 
             MessageBox.Show("Đã đưa cửa sổ về giữa màn hình.");
         }
+
         private void MnuResetSettings_Click(object? sender, RoutedEventArgs e)
         {
             if (MessageBox.Show("Xóa toàn bộ cài đặt (giao diện, kích thước, vị trí, tài khoản gần nhất)?\n\nKhởi động lại ứng dụng để áp dụng toàn bộ.", "Xác nhận đặt lại", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
@@ -1968,6 +2133,7 @@ namespace PersonalInfoManager
 
             MessageBox.Show("Đã đặt lại cài đặt.\n\nKhởi động lại ứng dụng để áp dụng toàn bộ.");
         }
+
         private void UpdateStorageInfo()
         {
             try
@@ -1997,7 +2163,12 @@ namespace PersonalInfoManager
             var accounts = _vaultService.Load(username).Where(account => !account.IsDeleted).ToList();
             if (accounts.Count == 0)
             {
+                _pwnedBreachedAccountIds.Clear();
+                _pwnedCheckedAccountVersions.Clear();
+                _pwnedCheckCompleted = true;
+                _pwnedResultsAreCurrent = true;
                 LanguageService.SetLocalizedText(lblPwnedPasswordAudit, "Chưa có mật khẩu trong kho mật khẩu để kiểm tra.");
+                RefreshSecurityOverview();
                 return;
             }
 
@@ -2012,6 +2183,14 @@ namespace PersonalInfoManager
                     accounts.Select(account => (account.Id, account.Password)), _sessionRevocationCts.Token);
 
                 if (_isLocked || !EnsureActiveSession()) return;
+
+                _pwnedBreachedAccountIds.Clear();
+                foreach (Guid accountId in result.AffectedAccountIds)
+                    _pwnedBreachedAccountIds.Add(accountId);
+                _pwnedCheckedAccountVersions.Clear();
+                foreach (var account in accounts)
+                    _pwnedCheckedAccountVersions[account.Id] = account.UpdatedAt;
+                _pwnedCheckCompleted = true;
 
                 if (result.AffectedAccounts == 0)
                 {
@@ -2036,6 +2215,7 @@ namespace PersonalInfoManager
                         () => new object?[] { result.AffectedAccounts, result.BreachedUniquePasswords, Environment.NewLine, affectedNames });
                 }
                 try { ActivityLogger.Log(username, "PWNED_PASSWORD_CHECK", $"Đã kiểm tra {result.CheckedUniquePasswords} giá trị; ảnh hưởng {result.AffectedAccounts} mục"); } catch { }
+                RefreshSecurityOverview();
             }
             catch (OperationCanceledException)
             {
@@ -2065,7 +2245,8 @@ namespace PersonalInfoManager
             {
                 string username = SessionService.CurrentUser!.Username;
                 var accounts = _vaultService.Load(username).Where(account => !account.IsDeleted).ToList();
-                int weakCount = accounts.Count(a => PasswordStrengthService.CalculateScore(a.Password) <= 2);
+                int weakCount = accounts.Count(a => !string.IsNullOrEmpty(a.Password) &&
+                    PasswordStrengthService.CalculateScore(a.Password) <= 2);
                 int reusedEntries = accounts
                     .Where(a => !string.IsNullOrEmpty(a.Password))
                     .GroupBy(a => a.Password, StringComparer.Ordinal)
@@ -2081,9 +2262,78 @@ namespace PersonalInfoManager
                     "Kho mật khẩu: {0} tài khoản • {1} mật khẩu yếu • {2} mục dùng mật khẩu trùng • mật khẩu cũ nhất đã biết: {3} ngày • {4} tài khoản chưa rõ ngày đổi MK",
                     () => new object?[] { accounts.Count, weakCount, reusedEntries, oldestKnownDays, unknownPasswordDate });
 
+                _pwnedResultsAreCurrent = _pwnedCheckCompleted &&
+                    accounts.Count == _pwnedCheckedAccountVersions.Count &&
+                    accounts.All(account => _pwnedCheckedAccountVersions.TryGetValue(account.Id, out DateTime checkedVersion) &&
+                        checkedVersion == account.UpdatedAt);
+
+                if (!_pwnedCheckCompleted)
+                {
+                    LanguageService.SetLocalizedText(lblPwnedPasswordAudit,
+                        "Chưa kiểm tra mật khẩu rò rỉ trong phiên này; dùng nút kiểm tra để đối chiếu tùy chọn.");
+                }
+                else if (!_pwnedResultsAreCurrent)
+                {
+                    LanguageService.SetLocalizedText(lblPwnedPasswordAudit,
+                        "Vault đã thay đổi sau lần kiểm tra rò rỉ; hãy chạy lại để cập nhật kết quả.");
+                }
+
+                var findings = PasswordSecurityAuditService.Analyze(
+                    accounts, _pwnedBreachedAccountIds, _pwnedResultsAreCurrent, DateTime.Now);
+                var accountById = accounts.ToDictionary(account => account.Id);
+                var findingItems = findings
+                    .Where(finding => accountById.ContainsKey(finding.AccountId))
+                    .Take(50)
+                    .Select(finding =>
+                    {
+                        SavedAccount account = accountById[finding.AccountId];
+                        string issue = finding.Kind switch
+                        {
+                            PasswordSecurityFindingKind.Breached => "Mật khẩu xuất hiện trong dữ liệu rò rỉ",
+                            PasswordSecurityFindingKind.Reused => "Mật khẩu được dùng lại",
+                            PasswordSecurityFindingKind.Weak => "Mật khẩu yếu",
+                            PasswordSecurityFindingKind.OlderThanYear => "Mật khẩu chưa đổi hơn 365 ngày",
+                            _ => "Chưa rõ ngày đổi mật khẩu"
+                        };
+                        string description = $"{LanguageService.Translate(issue)} — {account.ServiceName} ({account.Username})";
+                        return new SecurityFindingViewItem(account.Id, description);
+                    })
+                    .ToList();
+                listSecurityFindings.ItemsSource = findingItems;
+
+                string findingsMessage = findings.Count == 0
+                    ? (_pwnedResultsAreCurrent
+                        ? "Chưa phát hiện vấn đề trong các kiểm tra hiện có."
+                        : "Chưa có vấn đề cục bộ; kiểm tra mật khẩu rò rỉ chưa chạy hoặc kết quả đã cũ.")
+                    : findings.Count > findingItems.Count
+                        ? "Tìm thấy {0} cảnh báo; đang hiển thị {1} mục ưu tiên cao nhất."
+                        : "Tìm thấy {0} cảnh báo mật khẩu cần xem xét.";
+                if (findings.Count == 0)
+                    LanguageService.SetLocalizedText(lblSecurityFindingsSummary, findingsMessage);
+                else
+                    LanguageService.SetLocalizedFormattedText(
+                        lblSecurityFindingsSummary,
+                        findingsMessage,
+                        () => findings.Count > findingItems.Count
+                            ? new object?[] { findings.Count, findingItems.Count }
+                            : new object?[] { findings.Count });
+
                 LanguageService.SetLocalizedText(lblSecurity2FAAudit, TwoFactorService.IsEnabled(username)
                     ? "2FA: đã bật cho đăng nhập bằng mật khẩu."
                     : "2FA: đang tắt; nên bật để tăng bảo vệ khi đăng nhập bằng mật khẩu.");
+
+                int recoveryCodeCount = TwoFactorService.GetRecoveryCodeCount(username);
+                bool hasBackupPassphrase = BackupCrypto.HasStoredPassphrase(username);
+                LanguageService.SetLocalizedFormattedText(
+                    lblSecurityRecoveryAudit,
+                    "Mã khôi phục 2FA còn: {0} • Cụm mật khẩu sao lưu: {1}. Khóa tệp cá nhân gắn với Windows hiện tại; để đổi máy hoặc cài lại Windows, hãy tạo backup có cụm mật khẩu và giữ mã khôi phục riêng.",
+                    () => new object?[]
+                    {
+                        recoveryCodeCount,
+                        hasBackupPassphrase
+                            ? (LanguageService.IsEnglish ? "set" : "đã đặt")
+                            : (LanguageService.IsEnglish ? "not set" : "chưa đặt")
+                    });
 
                 DateTime? lastBackup = AutoBackupService.GetLastBackupUtc(username);
                 if (lastBackup == null)
@@ -2124,10 +2374,61 @@ namespace PersonalInfoManager
                 LanguageService.SetLocalizedText(lblSecurityPasswordAudit, "Không thể đọc đầy đủ trạng thái kho mật khẩu.");
                 LanguageService.SetLocalizedText(lblSecurity2FAAudit, "Không thể đọc trạng thái 2FA.");
                 LanguageService.SetLocalizedText(lblSecurityBackupAudit, "Không thể đọc trạng thái sao lưu.");
+                LanguageService.SetLocalizedText(lblSecurityRecoveryAudit, "Không thể đọc trạng thái khôi phục.");
                 LanguageService.SetLocalizedFormattedText(
                     lblSecurityFileAudit,
                     "Không thể đọc trạng thái mã hóa tệp: {0}",
                     () => new object?[] { ex.Message });
+            }
+        }
+
+        private void BtnOpenSecurityFinding_Click(object? sender, RoutedEventArgs e)
+        {
+            if (!EnsureActiveSession() || sender is not Button { Tag: Guid accountId }) return;
+
+            string username = SessionService.CurrentUser!.Username;
+            SavedAccount? account;
+            try
+            {
+                account = _vaultService.Load(username)
+                    .FirstOrDefault(item => item.Id == accountId && !item.IsDeleted);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                LockNow("Tài khoản đã bị khóa.");
+                return;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, ex.Message, "Không thể mở tài khoản",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (account == null)
+            {
+                RefreshSecurityOverview();
+                return;
+            }
+
+            CloseSettings();
+            txtSearch.Clear();
+            _searchTimer.Stop();
+            if (chkFavoritesOnly.IsChecked == true)
+                chkFavoritesOnly.IsChecked = false;
+            ShowPage("accounts");
+            navAccounts.IsChecked = true;
+            RefreshAccounts();
+
+            foreach (var item in dgAccounts.Items)
+            {
+                var original = item.GetType().GetProperty("_original")?.GetValue(item) as SavedAccount;
+                if (original?.Id != accountId) continue;
+
+                dgAccounts.SelectedItem = item;
+                dgAccounts.ScrollIntoView(item);
+                dgAccounts.Focus();
+                return;
             }
         }
     }

@@ -11,13 +11,13 @@ using PersonalInfoManager.Models;
 
 namespace PersonalInfoManager.Services
 {
-    public class UsersFileUnreadableException : Exception
+        public class UsersFileUnreadableException : Exception
     {
         public UsersFileUnreadableException(string message, Exception? inner = null)
             : base(message, inner) { }
     }
 
-    public class UserService
+        public class UserService
     {
         private static readonly object Sync = new();
         private static readonly JsonSerializerOptions JsonOpts = new() { WriteIndented = true };
@@ -27,6 +27,7 @@ namespace PersonalInfoManager.Services
         private readonly string _usersFile = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "PersonalInfoManager", "users.json");
+
         private const string LegacyDefaultAdminPassword = "admin123";
 
         private bool RequireAdmin(out string message)
@@ -92,9 +93,19 @@ namespace PersonalInfoManager.Services
             return false;
         }
 
-        public const int MaxFailedAttempts = 5;
+                public const int MaxFailedAttempts = 5;
 
-        public static readonly TimeSpan LockoutDuration = TimeSpan.FromMinutes(5);
+                public static readonly TimeSpan LockoutDuration = TimeSpan.FromMinutes(5);
+
+        public static readonly TimeSpan MaximumLockoutDuration = TimeSpan.FromMinutes(60);
+
+        private static TimeSpan GetLockoutDuration(int lockoutLevel)
+        {
+            if (lockoutLevel >= 4) return MaximumLockoutDuration;
+            int multiplier = 1 << Math.Clamp(lockoutLevel, 0, 3);
+            TimeSpan duration = TimeSpan.FromTicks(LockoutDuration.Ticks * multiplier);
+            return duration > MaximumLockoutDuration ? MaximumLockoutDuration : duration;
+        }
 
         private List<User> _users = new();
 
@@ -105,6 +116,7 @@ namespace PersonalInfoManager.Services
                 Reload();
             }
         }
+
         private void Reload()
         {
             lock (Sync)
@@ -115,7 +127,7 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        private List<User> ReadUsers(out bool needsProtection)
+                private List<User> ReadUsers(out bool needsProtection)
         {
             needsProtection = false;
             if (!File.Exists(_usersFile)) return new List<User>();
@@ -130,9 +142,11 @@ namespace PersonalInfoManager.Services
             var bak = TryParse(_usersFile + ".bak", out _);
             if (bak != null)
             {
+
                 needsProtection = true;
                 return bak;
             }
+
             try
             {
                 File.Copy(_usersFile,
@@ -185,6 +199,7 @@ namespace PersonalInfoManager.Services
                 }
                 else
                 {
+
                     json = stored;
                     needsProtection = true;
                 }
@@ -210,13 +225,16 @@ namespace PersonalInfoManager.Services
                     var previous = TryParse(_usersFile, out _);
                     if (previous != null)
                     {
+
                         WriteProtectedUsersFile(_usersFile + ".bak", previous);
                     }
                     else
                     {
+
                         File.Copy(_usersFile,
                             _usersFile + ".corrupt-" + DateTime.Now.ToString("yyyyMMddHHmmssfff") + "-" + Guid.NewGuid().ToString("N"),
                             overwrite: true);
+
                         WriteProtectedUsersFile(_usersFile + ".bak", _users);
                     }
                 }
@@ -230,23 +248,20 @@ namespace PersonalInfoManager.Services
             string json = JsonSerializer.Serialize(users, JsonOpts);
             byte[] plaintext = Encoding.UTF8.GetBytes(json);
             byte[]? encrypted = null;
-            string temp = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
-
             try
             {
                 encrypted = ProtectedData.Protect(
                     plaintext, UsersEntropy, DataProtectionScope.CurrentUser);
                 string content = ProtectedUsersPrefix + Convert.ToBase64String(encrypted);
-                File.WriteAllText(temp, content, Encoding.UTF8);
-                File.Move(temp, path, overwrite: true);
+                AtomicFileService.WriteAllText(path, content, Encoding.UTF8);
             }
             finally
             {
                 CryptographicOperations.ZeroMemory(plaintext);
                 if (encrypted != null) CryptographicOperations.ZeroMemory(encrypted);
-                try { if (File.Exists(temp)) File.Delete(temp); } catch { }
             }
         }
+
         private User? FindByUsernameCore(string username)
             => _users.FirstOrDefault(u =>
                 string.Equals(u.Username, username, StringComparison.OrdinalIgnoreCase));
@@ -344,6 +359,7 @@ namespace PersonalInfoManager.Services
                 return EmailExistsCore(email, excludeUserId);
             }
         }
+
         private static bool IsValidEmail(string email)
         {
             if (string.IsNullOrWhiteSpace(email)) return true;
@@ -426,13 +442,14 @@ namespace PersonalInfoManager.Services
                 finally { _mutex.Dispose(); }
             }
         }
+
         public (bool ok, string message) CreateUser(
             string username, string password, UserRole role)
         {
             return CreateUserFull(username, password, role, username, "", "");
         }
 
-        public (bool ok, string message) CreateInitialAdmin(
+                public (bool ok, string message) CreateInitialAdmin(
             string username, string password, string fullName, string email, string phone)
         {
             lock (Sync)
@@ -526,7 +543,8 @@ namespace PersonalInfoManager.Services
                 return (true, "Tạo tài khoản thành công.");
             }
         }
-        public (bool ok, string message, User? user) Authenticate(
+
+                public (bool ok, string message, User? user) Authenticate(
             string username, string password)
         {
             lock (Sync)
@@ -553,6 +571,7 @@ namespace PersonalInfoManager.Services
 
                 if (!user.IsActive)
                     return (false, "Tài khoản đã bị khóa.", null);
+
                 if (user.LockedUntil is { } until)
                 {
                     if (until > DateTime.Now)
@@ -562,6 +581,7 @@ namespace PersonalInfoManager.Services
                             $"Nhập sai mật khẩu quá nhiều lần. Tài khoản bị khóa tạm thời, hãy thử lại sau khoảng {mins} phút.",
                             null);
                     }
+
                     user.LockedUntil = null;
                     user.FailedLoginCount = 0;
                 }
@@ -572,11 +592,14 @@ namespace PersonalInfoManager.Services
 
                     if (user.FailedLoginCount >= MaxFailedAttempts)
                     {
-                        user.LockedUntil = DateTime.Now + LockoutDuration;
+                        int lockoutLevel = Math.Clamp(user.LockoutLevel, 0, 4);
+                        TimeSpan lockout = GetLockoutDuration(lockoutLevel);
+                        user.LockedUntil = DateTime.Now + lockout;
+                        user.LockoutLevel = Math.Min(lockoutLevel + 1, 4);
                         user.FailedLoginCount = 0;
                         Save();
                         return (false,
-                            $"Sai mật khẩu {MaxFailedAttempts} lần liên tiếp. Tài khoản bị khóa tạm thời {LockoutDuration.TotalMinutes:0} phút.",
+                            $"Sai mật khẩu {MaxFailedAttempts} lần liên tiếp. Tài khoản bị khóa tạm thời {lockout.TotalMinutes:0} phút.",
                             null);
                     }
 
@@ -586,6 +609,7 @@ namespace PersonalInfoManager.Services
                         $"Sai mật khẩu. Còn {left} lần thử trước khi bị khóa tạm thời.",
                         null);
                 }
+
                 if (IsDefaultPassword(password))
                     return (false,
                         "Mật khẩu mặc định cũ đã bị vô hiệu hóa. Hãy dùng Windows Hello nếu đã bật " +
@@ -601,8 +625,11 @@ namespace PersonalInfoManager.Services
 
                 user.FailedLoginCount = 0;
                 user.LockedUntil = null;
+                user.LockoutLevel = 0;
+
                 if (PasswordHasher.NeedsRehash(user.PasswordHash))
                     user.PasswordHash = PasswordHasher.Hash(password);
+
                 if (password.Length < MinimumPasswordLength(user.TwoFactorEnabled))
                     user.MustChangePassword = true;
 
@@ -611,6 +638,7 @@ namespace PersonalInfoManager.Services
                 return (true, "Đăng nhập thành công.", user);
             }
         }
+
         public (bool ok, string message) ChangePassword(
             string username, string oldPwd, string newPwd)
         {
@@ -641,12 +669,13 @@ namespace PersonalInfoManager.Services
                 user.MustChangePassword = false;
                 user.FailedLoginCount = 0;
                 user.LockedUntil = null;
+                user.LockoutLevel = 0;
                 Save();
                 return (true, "Đổi mật khẩu thành công.");
             }
         }
 
-        public (bool ok, string message) ResetPassword(Guid userId, string newPassword)
+                public (bool ok, string message) ResetPassword(Guid userId, string newPassword)
         {
             lock (Sync)
             {
@@ -667,10 +696,12 @@ namespace PersonalInfoManager.Services
                 user.MustChangePassword = true;
                 user.FailedLoginCount = 0;
                 user.LockedUntil = null;
+                user.LockoutLevel = 0;
                 Save();
                 return (true, "Đã đặt lại mật khẩu. Người dùng sẽ phải đổi mật khẩu khi đăng nhập lần tới.");
             }
         }
+
         public (bool ok, string message) UpdateProfile(
             Guid userId, string fullName, string email, string phone)
         {
@@ -731,12 +762,14 @@ namespace PersonalInfoManager.Services
                 {
                     user.FailedLoginCount = 0;
                     user.LockedUntil = null;
+                    user.LockoutLevel = 0;
                 }
                 Save();
                 return (true, "Cập nhật thành công.");
             }
         }
-        public void SetActive(Guid userId, bool active)
+
+                public void SetActive(Guid userId, bool active)
         {
             lock (Sync)
             {
@@ -751,11 +784,13 @@ namespace PersonalInfoManager.Services
                 {
                     user.FailedLoginCount = 0;
                     user.LockedUntil = null;
+                    user.LockoutLevel = 0;
                 }
                 Save();
             }
         }
-        public (bool ok, string message) DeleteUser(Guid userId, Guid currentUserId)
+
+                public (bool ok, string message) DeleteUser(Guid userId, Guid currentUserId)
         {
             lock (Sync)
             {
@@ -778,7 +813,8 @@ namespace PersonalInfoManager.Services
                 return (true, "Đã xóa tài khoản.");
             }
         }
-        public (bool ok, string message) SetRole(Guid userId, UserRole role)
+
+                public (bool ok, string message) SetRole(Guid userId, UserRole role)
         {
             lock (Sync)
             {
@@ -799,6 +835,7 @@ namespace PersonalInfoManager.Services
                 return (true, "Đã đổi vai trò.");
             }
         }
+
         public int CountAdmins() { lock (Sync) { Reload(); return _users.Count(u => u.Role == UserRole.Admin); } }
         public int CountUsers() { lock (Sync) { Reload(); return _users.Count(u => u.Role == UserRole.User); } }
         public int CountActive() { lock (Sync) { Reload(); return _users.Count(u => u.IsActive); } }
@@ -827,7 +864,8 @@ namespace PersonalInfoManager.Services
                 }
             }
         }
-        public (bool ok, string message) SetWindowsHello(
+
+                public (bool ok, string message) SetWindowsHello(
             Guid userId, bool enabled, string sid)
         {
             lock (Sync)
@@ -856,7 +894,7 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        public User? FindByWindowsHelloSid(string sid)
+                public User? FindByWindowsHelloSid(string sid)
         {
             if (string.IsNullOrWhiteSpace(sid)) return null;
 
@@ -873,7 +911,7 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        public List<User> GetWindowsHelloUsers()
+                public List<User> GetWindowsHelloUsers()
         {
             lock (Sync)
             {

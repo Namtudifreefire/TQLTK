@@ -12,8 +12,9 @@ using PersonalInfoManager.Services;
 
 namespace PersonalInfoManager
 {
-    public partial class MainWindow
+        public partial class MainWindow
     {
+
         private Dictionary<string, FrameworkElement> _pages = new();
 
         private static readonly HashSet<string> SettingsTags = new()
@@ -38,6 +39,7 @@ namespace PersonalInfoManager
                 ["admin"] = pageAdmin
             };
         }
+
         private void Nav_Checked(object sender, RoutedEventArgs e)
         {
             if (_pages.Count == 0) return;
@@ -46,12 +48,14 @@ namespace PersonalInfoManager
 
         private void ShowPage(string tag)
         {
+
             if (tag == "admin" && !SessionService.IsAdmin) return;
 
             bool isSettings = SettingsTags.Contains(tag);
 
             foreach (var kv in _pages)
             {
+
                 if (SettingsTags.Contains(kv.Key) != isSettings) continue;
                 kv.Value.Visibility = kv.Key == tag ? Visibility.Visible : Visibility.Collapsed;
             }
@@ -60,10 +64,12 @@ namespace PersonalInfoManager
 
             if (tag == "files") RefreshFiles();
             if (tag == "security") RefreshSecurityOverview();
+            if (tag == "drive") RefreshDriveTokenStatus();
         }
+
         private DateTime _userMenuClosedAt = DateTime.MinValue;
 
-        private void UpdateUserChip()
+                private void UpdateUserChip()
         {
             var u = SessionService.CurrentUser;
             if (u == null) return;
@@ -79,6 +85,7 @@ namespace PersonalInfoManager
 
         private void BtnUser_Click(object sender, RoutedEventArgs e)
         {
+
             if ((DateTime.UtcNow - _userMenuClosedAt).TotalMilliseconds < 250) return;
 
             var u = SessionService.CurrentUser;
@@ -102,6 +109,7 @@ namespace PersonalInfoManager
                 case "exit": MnuExit_Click(sender, e); break;
             }
         }
+
         protected override void OnPreviewKeyDown(KeyEventArgs e)
         {
             if (e.Key == Key.Escape)
@@ -119,10 +127,11 @@ namespace PersonalInfoManager
 
             base.OnPreviewKeyDown(e);
         }
+
         private bool _settingsOpen;
         private Dictionary<string, string>? _settingsIndex;
 
-        private void OpenSettings(string tag = "profile")
+                private void OpenSettings(string tag = "profile")
         {
             if (_isLocked || !SessionService.IsLoggedIn || _pages.Count == 0) return;
 
@@ -160,6 +169,7 @@ namespace PersonalInfoManager
             var fade = new DoubleAnimation(0, TimeSpan.FromMilliseconds(120));
             fade.Completed += (_, _) =>
             {
+
                 if (_settingsOpen) return;
 
                 settingsOverlay.BeginAnimation(OpacityProperty, null);
@@ -183,6 +193,7 @@ namespace PersonalInfoManager
             panelSettingsNav.Children.OfType<StackPanel>()
                 .SelectMany(g => g.Children.OfType<RadioButton>())
                 .FirstOrDefault(rb => rb.Tag as string == tag);
+
         private void TxtSettingsSearch_TextChanged(object sender, TextChangedEventArgs e)
         {
             lblSettingsSearchHint.Visibility =
@@ -191,7 +202,7 @@ namespace PersonalInfoManager
             ApplySettingsFilter();
         }
 
-        private void ApplySettingsFilter()
+                private void ApplySettingsFilter()
         {
             if (_pages.Count == 0) return;
 
@@ -228,6 +239,7 @@ namespace PersonalInfoManager
             }
 
             lblSettingsNoResult.Visibility = visibleCount == 0 ? Visibility.Visible : Visibility.Collapsed;
+
             if (firstMatch != null &&
                 (_currentSettingsTag == null || FindSettingsNav(_currentSettingsTag)?.Visibility != Visibility.Visible))
             {
@@ -250,6 +262,7 @@ namespace PersonalInfoManager
 
             return map;
         }
+
         private static void CollectText(DependencyObject node, StringBuilder sb)
         {
             if (node is TextBlock tb)
@@ -267,7 +280,7 @@ namespace PersonalInfoManager
             }
         }
 
-        private static string Fold(string s)
+                private static string Fold(string s)
         {
             string decomposed = s.Normalize(NormalizationForm.FormD);
             var sb = new StringBuilder(decomposed.Length);

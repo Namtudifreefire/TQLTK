@@ -7,13 +7,13 @@ using PersonalInfoManager.Models;
 
 namespace PersonalInfoManager.Services
 {
-    public class NoteService
+        public class NoteService
     {
         private readonly string _dataFile = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "PersonalInfoManager", "notes.json");
 
-        public List<Note> Load()
+                public List<Note> Load()
         {
             if (!File.Exists(_dataFile)) return new List<Note>();
 
@@ -51,7 +51,7 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        public void Save(List<Note> notes)
+                public void Save(List<Note> notes)
         {
             if (File.Exists(_dataFile))
             {
@@ -65,16 +65,7 @@ namespace PersonalInfoManager.Services
                 new JsonSerializerOptions { WriteIndented = true });
 
             string encrypted = AesCrypto.Encrypt(json);
-            string temp = _dataFile + "." + Guid.NewGuid().ToString("N") + ".tmp";
-            try
-            {
-                File.WriteAllText(temp, encrypted);
-                File.Move(temp, _dataFile, overwrite: true);
-            }
-            finally
-            {
-                try { if (File.Exists(temp)) File.Delete(temp); } catch { }
-            }
+            AtomicFileService.WriteAllText(_dataFile, encrypted);
         }
     }
 }

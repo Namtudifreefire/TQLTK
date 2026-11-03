@@ -35,9 +35,9 @@ namespace PersonalInfoManager.Services
         internal string TargetVaultFingerprint { get; }
     }
 
-    public static class VaultBackupService
+        public static class VaultBackupService
     {
-        public static (bool ok, string message) ExportToFile(string username, string destPath)
+                public static (bool ok, string message) ExportToFile(string username, string destPath)
         {
             try
             {
@@ -51,7 +51,7 @@ namespace PersonalInfoManager.Services
                 {
                     ExportedAt = DateTime.Now,
                     ExportedBy = username,
-                    AppVersion = "1.0.0",
+                    AppVersion = "3.6.7",
                     AccountCount = accounts.Count,
                     Accounts = accounts
                 };
@@ -64,7 +64,20 @@ namespace PersonalInfoManager.Services
                     ? BackupCrypto.Encrypt(json, passphrase)
                     : AesCrypto.Encrypt(json);
 
-                File.WriteAllText(destPath, encrypted);
+                string stagedPath = AtomicFileService.WriteTemporary(
+                    destPath, System.Text.Encoding.UTF8.GetBytes(encrypted));
+                try
+                {
+                    var verification = InspectBackup(username, stagedPath, passphrase);
+                    if (!verification.ok)
+                        throw new InvalidDataException("Bản sao lưu tạo mới không qua kiểm tra: " + verification.message);
+
+                    AtomicFileService.PromoteTemporary(stagedPath, destPath);
+                }
+                finally
+                {
+                    AtomicFileService.TryDelete(stagedPath);
+                }
 
                 try
                 {
@@ -86,13 +99,13 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        public static bool IsPassphraseProtected(string sourcePath)
+                public static bool IsPassphraseProtected(string sourcePath)
         {
             try { return BackupCrypto.IsPassphraseFormat(File.ReadAllText(sourcePath)); }
             catch { return false; }
         }
 
-        public static bool PassphraseWorks(string username, string sourcePath, string? passphrase = null)
+                public static bool PassphraseWorks(string username, string sourcePath, string? passphrase = null)
         {
             try
             {
@@ -309,7 +322,7 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        public static (bool ok, string message, int importedCount) ImportFromFile(
+                public static (bool ok, string message, int importedCount) ImportFromFile(
             string username, string sourcePath, string? passphrase = null,
             Func<string, bool>? confirmForeignOwner = null)
         {
@@ -319,7 +332,7 @@ namespace PersonalInfoManager.Services
             return CommitImport(username, prepared.preview, confirmForeignOwner);
         }
 
-        private class VaultPackage
+                private class VaultPackage
         {
             public DateTime ExportedAt { get; set; }
             public string ExportedBy { get; set; } = "";

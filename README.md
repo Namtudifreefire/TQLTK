@@ -8,6 +8,8 @@ TQLTK is a local account and password manager for Windows. It stores logins in a
 
 > The latest published release is **v3.6.6 (BETA)**. See its [release notes](https://github.com/Namtudifreefire/TQLTK/releases/tag/v3.6.6). This release currently has no installable binary attached. The latest ready-to-run ZIP is [PersonalInfoManager-3.6.5-win-x64.zip](https://github.com/Namtudifreefire/TQLTK/releases/download/v3.6.5/PersonalInfoManager-3.6.5-win-x64.zip).
 
+> English interface support was introduced in v3.6.6 (BETA); earlier versions are Vietnamese-only.
+
 TQLTK is a personal project maintained by one developer. It has not been independently security-audited. Read the [Security notes](#security-notes) before storing important credentials.
 
 ## Features
@@ -50,7 +52,7 @@ Until then, use the ZIP download above.
 - **Local data:** vault, users, 2FA settings and activity logs are stored in %AppData%\PersonalInfoManager; window and theme settings are stored in HKCU\Software\TQLTK.
 - **Network:** there is no telemetry or analytics. Google Drive requests run when you use Drive sync. The optional breached-password check contacts Have I Been Pwned and sends only the first five characters of the password's SHA-1 hash, not the password itself. The app requests the drive.file scope for Google Drive.
 - **Windows account:** DPAPI ties the vault key to your Windows account. This does not protect data from malware running as your Windows user.
-- **Personal files:** files in the Personal Files tab are stored unencrypted.
+- **Personal files:** files are encrypted with AES-GCM and their key is protected by Windows DPAPI for the current Windows account. Existing plaintext files are migrated atomically when the file store is opened. Before moving to another Windows account or reinstalling Windows, create a file backup protected by your backup passphrase; the local DPAPI key cannot be transferred by copying the storage folder.
 - **Legacy CBC data:** v3.6.5 rejects old CBC-encrypted vault, note and backup data because that format does not verify integrity. Make and verify a separate backup before upgrading if you may have data in that format.
 - **Backup passphrase:** backups use a key derived with PBKDF2-SHA256 (600,000 iterations) and AES-256-GCM. A forgotten passphrase cannot be recovered for restoring on another PC.
 - **No independent audit:** do not use TQLTK as the only copy of important credentials.
@@ -62,13 +64,23 @@ Requires the .NET 10 SDK on Windows.
     cd Nguon
     dotnet build
 
-Nguon\publish.bat builds the single-file release.
+`Nguon\publish.bat` builds the single-file EXE, packages the EXE and MIT `LICENSE` at the ZIP root, verifies the ZIP contents, and writes `SHA256SUMS.txt`. To sign the EXE, install a trusted code-signing certificate in the current Windows user's Personal certificate store and set `TQLTK_SIGNING_CERT_THUMBPRINT` to its thumbprint, or pass `-CertificateThumbprint` to `release-artifacts.ps1`. Pass `-RequireSignature` to fail a release build if no certificate is configured. Builds without a certificate are unsigned; checksums do not prove publisher identity.
 
 Google Drive features need your own OAuth client. In Google Cloud Console, create an OAuth client ID of type **Desktop app**, save it as credentials.json next to PersonalInfoManager.csproj, then build. The file is embedded at build time and is git-ignored, so it is not part of this repository. Without it, the rest of the app works but Drive sync is unavailable.
 
 ## Release notes
 
 See the [Releases page](https://github.com/Namtudifreefire/TQLTK/releases) for downloadable builds and the full release history.
+
+### v3.6.7 (in development)
+
+- Verify backup manifests, entry counts and total sizes before a restore preview succeeds; new encrypted backups are verified before replacing the destination.
+- Use durable temporary-file writes for vaults, notes, recovery settings, CSV exports and backups so an interrupted write keeps the prior file intact.
+- Increase temporary sign-in lockouts from 5 to 10, 20, 40 and then 60 minutes after repeated failed-attempt groups; a successful sign-in or password reset clears the escalation. Password hashes already use PBKDF2-HMAC-SHA256 with 600,000 iterations and rehash older entries after sign-in.
+- Show the linked Google Drive account and allow removing this device's locally stored token without deleting Drive backups. Removing the local token does not revoke Google account access.
+- Expand the security overview with account-level findings for weak, reused, old, unknown-age and breached passwords, with an action to open the affected account. Breach results are marked stale after the vault changes.
+- Show recovery-code count, backup-passphrase status and the Windows-account dependency of personal-file encryption. Clarify that changing the TQLTK sign-in password does not rotate the vault encryption key, and guide users to make a passphrase-protected backup before moving Windows accounts or reinstalling Windows.
+- Add a repeatable release script that creates a root-level EXE + LICENSE ZIP and SHA-256 file, and signs/verifies the EXE when a trusted code-signing certificate is configured.
 
 ### v3.6.6 (BETA)
 
@@ -98,8 +110,6 @@ See the [Releases page](https://github.com/Namtudifreefire/TQLTK/releases) for d
 - Separate backup data and Google sign-in for each app user.
 - Improve account-data isolation and protection against reuse of 2FA and recovery codes across app instances.
 
-> Note: Only v3.6.6 (BETA) has support English and Vietnamese interface. Earlier versions are Vietnamese-only.
-
 ## License
 
 TQLTK is distributed under the [MIT License](LICENSE). Copyright © 2026 Namtudifreefire.
@@ -111,6 +121,8 @@ TQLTK is distributed under the [MIT License](LICENSE). Copyright © 2026 Namtudi
 **TQLTK** là ứng dụng quản lý tài khoản và mật khẩu chạy trên Windows. Dữ liệu tài khoản được lưu trong vault mã hóa trên máy; ứng dụng hỗ trợ TOTP cho từng tài khoản, tùy chọn Windows Hello và sao lưu lên Google Drive của chính bạn. Giao diện có tiếng Việt và tiếng Anh. Ứng dụng viết bằng C# (WPF, .NET), phát hành dạng portable và không cần cài .NET riêng.
 
 > Bản phát hành mới nhất là **v3.6.6 (BETA)**. Xem [ghi chú phát hành](https://github.com/Namtudifreefire/TQLTK/releases/tag/v3.6.6). Hiện bản này chưa có file cài đặt đính kèm. ZIP mới nhất có thể chạy ngay là [PersonalInfoManager-3.6.5-win-x64.zip](https://github.com/Namtudifreefire/TQLTK/releases/download/v3.6.5/PersonalInfoManager-3.6.5-win-x64.zip).
+
+> Giao diện tiếng Anh được giới thiệu từ v3.6.6 (BETA); các phiên bản trước chỉ có tiếng Việt.
 
 TQLTK là dự án cá nhân do một nhà phát triển duy trì và chưa được kiểm toán bảo mật độc lập. Hãy đọc [các lưu ý bảo mật](#security-notes) trước khi lưu thông tin đăng nhập quan trọng.
 
@@ -148,7 +160,7 @@ Trong thời gian chờ, hãy dùng file ZIP ở trên.
 - **Dữ liệu cục bộ:** vault, tài khoản người dùng, cài đặt 2FA và nhật ký hoạt động nằm trong %AppData%\PersonalInfoManager; cài đặt giao diện nằm trong HKCU\Software\TQLTK.
 - **Kết nối mạng:** ứng dụng không có telemetry hoặc analytics. Google Drive chỉ kết nối khi bạn dùng đồng bộ Drive. Kiểm tra mật khẩu bị lộ là tùy chọn và chỉ gửi năm ký tự đầu của SHA-1 hash tới Have I Been Pwned, không gửi mật khẩu. Ứng dụng yêu cầu quyền drive.file cho Google Drive.
 - **Tài khoản Windows:** DPAPI gắn khóa vault với tài khoản Windows. Cơ chế này không bảo vệ dữ liệu trước malware chạy bằng chính tài khoản Windows của bạn.
-- **File cá nhân:** file trong tab File cá nhân được lưu trên đĩa không mã hóa.
+- **File cá nhân:** file được mã hóa AES-GCM; khóa được bảo vệ bằng Windows DPAPI theo tài khoản Windows hiện tại. File cũ chưa mã hóa sẽ được chuyển đổi an toàn qua file tạm khi mở kho file. Trước khi đổi tài khoản Windows hoặc cài lại Windows, hãy tạo bản sao lưu có bảo vệ bằng cụm mật khẩu sao lưu; khóa DPAPI cục bộ không thể chuyển bằng cách chép thư mục dữ liệu.
 - **Dữ liệu CBC cũ:** v3.6.5 chặn mở vault, ghi chú và bản sao lưu cũ mã hóa CBC vì định dạng này không kiểm tra được tính toàn vẹn. Nếu có dữ liệu loại này, hãy tạo và kiểm tra một bản sao riêng trước khi cập nhật.
 - **Cụm mật khẩu sao lưu:** khóa backup được dẫn xuất bằng PBKDF2-SHA256 (600.000 vòng) và mã hóa AES-256-GCM. Nếu quên cụm mật khẩu, không thể khôi phục bản sao lưu trên máy khác.
 - **Chưa kiểm toán độc lập:** không nên dùng TQLTK làm bản lưu duy nhất cho thông tin đăng nhập quan trọng.
@@ -156,6 +168,16 @@ Trong thời gian chờ, hãy dùng file ZIP ở trên.
 ## Ghi chú phát hành
 
 Xem [trang Releases](https://github.com/Namtudifreefire/TQLTK/releases) để tải bản phát hành và đọc lịch sử đầy đủ.
+
+### v3.6.7 (đang phát triển)
+
+- Kiểm tra manifest, số lượng và tổng dung lượng trước khi chấp nhận bước xem trước khôi phục; bản sao lưu mới được xác minh trước khi thay file đích.
+- Ghi vault, ghi chú, thiết lập khôi phục, CSV và backup qua file tạm bền vững để lần ghi bị gián đoạn vẫn giữ file cũ.
+- Tăng thời gian khóa đăng nhập tạm thời theo từng nhóm nhập sai: 5, 10, 20, 40 rồi 60 phút; đăng nhập thành công hoặc đặt lại mật khẩu sẽ xóa mức tăng. Hash mật khẩu đã dùng PBKDF2-HMAC-SHA256 với 600.000 vòng; hash cũ được nâng cấp sau lần đăng nhập thành công.
+- Hiển thị tài khoản Google Drive đã liên kết và cho phép xóa token lưu cục bộ trên thiết bị này mà không xóa backup trên Drive. Xóa token cục bộ không thu hồi quyền ứng dụng trong tài khoản Google.
+- Mở rộng tổng quan bảo mật với cảnh báo theo từng tài khoản về mật khẩu yếu, dùng lại, lâu chưa đổi, chưa rõ ngày đổi hoặc bị lộ; có nút mở nhanh mục cần xử lý. Kết quả kiểm tra rò rỉ được đánh dấu cũ khi vault thay đổi.
+- Hiển thị số mã khôi phục còn lại, trạng thái cụm mật khẩu sao lưu và lưu ý khóa mã hóa file cá nhân gắn với tài khoản Windows. Nêu rõ đổi mật khẩu đăng nhập TQLTK không đổi khóa mã hóa vault; khuyến nghị tạo backup có cụm mật khẩu trước khi đổi tài khoản Windows hoặc cài lại Windows.
+- Thêm script phát hành có thể lặp lại: tạo ZIP có EXE và LICENSE ở gốc, tạo SHA-256, đồng thời ký và xác minh EXE khi đã cấu hình chứng thư code-signing đáng tin cậy.
 
 ### v3.6.6 (BETA)
 
@@ -192,7 +214,7 @@ Cần cài .NET 10 SDK trên Windows.
     cd Nguon
     dotnet build
 
-Nguon\publish.bat tạo bản phát hành dạng single-file.
+`Nguon\publish.bat` tạo EXE đơn, ZIP đặt EXE và giấy phép MIT ở thư mục gốc, kiểm tra nội dung ZIP và ghi `SHA256SUMS.txt`. Muốn ký EXE, cài chứng thư code-signing được Windows tin cậy trong kho Personal của tài khoản Windows hiện tại rồi đặt thumbprint vào `TQLTK_SIGNING_CERT_THUMBPRINT` hoặc truyền `-CertificateThumbprint` cho `release-artifacts.ps1`. Dùng `-RequireSignature` để build thất bại nếu chưa cấu hình chứng thư. Nếu không có chứng thư, file phát hành chưa được ký; SHA-256 không xác nhận danh tính nhà phát hành.
 
 Tính năng Google Drive cần OAuth client của bạn. Trong Google Cloud Console, tạo OAuth client ID loại **Desktop app**, lưu thành credentials.json cạnh PersonalInfoManager.csproj rồi build. File được nhúng lúc build và bị git-ignore nên không nằm trong repo. Nếu không có file này, các phần còn lại vẫn hoạt động nhưng không dùng được Drive sync.
 

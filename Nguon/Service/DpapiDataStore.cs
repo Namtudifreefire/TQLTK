@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -8,7 +9,7 @@ using Google.Apis.Util.Store;
 
 namespace PersonalInfoManager.Services
 {
-    public sealed class DpapiDataStore : IDataStore
+        public sealed class DpapiDataStore : IDataStore
     {
         private static readonly byte[] Entropy = Encoding.UTF8.GetBytes("TQLTK.GoogleTokens.v1");
         private readonly string _folder;
@@ -20,6 +21,9 @@ namespace PersonalInfoManager.Services
 
             _folder = folder;
         }
+
+        public bool HasStoredTokens => Directory.Exists(_folder) &&
+            Directory.EnumerateFiles(_folder, "*.bin", SearchOption.TopDirectoryOnly).Any();
 
         public async Task StoreAsync<T>(string key, T value)
         {
@@ -35,7 +39,14 @@ namespace PersonalInfoManager.Services
 
                 try
                 {
-                    await File.WriteAllBytesAsync(temp, encrypted).ConfigureAwait(false);
+                    await using (var stream = new FileStream(
+                        temp, FileMode.CreateNew, FileAccess.Write, FileShare.None,
+                        16 * 1024, FileOptions.Asynchronous | FileOptions.WriteThrough))
+                    {
+                        await stream.WriteAsync(encrypted).ConfigureAwait(false);
+                        await stream.FlushAsync().ConfigureAwait(false);
+                        stream.Flush(flushToDisk: true);
+                    }
                     File.Move(temp, path, overwrite: true);
                 }
                 finally

@@ -35,12 +35,13 @@ namespace PersonalInfoManager.Services
         internal string LocalFingerprint { get; }
     }
 
-    public static class FileBackupService
+        public static class FileBackupService
     {
-        public const long MaxTotalBytes = 100L * 1024 * 1024;
+                public const long MaxTotalBytes = 100L * 1024 * 1024;
 
         private const int CurrentFormatVersion = 1;
         private const string ManifestEntryName = "__tqltk__/manifest.json";
+
         private static readonly Regex ReservedName =
             new(@"^(CON|PRN|AUX|NUL|COM[0-9]|LPT[0-9])(\..*)?$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
@@ -52,7 +53,8 @@ namespace PersonalInfoManager.Services
             public int FileCount { get; set; }
             public long TotalBytes { get; set; }
         }
-        public static (int count, long bytes) Summarize(string username)
+
+                public static (int count, long bytes) Summarize(string username)
         {
             var fileService = new LocalFileService();
             var files = fileService.ListFiles(username);
@@ -93,8 +95,9 @@ namespace PersonalInfoManager.Services
 
                 using var ms = new MemoryStream(zipBytes, writable: false);
                 using var zip = new ZipArchive(ms, ZipArchiveMode.Read);
-                if (zip.GetEntry(ManifestEntryName) == null)
-                    return (false, "Bản sao lưu thiếu manifest của TQLTK.", 0, 0);
+                var manifestEntry = zip.GetEntry(ManifestEntryName);
+                if (manifestEntry == null || manifestEntry.Length > 64 * 1024)
+                    return (false, "Bản sao lưu thiếu manifest hợp lệ của TQLTK.", 0, 0);
 
                 var entries = zip.Entries.Where(IsUserFileEntry).ToList();
                 if (entries.Count == 0)
@@ -112,9 +115,12 @@ namespace PersonalInfoManager.Services
                     CopyBounded(stream, Stream.Null, entry.Length, cancellationToken);
                 }
 
+                if (!TryReadAndValidateManifest(zip, entries.Count, total, out var manifest))
+                    return (false, "Manifest không khớp số lượng hoặc dung lượng dữ liệu trong bản sao lưu.", 0, 0);
+
                 int invalid = zip.Entries.Count(e =>
                     e.Name.Length > 0 && !IsUserFileEntry(e) && e.FullName != ManifestEntryName);
-                string owner = ReadOwner(zip);
+                string owner = manifest.ExportedBy.Trim();
                 string ownerText = owner.Length == 0 ? "không rõ người tạo" : $"người tạo: {owner}";
                 string message = $"Bản sao lưu hợp lệ: {entries.Count} file, {FormatSize(total)}, {ownerText}. " +
                                  "Đã kiểm tra giải mã và nội dung nén; chưa thay đổi dữ liệu trong kho.";
@@ -138,7 +144,7 @@ namespace PersonalInfoManager.Services
         public static string FormatSize(long bytes) =>
             bytes < 1024 * 1024 ? $"{bytes / 1024.0:0.#} KB" : $"{bytes / 1048576.0:0.#} MB";
 
-        public static (bool ok, string message, int count, long bytes) CreateArchive(
+                public static (bool ok, string message, int count, long bytes) CreateArchive(
             string username, string destPath, string passphrase)
         {
             try
@@ -195,7 +201,29 @@ namespace PersonalInfoManager.Services
                     }
                 }
 
-                File.WriteAllBytes(destPath, encrypted);
+                string stagedPath;
+                try
+                {
+                    stagedPath = AtomicFileService.WriteTemporary(destPath, encrypted);
+                }
+                catch
+                {
+                    CryptographicOperations.ZeroMemory(encrypted);
+                    throw;
+                }
+                try
+                {
+                    var verification = InspectBackup(username, stagedPath, passphrase);
+                    if (!verification.ok)
+                        throw new InvalidDataException("Bản sao lưu tạo mới không qua kiểm tra: " + verification.message);
+
+                    AtomicFileService.PromoteTemporary(stagedPath, destPath);
+                }
+                finally
+                {
+                    AtomicFileService.TryDelete(stagedPath);
+                    CryptographicOperations.ZeroMemory(encrypted);
+                }
                 return (true, $"Đã đóng gói {files.Count} file ({FormatSize(total)}).", files.Count, total);
             }
             catch (Exception ex)
@@ -203,7 +231,8 @@ namespace PersonalInfoManager.Services
                 return (false, $"Lỗi: {ex.Message}", 0, 0);
             }
         }
-        public static (bool ok, string message, FileRestorePreview? preview) PreviewRestore(
+
+                public static (bool ok, string message, FileRestorePreview? preview) PreviewRestore(
             string username, string sourcePath, string? passphrase = null,
             Func<string?, string?>? askPassphrase = null,
             CancellationToken cancellationToken = default)
@@ -231,8 +260,9 @@ namespace PersonalInfoManager.Services
 
                 using var ms = new MemoryStream(zipBytes, writable: false);
                 using var zip = new ZipArchive(ms, ZipArchiveMode.Read);
-                if (zip.GetEntry(ManifestEntryName) == null)
-                    return (false, "Bản sao lưu thiếu manifest của TQLTK.", null);
+                var manifestEntry = zip.GetEntry(ManifestEntryName);
+                if (manifestEntry == null || manifestEntry.Length > 64 * 1024)
+                    return (false, "Bản sao lưu thiếu manifest hợp lệ của TQLTK.", null);
 
                 var entries = zip.Entries.Where(IsUserFileEntry).ToList();
                 int invalid = zip.Entries.Count(entry =>
@@ -248,6 +278,9 @@ namespace PersonalInfoManager.Services
                     if (entry.Length < 0 || totalBytes > MaxTotalBytes)
                         return (false, "Bản sao lưu vượt giới hạn dung lượng cho phép.", null);
                 }
+
+                if (!TryReadAndValidateManifest(zip, entries.Count, totalBytes, out _))
+                    return (false, "Manifest không khớp số lượng hoặc dung lượng dữ liệu trong bản sao lưu.", null);
 
                 var fileService = new LocalFileService();
                 string folder = fileService.GetExistingUserFolderReadOnly(username);
@@ -356,6 +389,7 @@ namespace PersonalInfoManager.Services
 
                 if (!File.Exists(sourcePath))
                     return (false, "File không tồn tại.", 0, 0);
+
                 if (new FileInfo(sourcePath).Length > MaxTotalBytes + 16L * 1024 * 1024)
                     return (false, "File quá lớn so với một bản sao lưu File cá nhân của TQLTK.", 0, 0);
 
@@ -383,6 +417,7 @@ namespace PersonalInfoManager.Services
                 using var zip = new ZipArchive(ms, ZipArchiveMode.Read);
                 if (zip.GetEntry(ManifestEntryName) == null)
                     return (false, "Bản sao lưu thiếu manifest của TQLTK.", 0, 0);
+
                 string owner = ReadOwner(zip);
                 bool foreignOwner = owner.Length > 0 &&
                                     !string.Equals(owner, username, StringComparison.OrdinalIgnoreCase);
@@ -404,6 +439,7 @@ namespace PersonalInfoManager.Services
 
                 if (entries.Count == 0)
                     return (false, "Bản sao lưu không chứa file nào để khôi phục.", 0, 0);
+
                 if (entries.Sum(e => e.Length) > MaxTotalBytes)
                     return (false, "Bản sao lưu có dung lượng lớn bất thường nên bị từ chối.", 0, 0);
 
@@ -423,6 +459,7 @@ namespace PersonalInfoManager.Services
                             continue;
                         }
                     }
+
                     cancellationToken.ThrowIfCancellationRequested();
                     using var source = entry.Open();
                     fileService.ImportStream(username, entry.Name, source, entry.Length,
@@ -455,7 +492,8 @@ namespace PersonalInfoManager.Services
                 if (zipBytes != null) CryptographicOperations.ZeroMemory(zipBytes);
             }
         }
-        private static byte[]? DecryptWithPrompts(
+
+                private static byte[]? DecryptWithPrompts(
             byte[] data, string username, string? passphrase, Func<string?, string?>? askPassphrase)
         {
             string? candidate = passphrase ?? BackupCrypto.GetStoredPassphrase(username);
@@ -508,6 +546,31 @@ namespace PersonalInfoManager.Services
             catch
             {
                 return "";
+            }
+        }
+
+        private static bool TryReadAndValidateManifest(
+            ZipArchive zip, int entryCount, long totalBytes, out ArchiveManifest manifest)
+        {
+            manifest = new ArchiveManifest();
+            try
+            {
+                var entry = zip.GetEntry(ManifestEntryName);
+                if (entry == null || entry.Length is < 1 or > 64 * 1024) return false;
+
+                using var stream = entry.Open();
+                var parsed = JsonSerializer.Deserialize<ArchiveManifest>(stream);
+                if (parsed == null || parsed.FormatVersion != CurrentFormatVersion ||
+                    parsed.FileCount != entryCount || parsed.TotalBytes != totalBytes ||
+                    string.IsNullOrWhiteSpace(parsed.ExportedBy))
+                    return false;
+
+                manifest = parsed;
+                return true;
+            }
+            catch (Exception ex) when (ex is IOException || ex is JsonException || ex is InvalidDataException)
+            {
+                return false;
             }
         }
 
@@ -611,7 +674,7 @@ namespace PersonalInfoManager.Services
             finally { CryptographicOperations.ZeroMemory(digest); }
         }
 
-        private static bool IsUserFileEntry(ZipArchiveEntry e)
+                private static bool IsUserFileEntry(ZipArchiveEntry e)
         {
             string name = e.Name;
 

@@ -756,8 +756,43 @@
                                             <TextBlock x:Name="lblSecurity2FAAudit" Style="{StaticResource RowDesc}" Margin="0,3" />
                                             <TextBlock x:Name="lblSecurityBackupAudit" Style="{StaticResource RowDesc}" Margin="0,3" />
                                             <TextBlock x:Name="lblSecurityFileAudit" Style="{StaticResource RowDesc}" Margin="0,3" />
+                                            <TextBlock x:Name="lblSecurityRecoveryAudit" Style="{StaticResource RowDesc}" Margin="0,3" TextWrapping="Wrap" />
                                             <TextBlock x:Name="lblPwnedPasswordAudit" Style="{StaticResource RowDesc}" Margin="0,7,0,0" TextWrapping="Wrap" />
                                             <TextBlock Text="Các chỉ số khác được tính cục bộ. Kiểm tra rò rỉ là tùy chọn và chỉ gửi tiền tố hash một phần qua HTTPS." Style="{StaticResource RowDesc}" Margin="0,4,0,0" TextWrapping="Wrap" />
+                                            <TextBlock Text="Tài khoản cần xem xét" Style="{StaticResource RowTitle}" Margin="0,12,0,4" />
+                                            <TextBlock x:Name="lblSecurityFindingsSummary" Style="{StaticResource RowDesc}" Margin="0,0,0,5" TextWrapping="Wrap" />
+                                            <ListBox x:Name="listSecurityFindings"
+                                                     MaxHeight="260"
+                                                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                                     VirtualizingPanel.IsVirtualizing="True"
+                                                     VirtualizingPanel.VirtualizationMode="Recycling">
+                                                <ListBox.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Grid Margin="3">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <TextBlock Text="{Binding Description}"
+                                                                       TextWrapping="Wrap"
+                                                                       VerticalAlignment="Center"
+                                                                       Margin="4,3,8,3" />
+                                                            <Button Grid.Column="1"
+                                                                    Content="Mở mục"
+                                                                    Tag="{Binding AccountId}"
+                                                                    Style="{StaticResource RowButton}"
+                                                                    Click="BtnOpenSecurityFinding_Click">
+                                                                <Button.ContentTemplate>
+                                                                    <DataTemplate>
+                                                                        <TextBlock Text="{Binding Converter={StaticResource LocalizedTextConverter}}" />
+                                                                    </DataTemplate>
+                                                                </Button.ContentTemplate>
+                                                            </Button>
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ListBox.ItemTemplate>
+                                            </ListBox>
                                         </StackPanel>
                                     </Border>
 
@@ -935,6 +970,20 @@
                                 <StackPanel Margin="28,8,28,24">
                                     <TextBlock Text="Google Drive (BETA)" Style="{StaticResource PageTitle}" />
                                     <TextBlock Text="Bản sao lưu nằm trong thư mục 'TQLTK Backup' trên Google Drive của bạn." Style="{StaticResource PageSub}" />
+
+                                    <Border Style="{StaticResource SettingRow}">
+                                        <DockPanel LastChildFill="True">
+                                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                                                <Button Content="Kiểm tra tài khoản" Style="{StaticResource RowButton}" Margin="0,0,8,0" Click="BtnCheckGoogleDriveAccount_Click" />
+                                                <Button Content="Ngắt kết nối" Style="{StaticResource RowDangerButton}" Click="BtnDisconnectGoogleDrive_Click" />
+                                            </StackPanel>
+                                            <StackPanel VerticalAlignment="Center" Margin="0,0,12,0">
+                                                <TextBlock Text="Tài khoản Drive đã liên kết" Style="{StaticResource RowTitle}" />
+                                                <TextBlock x:Name="lblGoogleDriveAccountStatus" Text="Chưa kiểm tra kết nối Drive. Nhấn Kiểm tra tài khoản để xác minh." Style="{StaticResource RowDesc}" TextWrapping="Wrap" Margin="0,3,0,0" />
+                                                <TextBlock Text="Ngắt kết nối chỉ xóa token được mã hóa trên máy này; quyền Google có thể thu hồi riêng trong tài khoản Google." Style="{StaticResource RowDesc}" TextWrapping="Wrap" Margin="0,3,0,0" />
+                                            </StackPanel>
+                                        </DockPanel>
+                                    </Border>
 
                                     <Border Style="{StaticResource SettingRow}">
                                         <DockPanel>
