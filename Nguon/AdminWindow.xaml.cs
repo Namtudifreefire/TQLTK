@@ -93,7 +93,7 @@ namespace PersonalInfoManager
                 return;
             }
 
-            var dlg = new EditUserWindow(u, _userService);
+            var dlg = new EditUserWindow(u, _userService) { Owner = this };
             if (dlg.ShowDialog() == true)
             {
                 try
