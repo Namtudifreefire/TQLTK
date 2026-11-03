@@ -92,6 +92,147 @@ internal static class EnglishCatalog
         Add("Chưa đọc dữ liệu.", "No data loaded.");
         Add("Chuyển nhanh giữa giao diện sáng và tối.", "Quickly switch between light and dark themes.");
         Add("Còn lại", "Remaining");
+        Add("Trang web", "Website");
+        Add("📋 Sao chép mã", "📋 Copy code");
+        Add("Sao chép mã (bộ nhớ tạm tự xóa)", "Copy code (clipboard clears automatically)");
+        Add("Trường tùy chỉnh được lưu bên trong kho mật khẩu đã mã hóa. Trường nhạy cảm được che khi nhập và không dùng trong tìm kiếm.", "Custom fields are stored in the encrypted password vault. Sensitive fields are masked while editing and excluded from search.");
+        Add("Tự động đổi giao diện theo giờ", "Automatically change the theme by time");
+        Add("Xuất kho mật khẩu (Sao lưu)", "Export password vault (Backup)");
+        Add("Nhập kho mật khẩu (Khôi phục)", "Import password vault (Restore)");
+        Add("Đồng bộ kho mật khẩu", "Sync password vault");
+        Add("Khôi phục kho mật khẩu", "Restore password vault");
+        Add("Xóa giao diện, kích thước, vị trí cửa sổ và tài khoản đăng nhập gần nhất.", "Clear the theme, window size and position, and the last signed-in account.");
+        Add("Các mật khẩu trước được giữ mã hóa trong kho mật khẩu. Chỉ lưu 5 mật khẩu gần nhất.", "Previous passwords are kept encrypted in the password vault. Only the 5 most recent are retained.");
+        Add("Dán URI otpauth:// hoặc khóa bí mật Base32; quét mã QR chuyển tài khoản Google Authenticator; nhập tệp JSON chưa mã hóa từ Aegis/2FAS hoặc tệp URI otpauth.", "Paste an otpauth:// URI or Base32 secret; scan a Google Authenticator account-transfer QR code; or import an unencrypted Aegis/2FAS JSON export or otpauth URI file.");
+        Add("Mã xác thực được lưu cùng kho mật khẩu đã mã hóa. Mã QR và khóa bí mật chứa thông tin nhạy cảm; chỉ nhập từ nguồn bạn tin cậy.", "Authenticator data is stored in the encrypted password vault. QR codes and secrets contain sensitive information; import them only from trusted sources.");
+        Add("Đọc URI / khóa bí mật", "Read URI / secret");
+        Add("Tài liệu cá nhân", "Personal files");
+        Add("Lưu toàn bộ tài khoản vào tệp .vault đã mã hóa.", "Save all accounts to an encrypted .vault file.");
+        Add("Nạp lại từ tệp .vault, tài khoản trùng sẽ được bỏ qua.", "Load from a .vault file; duplicate accounts are skipped.");
+        Add("Xác minh tệp .vault hoặc .tqf và xem số lượng dữ liệu trước khi khôi phục; không sửa kho mật khẩu.", "Verify a .vault or .tqf file and view its contents before restoring; the password vault is not modified.");
+        Add("Sao lưu tệp cá nhân", "Back up personal files");
+        Add("Nén và mã hóa kho tệp (tối đa 100 MB) rồi đưa lên Drive.", "Compress and encrypt the file storage (up to 100 MB), then upload it to Drive.");
+        Add("Khôi phục tệp cá nhân", "Restore personal files");
+        Add("Khôi phục tệp cá nhân từ Google Drive", "Restore personal files from Google Drive");
+        Add("📁 Khôi phục tệp cá nhân từ Google Drive", "📁 Restore personal files from Google Drive");
+        Add("Không có tệp nào bị ghi đè: tệp trùng nội dung được bỏ qua, tệp trùng tên nhưng khác nội dung được lưu thêm với tên mới.", "No files are overwritten: files with duplicate content are skipped, while files with the same name but different content are saved under a new name.");
+        Add("Sao lưu tài khoản ra tệp trên máy, hoặc nhập từ tệp.", "Back up accounts to a file on this computer, or import them from a file.");
+        Add("Tệp chứa mật khẩu dạng chữ thường.", "The file contains passwords in plaintext.");
+        Add("Cần xác thực Windows Hello. Tệp chứa mật khẩu dạng chữ thường.", "Windows Hello authentication is required. The file contains passwords in plaintext.");
+        Add("Tải bản sao lưu về, không ghi đè tệp nào.", "Download the backup without overwriting any files.");
+        Add("Tên tệp", "File name");
+        Add("URI otpauth://totp/... hoặc khóa bí mật Base32", "otpauth://totp/... URI or Base32 secret");
+        Add("Xem trước khôi phục kho mật khẩu", "Preview password vault restore");
+        Add("Xem trước khôi phục tệp cá nhân", "Preview personal file restore");
+        Add("Nhập tệp Authenticator…", "Import authenticator file…");
+        Add("Chọn tệp cần nhập", "Select files to import");
+        Add("Xuất tệp", "Export file");
+        Add("Tạo tệp văn bản", "Create text file");
+        Add("Xuất kho mật khẩu", "Export password vault");
+        Add("Nhập kho mật khẩu", "Import password vault");
+        Add("Chọn tệp cần kiểm tra", "Select a file to verify");
+        Add("Chọn bản sao lưu cần kiểm tra", "Select a backup to verify");
+        Add("Chọn ảnh mã QR từ ứng dụng xác thực", "Select a QR code image from your authenticator app");
+        Add("Chọn tệp xuất từ ứng dụng xác thực", "Select an export file from your authenticator app");
+        Add("Tất cả tệp (*.*)|*.*", "All files (*.*)|*.*");
+        Add("Tệp văn bản (*.txt)|*.txt", "Text files (*.txt)|*.txt");
+        Add("Tệp CSV (*.csv)|*.csv|Tất cả tệp (*.*)|*.*", "CSV files (*.csv)|*.csv|All files (*.*)|*.*");
+        Add("Bản sao lưu kho mật khẩu (*.vault)|*.vault|Tất cả tệp (*.*)|*.*", "Password vault backup (*.vault)|*.vault|All files (*.*)|*.*");
+        Add("Bản sao lưu TQLTK (*.vault;*.tqf)|*.vault;*.tqf|Tất cả tệp (*.*)|*.*", "TQLTK backup (*.vault;*.tqf)|*.vault;*.tqf|All files (*.*)|*.*");
+        Add("Ảnh mã QR (*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.tif)|*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.tif|Tất cả tệp (*.*)|*.*", "QR code images (*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.tif)|*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.tif|All files (*.*)|*.*");
+        Add("Tệp xuất từ ứng dụng xác thực (*.2fas;*.json;*.txt)|*.2fas;*.json;*.txt|Tất cả tệp (*.*)|*.*", "Authenticator app export (*.2fas;*.json;*.txt)|*.2fas;*.json;*.txt|All files (*.*)|*.*");
+        Add("Tài khoản không còn trong kho mật khẩu.", "This account is no longer in the password vault.");
+        Add("Không thể sao chép mật khẩu vào bộ nhớ tạm an toàn. Hãy thử lại.", "Could not safely copy the password to the clipboard. Try again.");
+        Add("Không thể sao chép mã vào bộ nhớ tạm an toàn. Hãy thử lại.", "Could not safely copy the code to the clipboard. Try again.");
+        Add("Đang kiểm tra các mật khẩu duy nhất…", "Checking unique passwords…");
+        Add("Kiểm tra xong: không tìm thấy mật khẩu nào trong dữ liệu Pwned Passwords ({0} mật khẩu duy nhất).", "Check complete: no passwords were found in the Pwned Passwords dataset ({0} unique passwords).");
+        Add("Cần đổi {0} mật khẩu trong kho mật khẩu ({1} giá trị duy nhất xuất hiện trong dữ liệu rò rỉ).{2}{3}", "Change {0} passwords in the password vault ({1} unique values appeared in breach data).{2}{3}");
+        Add("Đã hủy kiểm tra; không có kết luận về mật khẩu.", "Check cancelled; no conclusion about the passwords was reached.");
+        Add("Không thể hoàn tất kiểm tra; chưa thể kết luận an toàn. {0}", "The check could not be completed; password safety cannot be determined. {0}");
+        Add("Kho mật khẩu: {0} tài khoản • {1} mật khẩu yếu • {2} mục dùng mật khẩu trùng • mật khẩu cũ nhất đã biết: {3} ngày • {4} tài khoản chưa rõ ngày đổi MK", "Password vault: {0} accounts • {1} weak passwords • {2} entries with reused passwords • oldest known password: {3} days • password change date unknown for {4} accounts");
+        Add("2FA: đã bật cho đăng nhập bằng mật khẩu.", "2FA: enabled for password sign-in.");
+        Add("2FA: đang tắt; nên bật để tăng bảo vệ khi đăng nhập bằng mật khẩu.", "2FA: disabled; enable it to better protect password sign-in.");
+        Add("Sao lưu kho mật khẩu: chưa ghi nhận bản sao lưu nào.", "Password vault backup: no backup has been recorded.");
+        Add("Sao lưu kho mật khẩu gần nhất: {0} • dữ liệu đã thay đổi sau lần sao lưu.", "Latest password vault backup: {0} • data has changed since the backup.");
+        Add("Sao lưu kho mật khẩu gần nhất: {0} • chưa phát hiện thay đổi mới.", "Latest password vault backup: {0} • no new changes detected.");
+        Add("Kho tệp: {0} tệp mã hóa không đọc được; giữ nguyên để xử lý riêng.", "File storage: {0} encrypted files could not be read; they were left unchanged for separate handling.");
+        Add("Kho tệp: {0}/{1} tệp đã mã hóa; tệp cũ sẽ được chuyển đổi khi mở kho.", "File storage: {0}/{1} files are encrypted; legacy files will be converted when storage is opened.");
+        Add("Kho tệp: {0} tệp được mã hóa AES-GCM, khóa gắn với tài khoản Windows hiện tại.", "File storage: {0} files are encrypted with AES-GCM using a key bound to the current Windows account.");
+        Add("Không thể đọc trạng thái mã hóa tệp: {0}", "Could not read file encryption status: {0}");
+        Add("Đặt lại mật khẩu '{0}'", "Reset password '{0}'");
+        Add("Đã đồng bộ kho mật khẩu lên Google Drive thành công!\n\nBản sao lưu nằm trong thư mục 'TQLTK Backup' trên Google Drive của bạn.", "Password vault synced to Google Drive successfully!\n\nThe backup is in the 'TQLTK Backup' folder in your Google Drive.");
+        Add("Chưa có mật khẩu trong kho mật khẩu để kiểm tra.", "There are no passwords in the password vault to check.");
+        Add("Sao lưu kho mật khẩu: chưa ghi nhận bản sao lưu nào.", "Password vault backup: no backup has been recorded.");
+        Add("Không thể đọc đầy đủ trạng thái kho mật khẩu.", "Could not read the full password vault status.");
+        Add("xem lịch sử mật khẩu", "view password history");
+        Add("sửa tài khoản (cửa sổ Sửa hiển thị được mật khẩu)", "edit an account (the Edit window displays its password)");
+        Add("xem mã TOTP", "view the TOTP code");
+        Add("xóa hẳn mục khỏi thùng rác", "permanently delete an item from Trash");
+        Add("xuất kho mật khẩu", "export the password vault");
+        Add("nhập kho mật khẩu", "import the password vault");
+        Add("kiểm tra bản sao lưu", "verify a backup");
+        Add("đồng bộ kho mật khẩu lên Google Drive", "sync the password vault to Google Drive");
+        Add("khôi phục kho mật khẩu từ Google Drive", "restore the password vault from Google Drive");
+        Add("đặt hoặc đổi cụm mật khẩu sao lưu", "set or change the backup passphrase");
+        Add("lưu cụm mật khẩu sao lưu", "save the backup passphrase");
+        Add("nhận cụm mật khẩu sao lưu cũ", "adopt the existing backup passphrase");
+        Add("khôi phục tệp cá nhân từ Google Drive", "restore personal files from Google Drive");
+        Add("kiểm tra mật khẩu rò rỉ", "check for breached passwords");
+        Add("Đã bật tự động đổi giao diện theo giờ.\n\n• 06:00 - 18:00: Sáng\n• 18:00 - 06:00: Tối\n\nHiện tại ({0}): {1}", "Automatic theme switching is on.\n\n• 06:00–18:00: Light\n• 18:00–06:00: Dark\n\nCurrent ({0}): {1}");
+        Add("Đã tắt tự động đổi giao diện theo giờ.", "Automatic theme switching is off.");
+        Add("Giao diện tự động", "Automatic theme");
+        Add("Đặt lại mật khẩu '{0}'", "Reset password '{0}'");
+        Add("Nhập", "Import");
+        Add("Xem nhật ký", "View log");
+        Add("TQLTK • Phát triển bởi thienthuongthienha_duyngadocton_", "TQLTK • Developed by thienthuongthienha_duyngadocton_");
+        Add("Được tạo bởi 天地と月の造化 - TQLTK v3.6.6 (BETA) | © 2026 Namtudifreefire | Giấy phép MIT", "Made by 天地と月の造化 - TQLTK v3.6.6 (BETA) | © 2026 Namtudifreefire | MIT License");
+        Add("Sửa thông tin người dùng", "Edit user");
+        Add("✏️ Sửa thông tin người dùng", "✏️ Edit user");
+        Add("Cấp / Thu quyền quản trị", "Grant / revoke admin");
+        Add("Tạo, sửa, khóa, phân quyền, xóa người dùng và xem nhật ký.", "Create, edit, lock, manage roles, delete users, and view logs.");
+        Add("👑 Quản trị viên", "👑 Administrator");
+        Add("👤 Người dùng", "👤 User");
+        Add("Đặt lại cài đặt", "Reset settings");
+        Add("Xác nhận đặt lại", "Confirm reset");
+        Add("Đã đặt lại cài đặt.\n\nKhởi động lại ứng dụng để áp dụng toàn bộ.", "Settings were reset.\n\nRestart the app to apply all changes.");
+        Add("Xóa toàn bộ cài đặt (giao diện, kích thước, vị trí, tài khoản gần nhất)?\n\nKhởi động lại ứng dụng để áp dụng toàn bộ.", "Clear all settings (theme, size, position, and last signed-in account)?\n\nRestart the app to apply all changes.");
+        Add("Nhật ký hôm nay", "Today's log");
+        Add("(Chưa có nhật ký hôm nay)", "(No log entries today)");
+        Add("Nhập tài khoản từ CSV", "Import accounts from CSV");
+        Add("📥 Nhập tài khoản từ CSV", "📥 Import accounts from CSV");
+        Add("📥 Nhập", "📥 Import");
+        Add("✅ Sẽ nhập: ", "✅ To import: ");
+        Add("Chọn các tài khoản bạn muốn nhập. Các tài khoản trùng lặp sẽ được bỏ chọn sẵn.", "Select the accounts to import. Duplicate accounts are unchecked by default.");
+        Add("Bạn chưa chọn tài khoản nào để nhập.", "You have not selected any accounts to import.");
+        Add("Vui lòng nhập tên đăng nhập.", "Enter a username.");
+        Add("Vui lòng nhập mật khẩu.", "Enter a password.");
+        Add("Đã sao chép tên đăng nhập!", "Username copied!");
+        Add("Xác nhận để sao chép mật khẩu", "Confirm to copy password");
+        Add("Xác thực Windows Hello không thành công và bạn chưa bật xác thực 2 bước nên không thể sao chép mật khẩu.\n\nVào Bảo mật → Bật xác thực 2 bước (Authenticator) để có cách xác thực dự phòng.", "Windows Hello authentication failed and two-factor authentication is not enabled, so the password cannot be copied.\n\nGo to Security → Enable two-factor authentication (Authenticator) to add a backup verification method.");
+        Add("Xác thực thất bại. Đã hủy sao chép mật khẩu.", "Authentication failed. Password copying was cancelled.");
+        Add("Đã sao chép mật khẩu! Clipboard sẽ tự xóa sau ", "Password copied! The clipboard will clear in ");
+        Add("Chọn tệp cần xuất.", "Select a file to export.");
+        Add("Xuất thành công!", "Export completed successfully!");
+        Add("Đã đặt lại mật khẩu. Người dùng sẽ phải đổi mật khẩu khi đăng nhập lần tới.", "Password reset. The user will have to change it at the next sign-in.");
+        Add("Tên đăng nhập / Email (*):", "Username / Email (*):");
+        Add("Chưa có bản sao lưu File cá nhân nào của bạn trên Google Drive của tài khoản này. Nếu bạn dùng tên đăng nhập khác trên máy cũ, hãy tick ô bên dưới để xem thêm.", "There are no personal file backups for your account on this Google Drive. If you used a different username on the old computer, select the box below to see more.");
+        Add("Chưa có bản sao lưu nào trên Google Drive của tài khoản này. Lưu ý: bản sao lưu tạo bằng phiên bản cũ hơn 3.6.1 sẽ không hiện ở đây.", "There are no backups on this account's Google Drive. Note: backups created with versions earlier than 3.6.1 are not shown here.");
+        Add("Chưa có bản sao lưu nào của bạn trên Google Drive của tài khoản này. Nếu bạn dùng tên đăng nhập khác trên máy cũ, hãy tick ô bên dưới để xem thêm. Bản sao lưu tạo bằng phiên bản cũ hơn 3.6.1 sẽ không hiện ở đây.", "There are no backups for your account on this Google Drive. If you used a different username on the old computer, select the box below to see more. Backups created with versions earlier than 3.6.1 are not shown here.");
+        Add("Tìm thấy {0} bản sao lưu File cá nhân, mới nhất ở trên cùng. Chọn một bản rồi bấm Khôi phục.", "Found {0} personal file backups, newest first. Select one and choose Restore.");
+        Add("Tìm thấy {0} bản sao lưu, mới nhất ở trên cùng. Cột Thuộc về: Của bạn là bản tạo từ tài khoản này, Bản cũ là bản tạo trước khi tách theo người dùng. Chọn một bản rồi bấm Khôi phục.", "Found {0} backups, newest first. In the Owner column, Yours means the backup was created from this account, and Legacy means it predates per-user separation. Select a backup and choose Restore.");
+        Add("Nguồn: {0}\nNgười tạo: {1}\nSẽ nhập {2} tài khoản; bỏ qua {3} mục trùng.\nMật khẩu không hiển thị trong phần xem trước.", "Source: {0}\nCreated by: {1}\nWill import {2} accounts; skip {3} duplicates.\nPasswords are hidden in the preview.");
+        Add("Bản sao lưu Google Drive: {0} ({1})\nNgười tạo: {2}\nSẽ nhập {3} tài khoản; bỏ qua {4} mục trùng. Mật khẩu không hiển thị.", "Google Drive backup: {0} ({1})\nCreated by: {2}\nWill import {3} accounts; skip {4} duplicates. Passwords are hidden.");
+        Add("Bản sao lưu Google Drive: {0} ({1})\nNgười tạo: {2}\nSẽ khôi phục {3} file; bỏ qua {4} file trùng. Dung lượng: {5}.", "Google Drive backup: {0} ({1})\nCreated by: {2}\nWill restore {3} files; skip {4} duplicate files. Size: {5}.");
+        Add("Bản sao lưu Google Drive: {0} ({1})\nNgười tạo: {2}\nSẽ khôi phục {3} file; bỏ qua {4} file trùng. Dung lượng: {5}. Bỏ qua {6} mục không hợp lệ.", "Google Drive backup: {0} ({1})\nCreated by: {2}\nWill restore {3} files; skip {4} duplicate files. Size: {5}. Skip {6} invalid entries.");
+        Add("Làm mới", "Refresh");
+        Add("Sao chép", "Copy");
+        Add("📋 Sao chép", "📋 Copy");
+        Add("Sao chép tên đăng nhập", "Copy username");
+        Add("Sao chép mật khẩu", "Copy password");
+        Add("Đặt lại", "Reset");
+        Add("Đặt lại mật khẩu", "Reset password");
+        Add("Chưa đăng nhập", "Not signed in");
+        Add("Sẽ nhập", "Will import");
         Add("Copy mã (clipboard tự xóa)", "Copy code (clipboard clears automatically)");
         Add("Ctrl+Shift+,", "Ctrl+Shift+,");
         Add("Cụm mật khẩu sao lưu", "Backup passphrase");
@@ -103,6 +244,8 @@ internal static class EnglishCatalog
         Add("Đăng ký tài khoản - TQLTK", "Register account - TQLTK");
         Add("Đăng nhập - TQLTK", "Sign in - TQLTK");
         Add("Đăng nhập bằng Windows Hello", "Sign in with Windows Hello");
+        Add("Role=Admin", "Role=Administrator");
+        Add("Role=User", "Role=User");
         Add("Đánh dấu yêu thích", "Mark as favorite");
         Add("Đặt / Đổi", "Set / change");
         Add("Đặt mật khẩu mới cho tài khoản của bạn.", "Set a new password for your account.");
@@ -183,6 +326,7 @@ internal static class EnglishCatalog
         Add("Mã 6 số trong ứng dụng:", "6-digit code from the app:");
         Add("Mã khôi phục 2FA", "2FA recovery codes");
         Add("Mã khôi phục mới", "New recovery codes");
+        Add("Mã định danh", "ID");
         Add("Mã TOTP", "TOTP code");
         Add("Mã xác thực cho website (TOTP)", "Website authenticator code (TOTP)");
         Add("Mã xác thực được lưu cùng vault đã mã hóa. QR/secret chứa khóa bí mật; nhập chỉ từ nguồn bạn tin cậy.", "Authenticator data is stored in the encrypted vault. QR codes and secrets contain private keys; import them only from trusted sources.");
@@ -195,6 +339,7 @@ internal static class EnglishCatalog
         Add("Mật khẩu mới:", "New password:");
         Add("Mật khẩu mới: tối thiểu 8 ký tự nếu bật 2FA, nếu không tối thiểu 15 ký tự", "New password: at least 8 characters with 2FA enabled; otherwise at least 15 characters");
         Add("Mật khẩu trước đây", "Previous passwords");
+        Add("Mật khẩu", "Password");
         Add("Mật khẩu:", "Password:");
         Add("Màu sắc và vị trí cửa sổ.", "Theme and window position.");
         Add("Mở", "Open");
@@ -881,12 +1026,44 @@ internal static class EnglishCatalog
         new KeyValuePair<string, string>(" tài khoản ra:\n\n", " accounts to:\n\n"),
         new KeyValuePair<string, string>("' (>= 6 ký tự):\n\n", "' (at least 6 characters):\n\n"),
         new KeyValuePair<string, string>("OnExit đã chạy, mã thoát ", "OnExit ran; exit code "),
+        new KeyValuePair<string, string>("Tự động đổi giao diện sang ", "Automatically switched theme to "),
+        new KeyValuePair<string, string>(" sang Sáng lúc ", " to Light at "),
+        new KeyValuePair<string, string>(" sang Tối lúc ", " to Dark at "),
+        new KeyValuePair<string, string>("Đã bật tự động đổi giao diện theo giờ.\n\n", "Automatic theme switching is on.\n\n"),
+        new KeyValuePair<string, string>("Đã tắt tự động đổi giao diện theo giờ.", "Automatic theme switching is off."),
+        new KeyValuePair<string, string>("• 06:00 - 18:00: Sáng", "• 06:00–18:00: Light"),
+        new KeyValuePair<string, string>("• 18:00 - 06:00: Tối", "• 18:00–06:00: Dark"),
+        new KeyValuePair<string, string>(": Sáng", ": Light"),
+        new KeyValuePair<string, string>(": Tối", ": Dark"),
+        new KeyValuePair<string, string>("Đã sao chép mã. Bộ nhớ tạm sẽ tự xóa sau ", "Code copied. The clipboard will clear after "),
+        new KeyValuePair<string, string>("Đã sao chép. Bộ nhớ tạm sẽ tự xóa sau ", "Copied. The clipboard will clear after "),
+        new KeyValuePair<string, string>("Đã sao chép mật khẩu! Bộ nhớ tạm sẽ tự xóa sau ", "Password copied! The clipboard will clear after "),
+        new KeyValuePair<string, string>("\n\nTừ giờ các bản sao lưu và tệp xuất kho mật khẩu mới sẽ mở được trên máy khác ", "\n\nNew backups and password vault exports can now be opened on another computer "),
+        new KeyValuePair<string, string>("Nhập vào sẽ thêm các tài khoản của '", "Importing will add accounts from '"),
+        new KeyValuePair<string, string>("Kho mật khẩu: ", "Password vault: "),
+        new KeyValuePair<string, string>(" tài khoản • ", " accounts • "),
+        new KeyValuePair<string, string>(" mật khẩu yếu • ", " weak passwords • "),
+        new KeyValuePair<string, string>(" mục dùng mật khẩu trùng • ", " entries with reused passwords • "),
+        new KeyValuePair<string, string>(" mật khẩu cũ nhất đã biết: ", " oldest known password: "),
+        new KeyValuePair<string, string>(" ngày • ", " days • "),
+        new KeyValuePair<string, string>(" tài khoản chưa rõ ngày đổi MK", " accounts with an unknown password change date"),
+        new KeyValuePair<string, string>("Sao lưu kho mật khẩu gần nhất: ", "Latest password vault backup: "),
+        new KeyValuePair<string, string>(" • dữ liệu đã thay đổi sau lần sao lưu.", " • data has changed since the backup."),
+        new KeyValuePair<string, string>(" • chưa phát hiện thay đổi mới.", " • no new changes detected."),
+        new KeyValuePair<string, string>("Tải lên ", "Uploaded "),
+        new KeyValuePair<string, string>(" tệp cá nhân (", " personal files ("),
+        new KeyValuePair<string, string>("Nhập kho mật khẩu từ Drive: ", "Import password vault from Drive: "),
+        new KeyValuePair<string, string>("Đã tải kho mật khẩu lên thành công", "Password vault uploaded successfully"),
+        new KeyValuePair<string, string>("Không thể khôi phục mật khẩu từ lịch sử. Kho mật khẩu chưa được cập nhật.\n\n", "Could not restore the password from history. The password vault was not updated.\n\n"),
+        new KeyValuePair<string, string>("Cần xác thực để ", "Authentication is required to "),
+        new KeyValuePair<string, string>("nhưng Windows Hello không thành công và bạn chưa bật xác thực 2 bước.\n\n", "but Windows Hello failed and two-factor authentication is not enabled.\n\n"),
         new KeyValuePair<string, string>("Người tạo: ", "Created by: "),
         new KeyValuePair<string, string>("Nhập mật khẩu mới cho '", "Enter a new password for '"),
         new KeyValuePair<string, string>("Nhập sai mã 2FA quá nhiều lần. Hãy thử lại sau khoảng ", "Too many incorrect 2FA codes. Try again in about "),
         new KeyValuePair<string, string>("Nhập sai mật khẩu quá nhiều lần. Tài khoản bị khóa tạm thời, hãy thử lại sau khoảng ", "Too many incorrect passwords. The account is temporarily locked; try again in about "),
         new KeyValuePair<string, string>("Nhập vault từ Drive: ", "Import vault from Drive: "),
         new KeyValuePair<string, string>("Reset mật khẩu '", "Reset password for '"),
+        new KeyValuePair<string, string>("Đặt lại mật khẩu '", "Reset password '"),
         new KeyValuePair<string, string>("Sai mật khẩu ", "Incorrect password "),
         new KeyValuePair<string, string>("Sai mật khẩu. Còn ", "Incorrect password. Remaining attempts: "),
         new KeyValuePair<string, string>("Sửa '", "Edit '"),
@@ -899,6 +1076,7 @@ internal static class EnglishCatalog
         new KeyValuePair<string, string>("Sẽ nhập", "Will import"),
         new KeyValuePair<string, string>("Đã hủy khôi phục: bản sao lưu này thuộc về người dùng '", "Restore cancelled: this backup belongs to user '"),
         new KeyValuePair<string, string>("Đã hủy nhập: bản sao lưu này thuộc về người dùng '", "Import cancelled: this backup belongs to user '"),
+        new KeyValuePair<string, string>("Đã hủy khôi phục.", "Restore was cancelled."),
         new KeyValuePair<string, string>("Đã khoảng ", "About "),
         new KeyValuePair<string, string>("Đã khôi phục ", "Restored "),
         new KeyValuePair<string, string>("Đã kiểm tra ", "Checked "),
@@ -925,10 +1103,14 @@ internal static class EnglishCatalog
         new KeyValuePair<string, string>("xem mã TOTP", "view TOTP code"),
         new KeyValuePair<string, string>("xóa hẳn mục khỏi thùng rác", "permanently delete an item from Trash"),
         new KeyValuePair<string, string>("ngày xuất: ", "export date: "),
+        new KeyValuePair<string, string>("Nguồn: ", "Source: "),
+        new KeyValuePair<string, string>("Bản sao lưu Google Drive: ", "Google Drive backup: "),
         new KeyValuePair<string, string>("người tạo: ", "created by: "),
         new KeyValuePair<string, string>("nhớ xác thực ≤", "remember authentication ≤"),
         new KeyValuePair<string, string>("kể từ lần sao lưu gần nhất (", "since the last backup ("),
         new KeyValuePair<string, string>("kể từ lần đăng nhập trước (", "since the previous sign-in ("),
+        new KeyValuePair<string, string>(" kể từ lần đăng nhập trước (", " since the previous sign-in ("),
+        new KeyValuePair<string, string>(" trong nhật ký gần đây (tối đa 30 ngày):\n\n", " in recent logs (up to 30 days):\n\n"),
         new KeyValuePair<string, string>("cũ không đúng", "is incorrect"),
         new KeyValuePair<string, string>("hoặc nhờ một quản trị viên khác đặt lại mật khẩu.", "or ask another administrator to reset the password."),
         new KeyValuePair<string, string>("lần gần nhất: ", "last seen: "),
@@ -950,7 +1132,14 @@ internal static class EnglishCatalog
         new KeyValuePair<string, string>("Nếu không phải bạn, hãy đổi mật khẩu ngay (Hệ thống → Đổi mật khẩu) và xem lại nhật ký hoạt động.", "If this was not you, change your password now (System → Change Password) and review the activity log."),
         new KeyValuePair<string, string>("Sẽ khôi phục ", "Will restore "),
         new KeyValuePair<string, string>("Sẽ nhập ", "Will import "),
+        new KeyValuePair<string, string>("\nSẽ nhập ", "\nWill import "),
+        new KeyValuePair<string, string>(" tài khoản; bỏ qua ", " accounts; skip "),
+        new KeyValuePair<string, string>("\nMật khẩu không hiển thị trong phần xem trước.", "\nPasswords are hidden in the preview."),
         new KeyValuePair<string, string>("Trước khi hủy, ", "Before cancellation, "),
+        new KeyValuePair<string, string>("\nTrước khi hủy, ", "\nBefore cancellation, "),
+        new KeyValuePair<string, string>(" Cột \"Thuộc về\": \"Của bạn\" là bản tạo từ tài khoản này, \"Bản cũ\" là bản tạo trước khi tách theo người dùng. ", " The \"Owner\" column: \"Yours\" means the backup was created from this account; \"Legacy\" means it predates per-user separation. "),
+        new KeyValuePair<string, string>("; bỏ qua ", "; skip "),
+        new KeyValuePair<string, string>(" Mật khẩu không hiển thị.", " Passwords are hidden."),
         new KeyValuePair<string, string>("Trước khi lỗi xảy ra, ", "Before the error occurred, "),
         new KeyValuePair<string, string>(" (bản sao lưu của người dùng '", " (backup from user '"),
         new KeyValuePair<string, string>(" (có thay đổi mới)", " (new changes)"),
@@ -1118,7 +1307,7 @@ internal static class EnglishCatalog
         new KeyValuePair<string, string>("Đọc được ", "Found "),
         new KeyValuePair<string, string>("Độ mạnh: ", "Strength: "),
         new KeyValuePair<string, string>("⚠ Trùng: ", "⚠ Duplicates: "),
-        new KeyValuePair<string, string>("✅ Sẽ import: ", "✅ To import: "),
+        new KeyValuePair<string, string>("✅ Sẽ nhập: ", "✅ To import: "),
         new KeyValuePair<string, string>("📊 Tổng: ", "📊 Total: "),
         new KeyValuePair<string, string>("Đang thử lại sau ", "Retrying in "),
         new KeyValuePair<string, string>("Đã thiết lập ", "Configured "),

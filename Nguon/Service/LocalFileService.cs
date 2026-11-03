@@ -8,7 +8,7 @@ using System.Threading;
 
 namespace PersonalInfoManager.Services
 {
-        public class LocalFileService
+    public class LocalFileService
     {
         private readonly string _storageRoot;
 
@@ -19,7 +19,7 @@ namespace PersonalInfoManager.Services
                 "PersonalInfoManager", "Storage");
         }
 
-                public string GetUserFolder(string username)
+        public string GetUserFolder(string username)
         {
             var userService = new UserService();
             var user = userService.FindByUsername(username)
@@ -75,7 +75,7 @@ namespace PersonalInfoManager.Services
             return currentFolder;
         }
 
-                public string ImportFile(string username, string sourcePath)
+        public string ImportFile(string username, string sourcePath)
         {
             if (!File.Exists(sourcePath))
                 throw new FileNotFoundException("File nguồn không tồn tại.", sourcePath);
@@ -104,7 +104,7 @@ namespace PersonalInfoManager.Services
             return destPath;
         }
 
-                public string SaveTextFile(string username, string fileName, string content)
+        public string SaveTextFile(string username, string fileName, string content)
         {
             string userFolder = GetUserFolder(username);
             string destPath = EnsureUniquePath(Path.Combine(userFolder, fileName));
@@ -123,7 +123,7 @@ namespace PersonalInfoManager.Services
             return destPath;
         }
 
-                public List<FileInfo> ListFiles(string username, CancellationToken cancellationToken = default)
+        public List<FileInfo> ListFiles(string username, CancellationToken cancellationToken = default)
         {
             string userFolder = GetUserFolder(username);
             var directory = new DirectoryInfo(userFolder);
@@ -198,13 +198,13 @@ namespace PersonalInfoManager.Services
             LocalFileEncryptionService.ContentEqualsReadOnly(
                 storedPath, plaintext, plaintextLength, cancellationToken);
 
-                public void DeleteFile(string filePath)
+        public void DeleteFile(string filePath)
         {
             if (File.Exists(filePath))
                 File.Delete(filePath);
         }
 
-                public void ExportFile(string sourcePath, string destPath)
+        public void ExportFile(string sourcePath, string destPath)
         {
             if (!File.Exists(sourcePath))
                 throw new FileNotFoundException("File nguồn không tồn tại.", sourcePath);
@@ -213,7 +213,7 @@ namespace PersonalInfoManager.Services
             LocalFileEncryptionService.DecryptFileAtomic(sourcePath, destPath, overwrite: true);
         }
 
-                public long GetUsedBytes(string username)
+        public long GetUsedBytes(string username)
         {
             string folder = GetUserFolder(username);
             return GetStoredFiles(new DirectoryInfo(folder)).Where(f => !IsTemporaryFile(f.Name)).Sum(f => f.Length);
@@ -234,8 +234,7 @@ namespace PersonalInfoManager.Services
         private static bool IsTemporaryFile(string name) =>
             name.StartsWith(".tqltk-encrypted-", StringComparison.OrdinalIgnoreCase) ||
             name.StartsWith(".tqltk-decrypted-", StringComparison.OrdinalIgnoreCase);
-
-                private static string EnsureUniquePath(string path)
+        private static string EnsureUniquePath(string path)
         {
             if (!File.Exists(path)) return path;
 

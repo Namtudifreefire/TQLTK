@@ -5,7 +5,7 @@ using PersonalInfoManager.Services;
 
 namespace PersonalInfoManager
 {
-        public partial class BackupPassphraseWindow : Window
+    public partial class BackupPassphraseWindow : Window
     {
         private readonly bool _confirmMode;
 
@@ -48,7 +48,6 @@ namespace PersonalInfoManager
                     ShowError($"Cụm mật khẩu cần ít nhất {BackupCrypto.MinPassphraseLength} ký tự.");
                     return;
                 }
-
                 string a = p.Normalize(NormalizationForm.FormC);
                 string b = pwdConfirm.Password.Normalize(NormalizationForm.FormC);
                 if (!string.Equals(a, b, StringComparison.Ordinal))

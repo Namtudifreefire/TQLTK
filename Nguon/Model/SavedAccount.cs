@@ -4,17 +4,17 @@ using System.Linq;
 
 namespace PersonalInfoManager.Models
 {
-        public class SavedAccount
+    public class SavedAccount
     {
         public Guid Id { get; set; } = Guid.NewGuid();
 
-                public string ServiceName { get; set; } = "";
+        public string ServiceName { get; set; } = "";
 
-                public string Username { get; set; } = "";
+        public string Username { get; set; } = "";
 
-                public string Password { get; set; } = "";
+        public string Password { get; set; } = "";
 
-                public string Note { get; set; } = "";
+        public string Note { get; set; } = "";
         public string WebsiteUrl { get; set; } = "";
         public string Folder { get; set; } = "";
         public List<string> Tags { get; set; } = new();

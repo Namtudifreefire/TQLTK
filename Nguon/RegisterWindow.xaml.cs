@@ -12,7 +12,7 @@ namespace PersonalInfoManager
         private readonly UserService _userService = new();
         private readonly bool _isInitialAdmin;
 
-                public string RegisteredUsername { get; private set; } = "";
+        public string RegisteredUsername { get; private set; } = "";
 
         public RegisterWindow() : this(false) { }
 
@@ -31,13 +31,12 @@ namespace PersonalInfoManager
 
             Loaded += (_, _) => txtUsername.Focus();
         }
-
         private void TxtPassword_PasswordChanged(object sender, RoutedEventArgs e)
         {
             string pwd = txtPassword.Password;
             if (string.IsNullOrEmpty(pwd))
             {
-                lblStrength.Text = "";
+                LanguageService.SetLocalizedText(lblStrength, "");
                 return;
             }
 
@@ -50,7 +49,7 @@ namespace PersonalInfoManager
                 _ => ("Rất mạnh", Brushes.DarkGreen)
             };
 
-            lblStrength.Text = $"Độ mạnh: {text}";
+            LanguageService.SetLocalizedText(lblStrength, $"Độ mạnh: {text}");
             lblStrength.Foreground = color;
         }
 
@@ -84,7 +83,6 @@ namespace PersonalInfoManager
             if (pwd.Any(c => !char.IsLetterOrDigit(c))) score++;
             return score;
         }
-
         private void BtnRegister_Click(object sender, RoutedEventArgs e)
         {
             string username = txtUsername.Text.Trim();
@@ -93,14 +91,12 @@ namespace PersonalInfoManager
             string fullName = txtFullName.Text.Trim();
             string email = txtEmail.Text.Trim();
             string phone = txtPhone.Text.Trim();
-
             if (string.IsNullOrWhiteSpace(username) || username.Length < 3)
             {
                 ShowError("Tên đăng nhập phải từ 3 ký tự trở lên.");
                 txtUsername.Focus();
                 return;
             }
-
             if (username.Any(c => !char.IsLetterOrDigit(c) && c != '_'))
             {
                 ShowError("Tên đăng nhập chỉ được chứa chữ, số và dấu gạch dưới.");
@@ -129,7 +125,6 @@ namespace PersonalInfoManager
                 txtFullName.Focus();
                 return;
             }
-
             var result = _isInitialAdmin
                 ? _userService.CreateInitialAdmin(username, password, fullName, email, phone)
                 : _userService.CreateUserFull(
@@ -145,7 +140,6 @@ namespace PersonalInfoManager
                 ShowError(result.message);
                 return;
             }
-
             try
             {
                 ActivityLogger.Log(username, _isInitialAdmin ? "INITIAL_ADMIN_CREATED" : "REGISTER",
@@ -168,13 +162,11 @@ namespace PersonalInfoManager
             DialogResult = true;
             Close();
         }
-
         private void BtnCancel_Click(object sender, RoutedEventArgs e)
         {
             DialogResult = false;
             Close();
         }
-
         private void ShowError(string message)
         {
             MessageBox.Show(message, "Lỗi",

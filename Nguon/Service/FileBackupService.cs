@@ -35,13 +35,12 @@ namespace PersonalInfoManager.Services
         internal string LocalFingerprint { get; }
     }
 
-        public static class FileBackupService
+    public static class FileBackupService
     {
-                public const long MaxTotalBytes = 100L * 1024 * 1024;
+        public const long MaxTotalBytes = 100L * 1024 * 1024;
 
         private const int CurrentFormatVersion = 1;
         private const string ManifestEntryName = "__tqltk__/manifest.json";
-
         private static readonly Regex ReservedName =
             new(@"^(CON|PRN|AUX|NUL|COM[0-9]|LPT[0-9])(\..*)?$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
@@ -53,8 +52,7 @@ namespace PersonalInfoManager.Services
             public int FileCount { get; set; }
             public long TotalBytes { get; set; }
         }
-
-                public static (int count, long bytes) Summarize(string username)
+        public static (int count, long bytes) Summarize(string username)
         {
             var fileService = new LocalFileService();
             var files = fileService.ListFiles(username);
@@ -140,7 +138,7 @@ namespace PersonalInfoManager.Services
         public static string FormatSize(long bytes) =>
             bytes < 1024 * 1024 ? $"{bytes / 1024.0:0.#} KB" : $"{bytes / 1048576.0:0.#} MB";
 
-                public static (bool ok, string message, int count, long bytes) CreateArchive(
+        public static (bool ok, string message, int count, long bytes) CreateArchive(
             string username, string destPath, string passphrase)
         {
             try
@@ -205,8 +203,7 @@ namespace PersonalInfoManager.Services
                 return (false, $"Lỗi: {ex.Message}", 0, 0);
             }
         }
-
-                public static (bool ok, string message, FileRestorePreview? preview) PreviewRestore(
+        public static (bool ok, string message, FileRestorePreview? preview) PreviewRestore(
             string username, string sourcePath, string? passphrase = null,
             Func<string?, string?>? askPassphrase = null,
             CancellationToken cancellationToken = default)
@@ -359,7 +356,6 @@ namespace PersonalInfoManager.Services
 
                 if (!File.Exists(sourcePath))
                     return (false, "File không tồn tại.", 0, 0);
-
                 if (new FileInfo(sourcePath).Length > MaxTotalBytes + 16L * 1024 * 1024)
                     return (false, "File quá lớn so với một bản sao lưu File cá nhân của TQLTK.", 0, 0);
 
@@ -387,7 +383,6 @@ namespace PersonalInfoManager.Services
                 using var zip = new ZipArchive(ms, ZipArchiveMode.Read);
                 if (zip.GetEntry(ManifestEntryName) == null)
                     return (false, "Bản sao lưu thiếu manifest của TQLTK.", 0, 0);
-
                 string owner = ReadOwner(zip);
                 bool foreignOwner = owner.Length > 0 &&
                                     !string.Equals(owner, username, StringComparison.OrdinalIgnoreCase);
@@ -409,7 +404,6 @@ namespace PersonalInfoManager.Services
 
                 if (entries.Count == 0)
                     return (false, "Bản sao lưu không chứa file nào để khôi phục.", 0, 0);
-
                 if (entries.Sum(e => e.Length) > MaxTotalBytes)
                     return (false, "Bản sao lưu có dung lượng lớn bất thường nên bị từ chối.", 0, 0);
 
@@ -429,7 +423,6 @@ namespace PersonalInfoManager.Services
                             continue;
                         }
                     }
-
                     cancellationToken.ThrowIfCancellationRequested();
                     using var source = entry.Open();
                     fileService.ImportStream(username, entry.Name, source, entry.Length,
@@ -462,8 +455,7 @@ namespace PersonalInfoManager.Services
                 if (zipBytes != null) CryptographicOperations.ZeroMemory(zipBytes);
             }
         }
-
-                private static byte[]? DecryptWithPrompts(
+        private static byte[]? DecryptWithPrompts(
             byte[] data, string username, string? passphrase, Func<string?, string?>? askPassphrase)
         {
             string? candidate = passphrase ?? BackupCrypto.GetStoredPassphrase(username);
@@ -619,7 +611,7 @@ namespace PersonalInfoManager.Services
             finally { CryptographicOperations.ZeroMemory(digest); }
         }
 
-                private static bool IsUserFileEntry(ZipArchiveEntry e)
+        private static bool IsUserFileEntry(ZipArchiveEntry e)
         {
             string name = e.Name;
 

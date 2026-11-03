@@ -61,7 +61,7 @@
                 </Border>
 
                 <Button Grid.Column="1"
-                        Content="📋 Copy"
+                        Content="📋 Sao chép"
                         Height="34" Padding="12,4" Margin="6,0,0,0"
                         Style="{StaticResource OutlineButton}"
                         Click="BtnCopySecret_Click" />
@@ -129,7 +129,7 @@
             </Border>
 
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,18,0,0">
-                <Button Content="📋 Copy mã"
+                <Button Content="📋 Sao chép mã"
                         Height="38" Padding="20,8" Margin="0,0,8,0"
                         Style="{StaticResource OutlineButton}"
                         Click="BtnCopyRecovery_Click" />

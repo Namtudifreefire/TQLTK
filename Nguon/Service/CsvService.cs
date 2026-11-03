@@ -9,18 +9,15 @@ using PersonalInfoManager.Models;
 
 namespace PersonalInfoManager.Services
 {
-        public static class CsvService
+    public static class CsvService
     {
-
-                public static (bool ok, string message) ExportToFile(
+        public static (bool ok, string message) ExportToFile(
             List<SavedAccount> accounts, string filePath)
         {
             try
             {
                 var sb = new StringBuilder();
-
                 sb.AppendLine("ServiceName,Username,Password,Note,CreatedAt,UpdatedAt,PasswordChangedAt,TotpSecret,TotpIssuer,TotpAlgorithm,TotpDigits,TotpPeriodSeconds,WebsiteUrl,Folder,Tags,IsFavorite,CustomFieldsJson");
-
                 foreach (var acc in accounts)
                 {
                     sb.AppendLine(string.Join(",",
@@ -43,7 +40,6 @@ namespace PersonalInfoManager.Services
                         EscapeCsv(JsonSerializer.Serialize(acc.CustomFields ?? new List<AccountCustomField>()))
                     ));
                 }
-
                 File.WriteAllText(filePath, sb.ToString(), new UTF8Encoding(true));
 
                 return (true, $"Đã xuất {accounts.Count} tài khoản ra:\n{filePath}");
@@ -54,13 +50,11 @@ namespace PersonalInfoManager.Services
             }
         }
 
-                private static string EscapeCsv(string? value)
+        private static string EscapeCsv(string? value)
         {
             if (string.IsNullOrEmpty(value)) return "\"\"";
-
             if (StartsWithSpreadsheetFormula(value))
                 value = "'" + value;
-
             if (value.Contains(',') || value.Contains('"') ||
                 value.Contains('\n') || value.Contains('\r'))
             {
@@ -79,26 +73,21 @@ namespace PersonalInfoManager.Services
 
             return index < value.Length && value[index] is '=' or '+' or '-' or '@';
         }
-
-                public static (bool ok, string message, List<SavedAccount> accounts)
+        public static (bool ok, string message, List<SavedAccount> accounts)
             ImportFromFile(string filePath)
         {
             try
             {
                 if (!File.Exists(filePath))
                     return (false, "File không tồn tại.", new List<SavedAccount>());
-
                 string content = File.ReadAllText(filePath, Encoding.UTF8);
                 var lines = ParseCsvLines(content);
 
                 if (lines.Count < 2)
                     return (false, "File CSV rỗng hoặc không có dữ liệu.", new List<SavedAccount>());
-
                 var header = lines[0].Select(h => h.Trim().ToLowerInvariant()).ToList();
                 var accounts = new List<SavedAccount>();
-
                 string format = DetectFormat(header);
-
                 for (int i = 1; i < lines.Count; i++)
                 {
                     var row = lines[i];
@@ -111,7 +100,6 @@ namespace PersonalInfoManager.Services
                     }
                     catch
                     {
-
                     }
                 }
 
@@ -126,13 +114,11 @@ namespace PersonalInfoManager.Services
             }
         }
 
-                private static string DetectFormat(List<string> header)
+        private static string DetectFormat(List<string> header)
         {
             var h = header.Select(x => x.Trim().ToLowerInvariant()).ToList();
-
             if (h.Contains("login_username") || h.Contains("login_password"))
                 return "Bitwarden";
-
             if (h.Contains("url") && h.Contains("grouping"))
                 return "LastPass";
 
@@ -149,17 +135,15 @@ namespace PersonalInfoManager.Services
                 (h.Contains("otp") || h.Contains("otpauth") || h.Contains("category") ||
                  h.Contains("type") || h.Contains("favorite")))
                 return "1Password";
-
             if (h.Contains("url") && h.Contains("name") && h.Contains("username") && h.Contains("password"))
                 return "Chrome";
-
             if (h.Contains("servicename"))
                 return "TQLTK";
 
             return "Generic";
         }
 
-                private static SavedAccount? ParseRow(
+        private static SavedAccount? ParseRow(
             List<string> row, List<string> header, string format)
         {
             string Get(string colName)
@@ -270,14 +254,12 @@ namespace PersonalInfoManager.Services
                     break;
 
                 default:
-
                     serviceName = row.Count > 0 ? row[0].Trim() : "";
                     username = row.Count > 1 ? row[1].Trim() : "";
                     password = row.Count > 2 ? row[2].Trim() : "";
                     note = row.Count > 3 ? row[3].Trim() : "";
                     break;
             }
-
             if (string.IsNullOrWhiteSpace(serviceName) &&
                 string.IsNullOrWhiteSpace(username) &&
                 string.IsNullOrWhiteSpace(password))
@@ -403,7 +385,7 @@ namespace PersonalInfoManager.Services
             return fields;
         }
 
-                private static List<List<string>> ParseCsvLines(string content)
+        private static List<List<string>> ParseCsvLines(string content)
         {
             var result = new List<List<string>>();
             var currentRow = new List<string>();
@@ -418,7 +400,6 @@ namespace PersonalInfoManager.Services
                 {
                     if (c == '"')
                     {
-
                         if (i + 1 < content.Length && content[i + 1] == '"')
                         {
                             currentField.Append('"');
@@ -447,7 +428,6 @@ namespace PersonalInfoManager.Services
                     }
                     else if (c == '\n' || c == '\r')
                     {
-
                         if (c == '\r' && i + 1 < content.Length && content[i + 1] == '\n')
                             i++;
 
@@ -464,7 +444,6 @@ namespace PersonalInfoManager.Services
                     }
                 }
             }
-
             if (currentField.Length > 0 || currentRow.Count > 0)
             {
                 currentRow.Add(currentField.ToString());
@@ -474,8 +453,7 @@ namespace PersonalInfoManager.Services
 
             return result;
         }
-
-                public static List<SavedAccount> RemoveDuplicates(
+        public static List<SavedAccount> RemoveDuplicates(
             List<SavedAccount> imported, List<SavedAccount> existing)
         {
             var existingKeys = new HashSet<string>(

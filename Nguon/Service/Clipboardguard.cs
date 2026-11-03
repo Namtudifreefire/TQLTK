@@ -7,7 +7,7 @@ using System.Windows.Threading;
 
 namespace PersonalInfoManager.Services
 {
-        public static class ClipboardGuard
+    public static class ClipboardGuard
     {
         public const int ClearAfterSeconds = 30;
 
@@ -23,7 +23,6 @@ namespace PersonalInfoManager.Services
             {
                 var data = new DataObject();
                 data.SetText(text);
-
                 data.SetData("ExcludeClipboardContentFromMonitorProcessing", new MemoryStream(BitConverter.GetBytes(1)));
                 data.SetData("CanIncludeInClipboardHistory", new MemoryStream(BitConverter.GetBytes(0)));
                 data.SetData("CanUploadToCloudClipboard", new MemoryStream(BitConverter.GetBytes(0)));
@@ -32,7 +31,6 @@ namespace PersonalInfoManager.Services
             }
             catch
             {
-
                 return false;
             }
 
@@ -49,7 +47,7 @@ namespace PersonalInfoManager.Services
             return true;
         }
 
-                public static void ClearNow()
+        public static void ClearNow()
         {
             _timer?.Stop();
             _timer = null;
@@ -65,10 +63,8 @@ namespace PersonalInfoManager.Services
             }
             catch
             {
-
             }
         }
-
         private static void SetWithRetry(IDataObject data)
         {
             for (int i = 0; ; i++)

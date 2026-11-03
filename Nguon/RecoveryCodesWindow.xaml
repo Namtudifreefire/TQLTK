@@ -44,7 +44,7 @@
         <StackPanel Orientation="Horizontal"
                     HorizontalAlignment="Right"
                     Margin="0,16,0,0">
-            <Button Content="📋 Copy"
+            <Button Content="📋 Sao chép"
                     Padding="15,8"
                     Margin="0,0,8,0"
                     Style="{StaticResource OutlineButton}"

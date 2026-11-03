@@ -29,9 +29,10 @@ public partial class TotpSetupWindow : Window
     {
         var dialog = new OpenFileDialog
         {
-            Title = "Chọn ảnh QR từ Authenticator",
-            Filter = "Ảnh QR (*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.tif)|*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.tif|Tất cả file (*.*)|*.*"
+            Title = "Chọn ảnh mã QR từ ứng dụng xác thực",
+            Filter = "Ảnh mã QR (*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.tif)|*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.tif|Tất cả tệp (*.*)|*.*"
         };
+        LocalizedFileDialog.Apply(dialog);
         if (dialog.ShowDialog(this) != true) return;
         try { SetEntries(TotpService.DecodeQrImage(dialog.FileName)); }
         catch (Exception ex) { SetError(ex.Message); }
@@ -41,9 +42,10 @@ public partial class TotpSetupWindow : Window
     {
         var dialog = new OpenFileDialog
         {
-            Title = "Chọn export từ Authenticator",
-            Filter = "Export Authenticator (*.2fas;*.json;*.txt)|*.2fas;*.json;*.txt|Tất cả file (*.*)|*.*"
+            Title = "Chọn tệp xuất từ ứng dụng xác thực",
+            Filter = "Tệp xuất từ ứng dụng xác thực (*.2fas;*.json;*.txt)|*.2fas;*.json;*.txt|Tất cả tệp (*.*)|*.*"
         };
+        LocalizedFileDialog.Apply(dialog);
         if (dialog.ShowDialog(this) != true) return;
         try { SetEntries(TotpService.ImportAuthenticatorFile(dialog.FileName, _fallbackName)); }
         catch (Exception ex) { SetError(ex.Message); }

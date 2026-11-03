@@ -8,13 +8,13 @@ using PersonalInfoManager.Models;
 
 namespace PersonalInfoManager.Services
 {
-        public class VaultUnreadableException : Exception
+    public class VaultUnreadableException : Exception
     {
         public VaultUnreadableException(string message, Exception? inner = null)
             : base(message, inner) { }
     }
 
-        public class AccountVaultService
+    public class AccountVaultService
     {
         public const int TrashRetentionDays = 30;
         private static readonly JsonSerializerOptions JsonOpts =
@@ -69,8 +69,7 @@ namespace PersonalInfoManager.Services
                 legacyPath + ".bak", isolatedPath + ".bak", user.Id);
             return isolatedPath;
         }
-
-                public static void ClearCache()
+        public static void ClearCache()
         {
             lock (CacheLock) Cache.Clear();
         }
@@ -95,8 +94,7 @@ namespace PersonalInfoManager.Services
         {
             lock (CacheLock) Cache.Remove(file);
         }
-
-                private static List<SavedAccount>? TryRead(string file, out Exception? error)
+        private static List<SavedAccount>? TryRead(string file, out Exception? error)
         {
             error = null;
 
@@ -121,7 +119,7 @@ namespace PersonalInfoManager.Services
             }
         }
 
-                private List<SavedAccount> LoadShared(string username)
+        private List<SavedAccount> LoadShared(string username)
         {
             string file = GetVaultFile(username);
 
@@ -131,7 +129,6 @@ namespace PersonalInfoManager.Services
                 DropCache(file);
                 return new List<SavedAccount>();
             }
-
             DateTime stamp = info.LastWriteTimeUtc;
             long length = info.Length;
 
@@ -148,12 +145,10 @@ namespace PersonalInfoManager.Services
                 StoreCache(file, info, accounts);
                 return accounts;
             }
-
             DropCache(file);
             var fromBackup = TryRead(file + ".bak", out _);
             if (fromBackup != null)
             {
-
                 Save(username, fromBackup);
                 return fromBackup;
             }
@@ -165,7 +160,7 @@ namespace PersonalInfoManager.Services
                 mainError);
         }
 
-                public List<SavedAccount> Load(string username) => CloneAll(LoadShared(username));
+        public List<SavedAccount> Load(string username) => CloneAll(LoadShared(username));
 
         public int PurgeExpiredTrash(string username)
         {
@@ -183,15 +178,13 @@ namespace PersonalInfoManager.Services
             if (removed > 0) Save(username, accounts);
             return removed;
         }
-
-                public void Save(string username, List<SavedAccount> accounts)
+        public void Save(string username, List<SavedAccount> accounts)
         {
             Directory.CreateDirectory(_root);
             string file = GetVaultFile(username);
 
             string json = JsonSerializer.Serialize(accounts, JsonOpts);
             string encrypted = AesCrypto.Encrypt(json);
-
             if (AesCrypto.Decrypt(encrypted) != json)
                 throw new CryptographicException(
                     "Kiểm tra sau mã hóa thất bại, dữ liệu chưa được ghi.");
@@ -201,23 +194,19 @@ namespace PersonalInfoManager.Services
                 var previous = TryRead(file, out _);
                 if (previous != null)
                 {
-
                     string previousJson = JsonSerializer.Serialize(previous, JsonOpts);
                     WriteAtomically(file + ".bak", AesCrypto.Encrypt(previousJson));
                 }
                 else
                 {
-
                     File.Copy(file,
                         file + ".corrupt-" + DateTime.Now.ToString("yyyyMMddHHmmssfff") + "-" + Guid.NewGuid().ToString("N"),
                         overwrite: true);
-
                     WriteAtomically(file + ".bak", encrypted);
                 }
             }
 
             WriteAtomically(file, encrypted);
-
             try { StoreCache(file, new FileInfo(file), CloneAll(accounts)); }
             catch { DropCache(file); }
         }
@@ -235,7 +224,6 @@ namespace PersonalInfoManager.Services
                 try { if (File.Exists(temp)) File.Delete(temp); } catch { }
             }
         }
-
         public List<SavedAccount> Search(string username, string keyword)
         {
             var all = LoadShared(username);
@@ -256,9 +244,9 @@ namespace PersonalInfoManager.Services
             ));
         }
 
-                public int Count(string username) => LoadShared(username).Count(account => !account.IsDeleted);
+        public int Count(string username) => LoadShared(username).Count(account => !account.IsDeleted);
 
-                public DateTime? GetLastWriteUtc(string username)
+        public DateTime? GetLastWriteUtc(string username)
         {
             var info = new FileInfo(GetVaultFile(username));
             return info.Exists ? info.LastWriteTimeUtc : null;

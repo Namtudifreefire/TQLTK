@@ -1,7 +1,7 @@
 <Window x:Class="PersonalInfoManager.CsvImportWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Import tài khoản từ CSV"
+        Title="Nhập tài khoản từ CSV"
         Height="600" Width="900"
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResize"
@@ -16,7 +16,7 @@
 		</Grid.RowDefinitions>
 
 		<StackPanel Grid.Row="0" Margin="0,0,0,15">
-			<TextBlock Text="📥 Import tài khoản từ CSV"
+			<TextBlock Text="📥 Nhập tài khoản từ CSV"
                        FontSize="20" FontWeight="Bold"
                        Foreground="{DynamicResource TextPrimaryBrush}"
                        Margin="0,0,0,6" />
@@ -55,7 +55,6 @@
                   GridLinesVisibility="Horizontal"
                   RowHeight="32">
 			<DataGrid.Columns>
-
 				<DataGridTemplateColumn Header="✓" Width="50">
 					<DataGridTemplateColumn.CellTemplate>
 						<DataTemplate>
@@ -65,10 +64,10 @@
 					</DataGridTemplateColumn.CellTemplate>
 				</DataGridTemplateColumn>
 				<DataGridTextColumn Header="Dịch vụ" Binding="{Binding ServiceName}" Width="180" />
-				<DataGridTextColumn Header="Username" Binding="{Binding Username}" Width="180" />
-				<DataGridTextColumn Header="Password" Binding="{Binding MaskedPassword}" Width="120" />
-				<DataGridTextColumn Header="Note" Binding="{Binding Note}" Width="*" />
-				<DataGridTextColumn Header="Trạng thái" Binding="{Binding Status}" Width="120" />
+				<DataGridTextColumn Header="Tên đăng nhập" Binding="{Binding Username}" Width="180" />
+				<DataGridTextColumn Header="Mật khẩu" Binding="{Binding MaskedPassword}" Width="120" />
+				<DataGridTextColumn Header="Ghi chú" Binding="{Binding Note}" Width="*" />
+				<DataGridTextColumn Header="Trạng thái" Binding="{Binding Status, Converter={StaticResource LocalizedTextConverter}}" Width="120" />
 			</DataGrid.Columns>
 		</DataGrid>
 
@@ -88,7 +87,7 @@
                     Click="BtnCancel_Click"
                     Padding="16,8" Margin="0,0,8,0"
                     Style="{StaticResource OutlineButton}" />
-			<Button Content="📥 Import"
+			<Button Content="📥 Nhập"
                     Click="BtnImport_Click"
                     Padding="20,8"
                     IsDefault="True"

@@ -11,7 +11,6 @@
         Style="{StaticResource SlideInWindow}">
 
     <Window.Resources>
-
         <Style x:Key="PrimaryButton" TargetType="Button"
                BasedOn="{StaticResource RoundedButton}">
             <Style.Triggers>
@@ -55,9 +54,9 @@
                                         Binding="{Binding SizeText, Mode=OneWay}"
                                         Width="Auto" />
                     <DataGridTextColumn Header="Thuộc về"
-                                        Binding="{Binding OwnerText, Mode=OneWay}"
+                                        Binding="{Binding OwnerText, Mode=OneWay, Converter={StaticResource LocalizedTextConverter}}"
                                         Width="Auto" />
-                    <DataGridTextColumn Header="Tên file"
+                    <DataGridTextColumn Header="Tên tệp"
                                         Binding="{Binding Name, Mode=OneWay}"
                                         Width="*" />
                 </DataGrid.Columns>

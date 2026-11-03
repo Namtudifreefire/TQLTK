@@ -8,9 +8,8 @@ using WindowsHello;
 
 namespace PersonalInfoManager.Services
 {
-        public static class WindowsHelloService
+    public static class WindowsHelloService
     {
-
         private static void Log(string msg)
         {
             string line = "[Hello] " + msg;
@@ -29,8 +28,7 @@ namespace PersonalInfoManager.Services
             }
             catch { }
         }
-
-                public static async Task<bool> IsAvailableAsync()
+        public static async Task<bool> IsAvailableAsync()
         {
             try
             {
@@ -48,8 +46,7 @@ namespace PersonalInfoManager.Services
                 return true;
             }
         }
-
-                public static Task<bool> EnableAsync(Window owner, string message)
+        public static Task<bool> EnableAsync(Window owner, string message)
         {
             try
             {
@@ -66,7 +63,6 @@ namespace PersonalInfoManager.Services
 
                 var provider = WinHelloProvider.CreateInstance(message, hwnd);
                 Log("Đã tạo WinHelloProvider");
-
                 var data = new byte[] { 0x50, 0x49, 0x4D };
                 var encryptedData = provider.Encrypt(data);
                 Log("Encrypt hoàn tất");
@@ -86,8 +82,7 @@ namespace PersonalInfoManager.Services
                 return Task.FromResult(false);
             }
         }
-
-                public static Task<bool> VerifyAsync(Window owner, string message)
+        public static Task<bool> VerifyAsync(Window owner, string message)
         {
             try
             {
@@ -124,7 +119,6 @@ namespace PersonalInfoManager.Services
                 return Task.FromResult(false);
             }
         }
-
         public static string GetCurrentWindowsSid()
         {
             try

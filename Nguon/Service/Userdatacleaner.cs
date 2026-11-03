@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace PersonalInfoManager.Services
 {
-        public static class UserDataCleaner
+    public static class UserDataCleaner
     {
         private static readonly string Root = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
@@ -19,8 +19,7 @@ namespace PersonalInfoManager.Services
             public long Bytes;
             public int FileCount;
         }
-
-                public static List<string> Describe(Guid userId, string username)
+        public static List<string> Describe(Guid userId, string username)
         {
             var warnings = new List<string>();
             var descriptions = BuildItems(userId, username, warnings)
@@ -30,7 +29,7 @@ namespace PersonalInfoManager.Services
             return descriptions;
         }
 
-                public static (List<string> removed, List<string> errors) Delete(Guid userId, string username)
+        public static (List<string> removed, List<string> errors) Delete(Guid userId, string username)
         {
             var removed = new List<string>();
             var errors = new List<string>();
@@ -54,7 +53,6 @@ namespace PersonalInfoManager.Services
             }
 
             errors.AddRange(warnings);
-
             try
             {
                 if (string.Equals(RegistryService.GetLastUser(), username, StringComparison.OrdinalIgnoreCase))
@@ -64,7 +62,6 @@ namespace PersonalInfoManager.Services
 
             return (removed, errors);
         }
-
         private static List<Item> BuildItems(Guid userId, string username, List<string> warnings)
         {
             var items = new List<Item>();
@@ -72,7 +69,6 @@ namespace PersonalInfoManager.Services
             string isolatedName = UserStorageIdentity.GetDirectoryName(userId);
 
             string tag = BackupCrypto.UserTag(username);
-
             var vault = new Item { Label = "Kho tài khoản đã lưu (vault) và bản dự phòng" };
             string vaultFile = Path.Combine(Root, $"vault_{isolatedName}.dat");
             AddFile(vault, vaultFile);
@@ -94,7 +90,6 @@ namespace PersonalInfoManager.Services
                 Root, username, LegacyUserStorageKind.Vault))
                 warnings.Add("Vault cũ có đường dẫn trùng với tài khoản khác nên được giữ nguyên.");
             AddIfAny(items, vault);
-
             var twoFa = new Item { Label = "Cấu hình xác thực 2 bước (2FA)" };
             AddFile(twoFa, Path.Combine(
                 Root, "2fa", UserStorageIdentity.GetDirectoryName(userId) + ".2fa"));
@@ -107,13 +102,11 @@ namespace PersonalInfoManager.Services
                 Root, username, LegacyUserStorageKind.TwoFactor))
                 warnings.Add("File 2FA cũ có đường dẫn trùng với tài khoản khác nên được giữ nguyên.");
             AddIfAny(items, twoFa);
-
             var pass = new Item { Label = "Cụm mật khẩu sao lưu đã lưu trên máy" };
             string passFile = Path.Combine(Root, $"backup_pass_{tag}.dat");
             AddFile(pass, passFile);
             AddFile(pass, passFile + ".tmp");
             AddIfAny(items, pass);
-
             string storageRoot = Path.Combine(Root, "Storage");
             string storageDir = Path.Combine(storageRoot, isolatedName);
             AddStorageDirectory(items, storageDir);
@@ -126,7 +119,6 @@ namespace PersonalInfoManager.Services
             else if (UserStorageIdentity.HasLegacyData(
                 Root, username, LegacyUserStorageKind.LocalFiles))
                 warnings.Add("Thư mục file cũ có đường dẫn trùng với tài khoản khác nên được giữ nguyên.");
-
             string tokenRoot = Path.Combine(Root, "GoogleTokens");
             string tokenDir = Path.Combine(tokenRoot, tag);
             if (Directory.Exists(tokenDir) && IsDirectChild(tokenRoot, tokenDir))
@@ -157,7 +149,7 @@ namespace PersonalInfoManager.Services
             AddIfAny(items, storage);
         }
 
-                private static bool IsDirectChild(string parent, string child)
+        private static bool IsDirectChild(string parent, string child)
         {
             string p = Path.GetFullPath(parent).TrimEnd(Path.DirectorySeparatorChar);
             string c = Path.GetFullPath(child).TrimEnd(Path.DirectorySeparatorChar);

@@ -73,8 +73,8 @@
                               Margin="0,4"
                               SelectedIndex="0"
                               VerticalContentAlignment="Center">
-                        <ComboBoxItem Content="User" />
-                        <ComboBoxItem Content="Admin" />
+                        <ComboBoxItem Content="Người dùng" />
+                        <ComboBoxItem Content="Quản trị viên" />
                     </ComboBox>
 
                     <TextBlock Grid.Row="1" Grid.Column="0"
@@ -143,7 +143,7 @@
                                         Binding="{Binding Phone}"
                                         Width="Auto" MinWidth="120" />
                     <DataGridTextColumn Header="Vai trò"
-                                        Binding="{Binding Role}"
+                                        Binding="{Binding Role, Converter={StaticResource LocalizedTextConverter}, ConverterParameter=Role}"
                                         Width="Auto" MinWidth="100" />
                     <DataGridCheckBoxColumn Header="HĐ"
                                             Binding="{Binding IsActive}"
@@ -152,9 +152,9 @@
                                         Binding="{Binding CreatedAt, StringFormat='dd/MM/yyyy HH:mm'}"
                                         Width="Auto" MinWidth="150" />
                     <DataGridTextColumn Header="ĐN cuối"
-                                        Binding="{Binding LastLoginAt, StringFormat='dd/MM/yyyy HH:mm', TargetNullValue='(chưa)'}"
+                                        Binding="{Binding LastLoginAt, Converter={StaticResource LocalizedTextConverter}, ConverterParameter=LastLoginAt}"
                                         Width="Auto" MinWidth="150" />
-                    <DataGridTextColumn Header="Id"
+                    <DataGridTextColumn Header="Mã định danh"
                                         Binding="{Binding Id}"
                                         Width="Auto" MinWidth="280" />
                 </DataGrid.Columns>
@@ -180,7 +180,7 @@
                         Style="{StaticResource OutlineButton}">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="🔑" Margin="0,0,6,0" VerticalAlignment="Center" />
-                        <TextBlock Text="Reset MK" VerticalAlignment="Center" />
+                        <TextBlock Text="Đặt lại mật khẩu" VerticalAlignment="Center" />
                     </StackPanel>
                 </Button>
 
@@ -196,7 +196,7 @@
                         Style="{StaticResource OutlineButton}">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="👑" Margin="0,0,6,0" VerticalAlignment="Center" />
-                        <TextBlock Text="Cấp / Thu Admin" VerticalAlignment="Center" />
+                        <TextBlock Text="Cấp / Thu quyền quản trị" VerticalAlignment="Center" />
                     </StackPanel>
                 </Button>
 
@@ -213,7 +213,7 @@
                         Style="{StaticResource OutlineButton}">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="🔄" Margin="0,0,6,0" VerticalAlignment="Center" />
-                        <TextBlock Text="Refresh" VerticalAlignment="Center" />
+                        <TextBlock Text="Làm mới" VerticalAlignment="Center" />
                     </StackPanel>
                 </Button>
 
@@ -221,7 +221,7 @@
                         Style="{StaticResource OutlineButton}">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="📜" Margin="0,0,6,0" VerticalAlignment="Center" />
-                        <TextBlock Text="Xem Log" VerticalAlignment="Center" />
+                        <TextBlock Text="Xem nhật ký" VerticalAlignment="Center" />
                     </StackPanel>
                 </Button>
             </WrapPanel>

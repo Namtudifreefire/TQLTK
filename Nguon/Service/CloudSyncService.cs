@@ -18,20 +18,20 @@ using DriveFile = Google.Apis.Drive.v3.Data.File;
 
 namespace PersonalInfoManager.Services
 {
-        public enum BackupKind
+    public enum BackupKind
     {
-                Vault,
-                Files
+        Vault,
+        Files
     }
 
-        public enum BackupOwner
+    public enum BackupOwner
     {
-                Mine,
-                Legacy,
-                Other
+        Mine,
+        Legacy,
+        Other
     }
 
-        public sealed class BackupInfo
+    public sealed class BackupInfo
     {
         public string Id { get; init; } = "";
         public string Name { get; init; } = "";
@@ -60,7 +60,7 @@ namespace PersonalInfoManager.Services
         }
     }
 
-        public class CloudSyncService
+    public class CloudSyncService
     {
         private const string ResourceName = "credentials.json";
         private const string ApplicationName = "TQLTK";
@@ -68,7 +68,6 @@ namespace PersonalInfoManager.Services
         private const string FolderMime = "application/vnd.google-apps.folder";
         private const string VaultPrefix = "vault_backup_";
         private const string FilesPrefix = "files_backup_";
-
         private static readonly Regex TaggedVaultName =
             new(@"^vault_backup_u[0-9a-f]{8}_", RegexOptions.Compiled);
 
@@ -84,19 +83,18 @@ namespace PersonalInfoManager.Services
         private readonly string _tag;
         private readonly string _tokenDir;
 
-                private string MyPrefixOf(BackupKind kind) => $"{PrefixOf(kind)}{_tag}_";
+        private string MyPrefixOf(BackupKind kind) => $"{PrefixOf(kind)}{_tag}_";
 
-                public string? LastError { get; private set; }
+        public string? LastError { get; private set; }
 
-                public string? LastUploadedName { get; private set; }
+        public string? LastUploadedName { get; private set; }
 
-                public CloudSyncService(string username)
+        public CloudSyncService(string username)
         {
             if (string.IsNullOrWhiteSpace(username))
                 throw new ArgumentException("Thiếu tên người dùng.", nameof(username));
 
             _tag = BackupCrypto.UserTag(username);
-
             _tokenDir = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                 "PersonalInfoManager", "GoogleTokens", _tag);
@@ -109,12 +107,11 @@ namespace PersonalInfoManager.Services
                        "Nếu bạn tự build từ mã nguồn, hãy tạo credentials.json của riêng bạn " +
                        "(Google Cloud Console → OAuth client kiểu Desktop) và đặt cạnh file .csproj.") { }
         }
-
-                public Task<bool> UploadVaultAsync(
+        public Task<bool> UploadVaultAsync(
             string localFilePath, int keep = 5, CancellationToken ct = default)
             => UploadAsync(BackupKind.Vault, localFilePath, keep, ct);
 
-                public Task<bool> UploadFilesBackupAsync(
+        public Task<bool> UploadFilesBackupAsync(
             string localFilePath, int keep = 3, CancellationToken ct = default)
             => UploadAsync(BackupKind.Files, localFilePath, keep, ct);
 
@@ -128,7 +125,6 @@ namespace PersonalInfoManager.Services
             {
                 if (!File.Exists(localFilePath))
                     throw new FileNotFoundException("Chưa có file dữ liệu để sao lưu.", localFilePath);
-
                 using var cts = LinkedWithTimeout(ct, kind == BackupKind.Files ? 20 : 5);
 
                 try
@@ -137,7 +133,6 @@ namespace PersonalInfoManager.Services
                 }
                 catch (TokenResponseException)
                 {
-
                     if (Directory.Exists(_tokenDir))
                         Directory.Delete(_tokenDir, recursive: true);
 
@@ -166,7 +161,6 @@ namespace PersonalInfoManager.Services
                 Name = name,
                 Parents = new List<string> { folderId }
             };
-
             using var stream = new FileStream(
                 filePath, FileMode.Open, FileAccess.Read,
                 FileShare.ReadWrite | FileShare.Delete);
@@ -184,12 +178,11 @@ namespace PersonalInfoManager.Services
             await TrimOldBackupsAsync(service, folderId, kind, keep, ct);
             return name;
         }
-
-                public Task<List<BackupInfo>?> ListBackupsAsync(
+        public Task<List<BackupInfo>?> ListBackupsAsync(
             bool includeOthers = false, CancellationToken ct = default)
             => ListBackupsAsync(BackupKind.Vault, includeOthers, ct);
 
-                public async Task<List<BackupInfo>?> ListBackupsAsync(
+        public async Task<List<BackupInfo>?> ListBackupsAsync(
             BackupKind kind, bool includeOthers = false, CancellationToken ct = default)
         {
             LastError = null;
@@ -205,14 +198,13 @@ namespace PersonalInfoManager.Services
             }
         }
 
-                public async Task<bool> DownloadBackupAsync(
+        public async Task<bool> DownloadBackupAsync(
             string fileId, string destPath, CancellationToken ct = default)
         {
             LastError = null;
 
             try
             {
-
                 using var cts = LinkedWithTimeout(ct, 20);
                 await WithAuthRetryAsync(async () =>
                 {
@@ -228,8 +220,7 @@ namespace PersonalInfoManager.Services
             catch (Exception ex)
             {
                 LastError = Explain(ex);
-
-                try { if (File.Exists(destPath)) File.Delete(destPath); } catch {  }
+                try { if (File.Exists(destPath)) File.Delete(destPath); } catch {}
 
                 return false;
             }
@@ -288,7 +279,7 @@ namespace PersonalInfoManager.Services
             return BackupOwner.Legacy;
         }
 
-                private async Task<T> WithAuthRetryAsync<T>(Func<Task<T>> op, CancellationToken ct)
+        private async Task<T> WithAuthRetryAsync<T>(Func<Task<T>> op, CancellationToken ct)
         {
             try
             {
@@ -310,7 +301,6 @@ namespace PersonalInfoManager.Services
             cts.CancelAfter(TimeSpan.FromMinutes(minutes));
             return cts;
         }
-
         private async Task<DriveService> GetDriveServiceAsync(CancellationToken ct)
         {
             using Stream secretStream =
@@ -354,7 +344,7 @@ namespace PersonalInfoManager.Services
             return (await create.ExecuteAsync(ct)).Id;
         }
 
-                private static async Task<List<DriveFile>> ListBackupFilesAsync(
+        private static async Task<List<DriveFile>> ListBackupFilesAsync(
             DriveService service, string folderId, string prefix, CancellationToken ct)
         {
             var all = new List<DriveFile>();
@@ -382,7 +372,7 @@ namespace PersonalInfoManager.Services
             return all;
         }
 
-                private async Task TrimOldBackupsAsync(
+        private async Task TrimOldBackupsAsync(
             DriveService service, string folderId, BackupKind kind, int keep, CancellationToken ct)
         {
             if (keep < 1) return;
@@ -391,12 +381,11 @@ namespace PersonalInfoManager.Services
 
             var mineFiles = (await ListBackupFilesAsync(service, folderId, PrefixOf(kind), ct))
                 .Where(f => f.Name!.StartsWith(mine, StringComparison.Ordinal));
-
             foreach (var old in mineFiles.Skip(keep))
                 await service.Files.Update(new DriveFile { Trashed = true }, old.Id).ExecuteAsync(ct);
         }
 
-                public static string Explain(Exception ex)
+        public static string Explain(Exception ex)
         {
             string detail = ex.Message;
 

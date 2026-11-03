@@ -1,7 +1,7 @@
 <Window x:Class="PersonalInfoManager.EditUserWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Sửa thông tin user"
+        Title="Sửa thông tin người dùng"
         Width="450"
         SizeToContent="Height"
         MaxHeight="{Binding Source={x:Static SystemParameters.WorkArea}, Path=Height, FallbackValue=600}"
@@ -22,7 +22,7 @@
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <TextBlock Grid.Row="0" Text="✏️ Sửa thông tin user"
+            <TextBlock Grid.Row="0" Text="✏️ Sửa thông tin người dùng"
                        FontSize="16" FontWeight="Bold"
                        HorizontalAlignment="Center" Margin="0,0,0,20" />
 

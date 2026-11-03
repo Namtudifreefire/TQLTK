@@ -1,10 +1,13 @@
 using System.ComponentModel;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Data;
+using System.Windows.Media;
+using System.Windows.Media.Media3D;
 
 namespace PersonalInfoManager.Services;
 
@@ -14,11 +17,89 @@ public static class LanguageService
     {
         public string? Source { get; set; }
         public string? Rendered { get; set; }
+        public Func<string>? Renderer { get; set; }
         public bool IsUpdating { get; set; }
     }
 
     private static readonly ConditionalWeakTable<DependencyObject, Dictionary<DependencyProperty, ObservedValue>> Observed = new();
     private static readonly ConditionalWeakTable<TextBlock, ObservedValue> LocalizedTextBlocks = new();
+    private static readonly IReadOnlyDictionary<string, string> EnglishActivityActions =
+        new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["ADD_ACCOUNT"] = "Add account",
+            ["ADMIN_CHANGE_ROLE"] = "Change user role",
+            ["ADMIN_CREATE_USER"] = "Create user",
+            ["ADMIN_DELETE_USER"] = "Delete user",
+            ["ADMIN_DELETE_USER_DATA"] = "Delete user data",
+            ["ADMIN_EDIT_USER"] = "Edit user",
+            ["ADMIN_LOCK_USER"] = "Lock user",
+            ["ADMIN_RESET_PWD"] = "Reset password",
+            ["ADMIN_UNLOCK_USER"] = "Unlock user",
+            ["APP_EXIT"] = "Application exit",
+            ["AUTO_BACKUP"] = "Automatic backup",
+            ["AUTO_BACKUP_FAILED"] = "Automatic backup failed",
+            ["AUTO_LOCK"] = "Automatic lock",
+            ["AUTO_THEME_SWITCH"] = "Automatic theme change",
+            ["CHANGE_PASSWORD"] = "Change password",
+            ["COPY_PASSWORD"] = "Copy password",
+            ["COPY_PASSWORD_DENIED"] = "Password copy denied",
+            ["CREATE_FILE"] = "Create file",
+            ["DELETE_FILE"] = "Delete file",
+            ["DISABLE_2FA"] = "Disable two-factor authentication",
+            ["DISABLE_WINDOWS_HELLO"] = "Disable Windows Hello",
+            ["EDIT_ACCOUNT"] = "Edit account",
+            ["EDIT_ACCOUNT_DENIED"] = "Account edit denied",
+            ["ENABLE_2FA"] = "Enable two-factor authentication",
+            ["ENABLE_WINDOWS_HELLO"] = "Enable Windows Hello",
+            ["EXIT_APP"] = "Exit application",
+            ["EXPORT_CSV"] = "Export CSV",
+            ["EXPORT_CSV_DENIED"] = "CSV export denied",
+            ["EXPORT_FILE"] = "Export file",
+            ["EXPORT_VAULT"] = "Export vault",
+            ["IMPORT_CSV"] = "Import CSV",
+            ["IMPORT_FILE"] = "Import file",
+            ["IMPORT_VAULT"] = "Import vault",
+            ["LOGIN"] = "Sign-in",
+            ["LOGIN_2FA_FAILED"] = "Two-factor sign-in failed",
+            ["LOGIN_2FA_OK"] = "Two-factor sign-in succeeded",
+            ["LOGIN_FAILED"] = "Sign-in failed",
+            ["LOGIN_FORCED_CHANGE_CANCELLED"] = "Required password change cancelled",
+            ["LOGIN_WINDOWS_HELLO"] = "Windows Hello sign-in",
+            ["LOGOUT"] = "Sign-out",
+            ["MOVE_ACCOUNT_TO_TRASH"] = "Move account to Trash",
+            ["PASSWORD_HISTORY_DENIED"] = "Password history access denied",
+            ["PERMANENT_DELETE_ACCOUNT"] = "Permanently delete account",
+            ["PERMANENT_DELETE_NOTE"] = "Permanently delete note",
+            ["PWNED_PASSWORD_CHECK"] = "Check for breached passwords",
+            ["PWNED_PASSWORD_CHECK_DENIED"] = "Breached password check denied",
+            ["REGENERATE_RECOVERY_CODES"] = "Regenerate recovery codes",
+            ["REGISTER"] = "Register account",
+            ["INITIAL_ADMIN_CREATED"] = "Create initial administrator",
+            ["RESTORE_ACCOUNT_FROM_TRASH"] = "Restore account from Trash",
+            ["RESTORE_FILES_GOOGLE_DRIVE"] = "Restore personal files from Google Drive",
+            ["RESTORE_FILES_GOOGLE_DRIVE_DENIED"] = "Personal file restore denied",
+            ["RESTORE_GOOGLE_DRIVE"] = "Restore vault from Google Drive",
+            ["RESTORE_GOOGLE_DRIVE_DENIED"] = "Vault restore denied",
+            ["RESTORE_NOTE_FROM_TRASH"] = "Restore note from Trash",
+            ["RESTORE_PASSWORD_HISTORY"] = "Restore previous password",
+            ["SET_BACKUP_PASSPHRASE"] = "Set backup passphrase",
+            ["SET_BACKUP_PASSPHRASE_DENIED"] = "Backup passphrase change denied",
+            ["SHOW_ACCOUNT_TOTP_DENIED"] = "Account TOTP access denied",
+            ["SHOW_PASSWORD"] = "Show password",
+            ["SHOW_PASSWORD_DENIED"] = "Password reveal denied",
+            ["SYNC_GOOGLE_DRIVE_DENIED"] = "Google Drive sync denied",
+            ["SYNC_FILES_GOOGLE_DRIVE"] = "Sync personal files to Google Drive",
+            ["SYNC_GOOGLE_DRIVE"] = "Sync vault to Google Drive",
+            ["TRASH_PERMANENT_DELETE_DENIED"] = "Permanent deletion from Trash denied",
+            ["UNHANDLED_ERROR"] = "Unhandled error",
+            ["UNOBSERVED_TASK_ERROR"] = "Background task error",
+            ["UPDATE_PROFILE"] = "Update profile",
+            ["EXPORT_VAULT_DENIED"] = "Vault export denied",
+            ["IMPORT_VAULT_DENIED"] = "Vault import denied",
+            ["VERIFY_BACKUP_DENIED"] = "Backup verification denied",
+            ["VERIFY_FILE_BACKUP"] = "Verify file backup",
+            ["VERIFY_VAULT_BACKUP"] = "Verify vault backup"
+        };
     private static string _currentCode = RegistryService.GetLanguage();
 
     public static string CurrentCode => _currentCode;
@@ -63,7 +144,11 @@ public static class LanguageService
         if (actionEnd < 0) return Translate(line);
 
         int detailStart = actionEnd + 2;
-        return line[..detailStart] + Translate(line[detailStart..]);
+        string action = line[(usernameEnd + 3)..actionEnd];
+        string translatedAction = IsEnglish && EnglishActivityActions.TryGetValue(action, out string? englishAction)
+            ? englishAction
+            : action;
+        return line[..(usernameEnd + 3)] + translatedAction + line[actionEnd..detailStart] + Translate(line[detailStart..]);
     }
 
     public static string Translate(string value, string languageCode)
@@ -201,12 +286,49 @@ public static class LanguageService
     public static void ApplyToWindow(Window window)
     {
         Visit(window, new HashSet<DependencyObject>());
+        RefreshLocalizedBindings(window, new HashSet<DependencyObject>());
+    }
+
+    private static void RefreshLocalizedBindings(DependencyObject element, HashSet<DependencyObject> visited)
+    {
+        if (!visited.Add(element)) return;
+
+        if (element is TextBlock textBlock &&
+            BindingOperations.GetBindingExpression(textBlock, TextBlock.TextProperty) is { } binding &&
+            binding.ParentBinding.Converter is LocalizedTextConverter)
+        {
+            binding.UpdateTarget();
+        }
+
+        if (element is Visual or Visual3D)
+        {
+            int visualChildren = VisualTreeHelper.GetChildrenCount(element);
+            for (int i = 0; i < visualChildren; i++)
+                RefreshLocalizedBindings(VisualTreeHelper.GetChild(element, i), visited);
+        }
+
+        foreach (object child in LogicalTreeHelper.GetChildren(element))
+            if (child is DependencyObject dependencyChild)
+                RefreshLocalizedBindings(dependencyChild, visited);
     }
 
     public static void SetLocalizedText(TextBlock textBlock, string sourceText)
     {
         ObservedValue observation = LocalizedTextBlocks.GetValue(textBlock, _ => new());
         observation.Source = sourceText;
+        observation.Renderer = null;
+        RenderLocalizedTextBlock(textBlock, observation);
+    }
+
+    public static void SetLocalizedFormattedText(
+        TextBlock textBlock,
+        string sourceTemplate,
+        Func<object?[]> arguments)
+    {
+        ObservedValue observation = LocalizedTextBlocks.GetValue(textBlock, _ => new());
+        observation.Source = sourceTemplate;
+        observation.Renderer = () => string.Format(CultureInfo.CurrentCulture,
+            Translate(sourceTemplate), arguments());
         RenderLocalizedTextBlock(textBlock, observation);
     }
 
@@ -260,7 +382,8 @@ public static class LanguageService
 
     private static void RenderLocalizedTextBlock(TextBlock textBlock, ObservedValue observation)
     {
-        string? translated = observation.Source == null ? null : Translate(observation.Source);
+        string? translated = observation.Renderer?.Invoke() ??
+            (observation.Source == null ? null : Translate(observation.Source));
         observation.Rendered = translated;
         if (translated == null || string.Equals(textBlock.Text, translated, StringComparison.Ordinal)) return;
         observation.IsUpdating = true;
@@ -310,6 +433,7 @@ public static class LanguageService
         Action<DependencyObject, string?> setter,
         ObservedValue observation)
     {
+        if (target is TextBlock textBlock && LocalizedTextBlocks.TryGetValue(textBlock, out _)) return;
         if (observation.IsUpdating) return;
         string? current = getter(target);
         if (string.Equals(current, observation.Rendered, StringComparison.Ordinal)) return;

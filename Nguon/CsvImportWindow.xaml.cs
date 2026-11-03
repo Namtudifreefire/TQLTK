@@ -17,7 +17,6 @@ namespace PersonalInfoManager
         public CsvImportWindow(List<SavedAccount> imported, List<SavedAccount> existing)
         {
             InitializeComponent();
-
             var existingKeys = new HashSet<string>(
                 existing.Select(a => $"{a.ServiceName.ToLower()}|{a.Username.ToLower()}"));
 
@@ -40,7 +39,7 @@ namespace PersonalInfoManager
 
             dgPreview.ItemsSource = Items;
 
-            lblInfo.Text = "Chọn các tài khoản bạn muốn import. Các tài khoản trùng lặp sẽ được bỏ chọn sẵn.";
+            lblInfo.Text = "Chọn các tài khoản bạn muốn nhập. Các tài khoản trùng lặp sẽ được bỏ chọn sẵn.";
             lblTotal.Text = $"📊 Tổng: {imported.Count}";
             lblDuplicates.Text = $"⚠ Trùng: {dupCount}";
             UpdateWillImportCount();
@@ -49,7 +48,7 @@ namespace PersonalInfoManager
         private void UpdateWillImportCount()
         {
             int willImport = Items.Count(x => x.IsSelected);
-            lblWillImport.Text = $"✅ Sẽ import: {willImport}";
+            lblWillImport.Text = $"✅ Sẽ nhập: {willImport}";
         }
 
         private void BtnSelectAll_Click(object sender, RoutedEventArgs e)
@@ -81,7 +80,7 @@ namespace PersonalInfoManager
 
             if (Result.Count == 0)
             {
-                MessageBox.Show("Bạn chưa chọn tài khoản nào để import.",
+                MessageBox.Show("Bạn chưa chọn tài khoản nào để nhập.",
                     "Thông báo", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
@@ -91,7 +90,7 @@ namespace PersonalInfoManager
         }
     }
 
-        public class CsvPreviewItem : INotifyPropertyChanged
+    public class CsvPreviewItem : INotifyPropertyChanged
     {
         private bool _isSelected;
 

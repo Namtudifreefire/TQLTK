@@ -18,7 +18,7 @@ namespace PersonalInfoManager
         private readonly List<AccountCustomField> _customFields = new();
         private bool _noteMovedToTrash;
 
-                public SavedAccount Result { get; private set; } = new();
+        public SavedAccount Result { get; private set; } = new();
 
         public EditAccountWindow(SavedAccount? existing)
         {
@@ -50,7 +50,6 @@ namespace PersonalInfoManager
             UpdatePasswordStrength();
             Loaded += (_, _) => txtService.Focus();
         }
-
         private void BtnTogglePwd_Click(object sender, RoutedEventArgs e)
         {
             _showPwd = !_showPwd;
@@ -69,7 +68,6 @@ namespace PersonalInfoManager
                 btnTogglePwd.Content = "👁️";
             }
         }
-
         private void BtnGeneratePwd_Click(object sender, RoutedEventArgs e)
         {
             var dialog = new PasswordGeneratorWindow { Owner = this };
@@ -95,12 +93,12 @@ namespace PersonalInfoManager
             string password = _showPwd ? txtPasswordVisible.Text : txtPassword.Password;
             if (string.IsNullOrEmpty(password))
             {
-                lblPwdStrength.Text = "";
+                LanguageService.SetLocalizedText(lblPwdStrength, "");
                 return;
             }
 
             int score = PasswordStrengthService.CalculateScore(password);
-            lblPwdStrength.Text = "Độ mạnh: " + PasswordStrengthService.GetLabel(score);
+            LanguageService.SetLocalizedText(lblPwdStrength, $"Độ mạnh: {PasswordStrengthService.GetLabel(score)}");
             lblPwdStrength.Foreground = score switch
             {
                 <= 2 => Brushes.Red,
@@ -173,7 +171,6 @@ namespace PersonalInfoManager
             btnDeleteNote.Visibility = string.IsNullOrWhiteSpace(txtNote.Text)
                 ? Visibility.Collapsed : Visibility.Visible;
         }
-
         private void BtnSave_Click(object sender, RoutedEventArgs e)
         {
             string service = txtService.Text.Trim();
@@ -229,14 +226,14 @@ namespace PersonalInfoManager
 
             if (string.IsNullOrWhiteSpace(username))
             {
-                MessageBox.Show("Vui lòng nhập username.");
+                MessageBox.Show("Vui lòng nhập tên đăng nhập.");
                 txtUsername.Focus();
                 return;
             }
 
             if (string.IsNullOrWhiteSpace(password))
             {
-                MessageBox.Show("Vui lòng nhập password.");
+                MessageBox.Show("Vui lòng nhập mật khẩu.");
                 return;
             }
 
@@ -288,7 +285,6 @@ namespace PersonalInfoManager
             }
             else
             {
-
                 Result = new SavedAccount
                 {
                     ServiceName = service,

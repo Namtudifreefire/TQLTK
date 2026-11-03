@@ -1,16 +1,21 @@
 using System.Collections.Generic;
 using System.Windows;
+using PersonalInfoManager.Services;
 
 namespace PersonalInfoManager
 {
     public partial class BackupRestorePreviewWindow : Window
     {
-        public BackupRestorePreviewWindow(string title, string summary, IEnumerable<BackupPreviewItem> items)
+        public BackupRestorePreviewWindow(
+            string title,
+            string summaryTemplate,
+            Func<object?[]> summaryArguments,
+            IEnumerable<BackupPreviewItem> items)
         {
             InitializeComponent();
             Title = title;
             txtTitle.Text = title;
-            txtSummary.Text = summary;
+            LanguageService.SetLocalizedFormattedText(txtSummary, summaryTemplate, summaryArguments);
             dgItems.ItemsSource = items;
         }
 

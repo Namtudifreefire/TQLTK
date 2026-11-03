@@ -28,7 +28,6 @@ namespace PersonalInfoManager
                     "Không thể sao chép mã khôi phục vào clipboard an toàn. Hãy thử lại.",
                     "Không thể sao chép", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
-
         private void BtnFinish_Click(object sender, RoutedEventArgs e)
         {
             var result = TwoFactorService.CommitRecoveryCodes(_username, _codes);
@@ -42,7 +41,6 @@ namespace PersonalInfoManager
             _finished = true;
             DialogResult = true;
         }
-
         protected override void OnClosing(CancelEventArgs e)
         {
             if (!_finished && SessionService.IsLoggedIn)

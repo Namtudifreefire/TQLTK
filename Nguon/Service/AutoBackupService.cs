@@ -6,23 +6,22 @@ using Microsoft.Win32;
 
 namespace PersonalInfoManager.Services
 {
-        public static class AutoBackupService
+    public static class AutoBackupService
     {
         private const string AppKey = @"Software\TQLTK";
         private const string FilePrefix = "vault_auto_";
         private const string FileExt = ".vault";
 
-                public const int KeepCount = 7;
+        public const int KeepCount = 7;
 
-                public const int RemindAfterDays = 7;
-
-                public static bool IsEnabled(string username) =>
+        public const int RemindAfterDays = 7;
+        public static bool IsEnabled(string username) =>
             ReadValue("AutoBackupEnabled_" + Tag(username)) != "0";
 
         public static void SetEnabled(string username, bool enabled) =>
             WriteValue("AutoBackupEnabled_" + Tag(username), enabled ? "1" : "0");
 
-                public static string GetFolder(string username)
+        public static string GetFolder(string username)
         {
             string? saved = ReadValue("AutoBackupFolder_" + Tag(username));
             if (!string.IsNullOrWhiteSpace(saved)) return saved;
@@ -36,7 +35,7 @@ namespace PersonalInfoManager.Services
             return Path.Combine(docs, "TQLTK Backup");
         }
 
-                public static string? TrySetFolder(string username, string folder)
+        public static string? TrySetFolder(string username, string folder)
         {
             try
             {
@@ -56,8 +55,7 @@ namespace PersonalInfoManager.Services
             WriteValue("AutoBackupFolder_" + Tag(username), folder);
             return null;
         }
-
-                public static (bool ok, string message, string? path) BackupNow(string username, string reason = "Thủ công")
+        public static (bool ok, string message, string? path) BackupNow(string username, string reason = "Thủ công")
         {
             try
             {
@@ -65,7 +63,6 @@ namespace PersonalInfoManager.Services
                 Directory.CreateDirectory(folder);
 
                 string prefix = $"{FilePrefix}{Tag(username)}_";
-
                 foreach (var stray in Directory.GetFiles(folder, prefix + "*" + FileExt + ".tmp"))
                 {
                     try { File.Delete(stray); } catch { }
@@ -82,7 +79,6 @@ namespace PersonalInfoManager.Services
                 }
 
                 File.Move(tmpPath, finalPath, overwrite: true);
-
                 var old = Directory.GetFiles(folder, prefix + "*" + FileExt)
                     .OrderByDescending(f => Path.GetFileName(f), StringComparer.Ordinal)
                     .Skip(KeepCount);
@@ -104,7 +100,7 @@ namespace PersonalInfoManager.Services
             }
         }
 
-                public static void RunOnExit(string username)
+        public static void RunOnExit(string username)
         {
             try
             {
@@ -124,16 +120,15 @@ namespace PersonalInfoManager.Services
             }
         }
 
-                public static void RecordBackup(string username) =>
+        public static void RecordBackup(string username) =>
             WriteValue("LastBackupUtc_" + Tag(username), DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture));
-
-                public static DateTime? GetLastBackupUtc(string username)
+        public static DateTime? GetLastBackupUtc(string username)
         {
             DateTime? recorded = ParseUtc(ReadValue("LastBackupUtc_" + Tag(username)));
             return Max(recorded, NewestBackupFileUtc(username));
         }
 
-                public static bool NeedsBackup(string username)
+        public static bool NeedsBackup(string username)
         {
             DateTime? vault = new AccountVaultService().GetLastWriteUtc(username);
             if (vault == null) return false;
@@ -142,7 +137,7 @@ namespace PersonalInfoManager.Services
             return last == null || vault.Value > last.Value;
         }
 
-                public static (string text, bool warn) GetStatusLine(string username)
+        public static (string text, bool warn) GetStatusLine(string username)
         {
             try
             {
@@ -173,7 +168,7 @@ namespace PersonalInfoManager.Services
             }
         }
 
-                public static string? GetReminder(string username)
+        public static string? GetReminder(string username)
         {
             try
             {
@@ -200,10 +195,9 @@ namespace PersonalInfoManager.Services
                 return null;
             }
         }
-
         private static string Tag(string username) => BackupCrypto.UserTag(username);
 
-                private static int CountAccounts(string username)
+        private static int CountAccounts(string username)
         {
             try { return new AccountVaultService().Count(username); }
             catch { return -1; }

@@ -29,8 +29,8 @@
                       VirtualizingPanel.VirtualizationMode="Recycling">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Mục" Binding="{Binding Name}" Width="2*" />
-                    <DataGridTextColumn Header="Kết quả dự kiến" Binding="{Binding Status}" Width="150" />
-                    <DataGridTextColumn Header="Chi tiết" Binding="{Binding Details}" Width="2*" />
+                    <DataGridTextColumn Header="Kết quả dự kiến" Binding="{Binding Status, Converter={StaticResource LocalizedTextConverter}}" Width="150" />
+                    <DataGridTextColumn Header="Chi tiết" Binding="{Binding Details, Converter={StaticResource LocalizedTextConverter}, ConverterParameter=BackupDetails}" Width="2*" />
                 </DataGrid.Columns>
             </DataGrid>
         </Border>

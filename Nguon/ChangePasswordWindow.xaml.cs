@@ -11,11 +11,11 @@ namespace PersonalInfoManager
         private readonly UserService _userService = new();
         private readonly bool _forced;
 
-                public bool Changed { get; private set; }
+        public bool Changed { get; private set; }
 
         public ChangePasswordWindow() : this(false) { }
 
-                public ChangePasswordWindow(bool forced)
+        public ChangePasswordWindow(bool forced)
         {
             InitializeComponent();
             _forced = forced;
@@ -30,14 +30,13 @@ namespace PersonalInfoManager
 
             Loaded += (_, _) => txtOldPwd.Focus();
         }
-
         private void TxtNewPwd_PasswordChanged(object sender, RoutedEventArgs e)
         {
             string pwd = txtNewPwd.Password;
 
             if (string.IsNullOrEmpty(pwd))
             {
-                lblStrength.Text = "";
+                LanguageService.SetLocalizedText(lblStrength, "");
                 return;
             }
 
@@ -50,7 +49,7 @@ namespace PersonalInfoManager
                 _ => (PasswordStrengthService.GetLabel(score), Brushes.DarkGreen)
             };
 
-            lblStrength.Text = $"Độ mạnh: {text}";
+            LanguageService.SetLocalizedText(lblStrength, $"Độ mạnh: {text}");
             lblStrength.Foreground = color;
         }
 
@@ -73,7 +72,6 @@ namespace PersonalInfoManager
                 lblConfirm.Foreground = Brushes.Red;
             }
         }
-
         private void BtnOk_Click(object sender, RoutedEventArgs e)
         {
             string oldPwd = txtOldPwd.Password;
@@ -81,7 +79,6 @@ namespace PersonalInfoManager
             string confirm = txtConfirmPwd.Password;
 
             lblStatus.Text = "";
-
             if (string.IsNullOrWhiteSpace(oldPwd) ||
                 string.IsNullOrWhiteSpace(newPwd))
             {
@@ -115,7 +112,6 @@ namespace PersonalInfoManager
                 lblStatus.Text = $"Mật khẩu mới phải từ {minimumLength} ký tự trở lên.";
                 return;
             }
-
             var result = _userService.ChangePassword(username, oldPwd, newPwd);
 
             if (result.ok)

@@ -47,7 +47,6 @@ namespace PersonalInfoManager
             dgUsers.ItemsSource = null;
             dgUsers.ItemsSource = _userService.GetAll();
         }
-
         private void BtnCreate_Click(object sender, RoutedEventArgs e)
         {
             var role = cbRole.SelectedIndex == 1 ? UserRole.Admin : UserRole.User;
@@ -74,7 +73,6 @@ namespace PersonalInfoManager
                         $"Tạo '{txtNewUser.Text.Trim()}' - {txtNewFullName.Text}");
                 }
                 catch { }
-
                 txtNewUser.Clear();
                 txtNewPwd.Clear();
                 txtNewFullName.Clear();
@@ -84,7 +82,6 @@ namespace PersonalInfoManager
                 Refresh();
             }
         }
-
         private void BtnEdit_Click(object sender, RoutedEventArgs e)
         {
             if (dgUsers.SelectedItem is not User u)
@@ -92,7 +89,6 @@ namespace PersonalInfoManager
                 MessageBox.Show("Chọn một tài khoản để sửa.");
                 return;
             }
-
             var dlg = new EditUserWindow(u, _userService) { Owner = this };
             if (dlg.ShowDialog() == true)
             {
@@ -105,7 +101,6 @@ namespace PersonalInfoManager
                 Refresh();
             }
         }
-
         private void BtnResetPwd_Click(object sender, RoutedEventArgs e)
         {
             if (dgUsers.SelectedItem is not User u)
@@ -117,7 +112,7 @@ namespace PersonalInfoManager
             var input = Microsoft.VisualBasic.Interaction.InputBox(
                 $"Nhập mật khẩu mới cho '{u.Username}' (>= 6 ký tự):\n" +
                 "(Người dùng sẽ phải đổi lại mật khẩu này khi đăng nhập lần tới.)",
-                "Reset mật khẩu", "");
+                "Đặt lại mật khẩu", "");
 
             if (string.IsNullOrWhiteSpace(input)) return;
 
@@ -132,12 +127,11 @@ namespace PersonalInfoManager
                 try
                 {
                     ActivityLogger.Log(SessionService.CurrentUser!.Username,
-                        "ADMIN_RESET_PWD", $"Reset mật khẩu '{u.Username}'");
+                        "ADMIN_RESET_PWD", $"Đặt lại mật khẩu '{u.Username}'");
                 }
                 catch { }
             }
         }
-
         private void BtnToggleActive_Click(object sender, RoutedEventArgs e)
         {
             if (dgUsers.SelectedItem is not User u)
@@ -151,7 +145,6 @@ namespace PersonalInfoManager
                 MessageBox.Show("Không thể khóa chính mình.");
                 return;
             }
-
             bool newActive = !u.IsActive;
             _userService.SetActive(u.Id, newActive);
 
@@ -164,7 +157,6 @@ namespace PersonalInfoManager
             catch { }
             Refresh();
         }
-
         private void BtnToggleRole_Click(object sender, RoutedEventArgs e)
         {
             if (dgUsers.SelectedItem is not User u)
@@ -191,7 +183,6 @@ namespace PersonalInfoManager
             catch { }
             Refresh();
         }
-
         private void BtnDelete_Click(object sender, RoutedEventArgs e)
         {
             if (dgUsers.SelectedItem is not User u)
@@ -205,7 +196,6 @@ namespace PersonalInfoManager
                     "Xác nhận", MessageBoxButton.YesNo,
                     MessageBoxImage.Warning) != MessageBoxResult.Yes)
                 return;
-
             var leftovers = UserDataCleaner.Describe(u.Id, u.Username);
             bool wipeData = false;
 
@@ -277,7 +267,7 @@ namespace PersonalInfoManager
 
             var dlg = new Window
             {
-                Title = "Log hôm nay",
+                Title = "Nhật ký hôm nay",
                 Width = 900,
                 Height = 550,
                 WindowStartupLocation = WindowStartupLocation.CenterOwner,

@@ -44,11 +44,11 @@ public partial class TotpCodeWindow : Window
         if (code.Length is not (6 or 8) || !code.All(char.IsDigit)) return;
         if (!ClipboardGuard.CopySensitive(code))
         {
-            MessageBox.Show(this, "Không thể sao chép mã vào clipboard an toàn. Hãy thử lại.",
+            MessageBox.Show(this, "Không thể sao chép mã vào bộ nhớ tạm an toàn. Hãy thử lại.",
                 "Không thể sao chép", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
-        MessageBox.Show(this, $"Đã copy mã. Clipboard sẽ tự xóa sau {ClipboardGuard.ClearAfterSeconds} giây.",
+        MessageBox.Show(this, $"Đã sao chép mã. Bộ nhớ tạm sẽ tự xóa sau {ClipboardGuard.ClearAfterSeconds} giây.",
             "Đã sao chép", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 

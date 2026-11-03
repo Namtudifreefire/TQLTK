@@ -93,7 +93,7 @@
             </Grid>
 
             <StackPanel Grid.Row="5" Margin="0,15,0,0">
-                <TextBlock Text="Username / Email (*):"
+                <TextBlock Text="Tên đăng nhập / Email (*):"
                            FontWeight="SemiBold"
                            FontSize="13"
                            Foreground="{DynamicResource TextPrimaryBrush}"
@@ -106,7 +106,7 @@
             </StackPanel>
 
             <StackPanel Grid.Row="6" Margin="0,15,0,0">
-                <TextBlock Text="Password (*):"
+                <TextBlock Text="Mật khẩu (*):"
                            FontWeight="SemiBold"
                            FontSize="13"
                            Foreground="{DynamicResource TextPrimaryBrush}"
