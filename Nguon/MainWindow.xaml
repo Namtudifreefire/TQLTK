@@ -441,7 +441,7 @@
                                         <DataGridTextColumn Header="Thư mục" Binding="{Binding Folder}" Width="130" />
                                         <DataGridTextColumn Header="Nhãn" Binding="{Binding TagsText}" Width="180" />
                                         <DataGridTextColumn Header="Ghi chú" Binding="{Binding Note}" Width="*" MinWidth="200" />
-                                        <DataGridTextColumn Header="Ngày đổi MK" Binding="{Binding PasswordChangedText}" Width="120" />
+                                        <DataGridTextColumn Header="Ngày đổi MK" Binding="{Binding PasswordChangedText}" Width="180" MinWidth="165" />
                                         <DataGridTextColumn Header="TOTP" Binding="{Binding TotpState}" Width="75" />
                                         <DataGridTextColumn Header="Cập nhật" Binding="{Binding UpdatedAt, StringFormat='dd/MM/yyyy HH:mm'}" Width="150" />
                                     </DataGrid.Columns>

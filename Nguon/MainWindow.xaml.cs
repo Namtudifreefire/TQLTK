@@ -46,7 +46,11 @@ namespace PersonalInfoManager
             cmbLanguageSettings.SelectionChanged += (_, _) =>
             {
                 if (cmbLanguageSettings.SelectedValue is string language)
+                {
                     LanguageService.SetLanguage(language);
+                    if (SessionService.IsLoggedIn)
+                        RefreshAccounts(updateStatus: false);
+                }
             };
             AutoLockMinutes = RegistryService.GetAutoLockMinutes();
             _lockWhenMinimized = RegistryService.GetLockWhenMinimized();
@@ -454,8 +458,8 @@ namespace PersonalInfoManager
                 FavoriteText = a.IsFavorite ? "★" : "",
                 a.CreatedAt,
                 a.UpdatedAt,
-                PasswordChangedText = a.PasswordChangedAt?.ToString("dd/MM/yyyy") ?? "Chưa rõ",
-                TotpState = string.IsNullOrWhiteSpace(a.TotpSecret) ? "—" : "Có",
+                PasswordChangedText = a.PasswordChangedAt?.ToString("dd/MM/yyyy") ?? LanguageService.Translate("Chưa rõ"),
+                TotpState = string.IsNullOrWhiteSpace(a.TotpSecret) ? "—" : LanguageService.Translate("Có"),
                 _original = a
             }).ToList();
 
