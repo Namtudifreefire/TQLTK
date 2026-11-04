@@ -265,6 +265,7 @@ internal static class EnglishCatalog
         Add("📋 Sao chép", "📋 Copy");
         Add("Sao chép tên đăng nhập", "Copy username");
         Add("Sao chép mật khẩu", "Copy password");
+        Add("Thao tác khác", "More actions");
         Add("Đặt lại", "Reset");
         Add("Đặt lại mật khẩu", "Reset password");
         Add("Chưa đăng nhập", "Not signed in");

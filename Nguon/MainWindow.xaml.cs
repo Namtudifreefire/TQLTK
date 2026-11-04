@@ -541,6 +541,13 @@ namespace PersonalInfoManager
                 RefreshAccounts();
             }
         }
+        private void BtnMoreAccountActions_Click(object? sender, RoutedEventArgs e)
+        {
+            if (sender is not Button button || button.ContextMenu is not ContextMenu menu) return;
+            menu.PlacementTarget = button;
+            menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
+            menu.IsOpen = true;
+        }
         private async void BtnPasswordHistory_Click(object? sender, RoutedEventArgs e)
         {
             var selected = GetSelectedAccount();
