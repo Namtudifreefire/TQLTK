@@ -27,6 +27,8 @@ internal static class EnglishCatalog
         Add("Không tìm thấy thông tin đăng nhập Google Drive còn dùng được.", "No usable Google Drive sign-in data was found.");
         Add("Đã xác minh tài khoản Drive bằng token đã lưu trên máy này.", "The Drive account was verified using the token saved on this device.");
         Add("Có token Drive đã lưu nhưng chưa xác minh được tài khoản: ", "A Drive token is saved, but the account could not be verified: ");
+        Add("Đường dẫn token Google Drive không khớp tài khoản hiện tại.", "The Google Drive token path does not match the current account.");
+        Add("Thư mục token Google Drive là liên kết hệ thống; không thể xóa an toàn.", "The Google Drive token directory is a system link and cannot be safely deleted.");
         Add("Tài khoản Google Drive đã liên kết: {0}.", "Linked Google Drive account: {0}.");
         Add("Không thể kiểm tra tài khoản Google Drive: ", "Could not check the Google Drive account: ");
         Add("Đã ngắt kết nối Drive trên máy này. Bản sao lưu trên Drive không bị xóa; quyền Google vẫn có thể được thu hồi riêng.", "Drive was disconnected on this device. Drive backups were not deleted; Google access can be revoked separately.");
@@ -634,6 +636,8 @@ internal static class EnglishCatalog
         Add("Bản sao lưu không chứa file hợp lệ.", "The backup does not contain any valid files.");
         Add("Bản sao lưu không chứa file nào để khôi phục.", "The backup contains no files to restore.");
         Add("Bản sao lưu thiếu manifest của TQLTK.", "The backup is missing the TQLTK manifest.");
+        Add("Bản sao lưu thiếu manifest hợp lệ của TQLTK.", "The backup is missing a valid TQLTK manifest.");
+        Add("Manifest không khớp số lượng hoặc dung lượng dữ liệu trong bản sao lưu.", "The manifest does not match the backup's file count or data size.");
         Add("Bản sao lưu vượt giới hạn dung lượng cho phép.", "The backup exceeds the allowed size limit.");
         Add("Bản xem trước đã được sử dụng hoặc không còn dữ liệu.", "This preview has already been used or no longer contains data.");
         Add("Bắt buộc đổi mật khẩu - TQLTK", "Password change required - TQLTK");
@@ -1051,6 +1055,7 @@ internal static class EnglishCatalog
 
     private static IReadOnlyList<KeyValuePair<string, string>> BuildFragments() => new[]
     {
+        new KeyValuePair<string, string>("Bản sao lưu tạo mới không qua kiểm tra: ", "The newly created backup did not pass verification: "),
         new KeyValuePair<string, string>(" phút", " minutes"),
         new KeyValuePair<string, string>(" Bỏ qua ", " Skipped "),
         new KeyValuePair<string, string>("Bỏ qua ", "Skipped "),
