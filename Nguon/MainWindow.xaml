@@ -7,7 +7,9 @@
         Background="{DynamicResource BackgroundBrush}"
         Style="{StaticResource SlideInWindow}"
         PreviewMouseDown="MainWindow_PreviewMouseDown">
+
     <Window.Resources>
+
         <Style x:Key="NavItem" TargetType="RadioButton">
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
             <Setter Property="FontFamily" Value="Segoe UI" />
@@ -44,12 +46,14 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
         <Style x:Key="NavGroup" TargetType="TextBlock">
             <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
             <Setter Property="FontFamily" Value="Segoe UI" />
             <Setter Property="FontSize" Value="12" />
             <Setter Property="Margin" Value="12,14,0,6" />
         </Style>
+
         <Style x:Key="IconButton" TargetType="Button">
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
             <Setter Property="FontFamily" Value="Segoe MDL2 Assets" />
@@ -79,6 +83,7 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
         <Style x:Key="UserChip" TargetType="Button">
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="FocusVisualStyle" Value="{x:Null}" />
@@ -101,6 +106,7 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
         <Style x:Key="UserMenuItem" TargetType="Button">
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="FocusVisualStyle" Value="{x:Null}" />
@@ -123,6 +129,7 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
         <Style x:Key="PageTitle" TargetType="TextBlock">
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
             <Setter Property="FontFamily" Value="Segoe UI" />
@@ -130,6 +137,7 @@
             <Setter Property="FontWeight" Value="Bold" />
             <Setter Property="Margin" Value="0,0,0,4" />
         </Style>
+
         <Style x:Key="PageSub" TargetType="TextBlock">
             <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
             <Setter Property="FontFamily" Value="Segoe UI" />
@@ -137,17 +145,20 @@
             <Setter Property="TextWrapping" Value="Wrap" />
             <Setter Property="Margin" Value="0,0,0,10" />
         </Style>
+
         <Style x:Key="SettingRow" TargetType="Border">
             <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
             <Setter Property="BorderThickness" Value="0,0,0,1" />
             <Setter Property="Padding" Value="0,14" />
         </Style>
+
         <Style x:Key="RowTitle" TargetType="TextBlock">
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
             <Setter Property="FontFamily" Value="Segoe UI" />
             <Setter Property="FontSize" Value="14" />
             <Setter Property="Margin" Value="0" />
         </Style>
+
         <Style x:Key="RowDesc" TargetType="TextBlock">
             <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
             <Setter Property="FontFamily" Value="Segoe UI" />
@@ -155,6 +166,7 @@
             <Setter Property="TextWrapping" Value="Wrap" />
             <Setter Property="Margin" Value="0,3,0,0" />
         </Style>
+
         <Style x:Key="RowState" TargetType="TextBlock">
             <Setter Property="FontFamily" Value="Segoe UI" />
             <Setter Property="FontSize" Value="12" />
@@ -162,6 +174,7 @@
             <Setter Property="VerticalAlignment" Value="Center" />
             <Setter Property="Margin" Value="12,0,0,0" />
         </Style>
+
         <Style x:Key="RowButton" TargetType="Button" BasedOn="{StaticResource OutlineButton}">
             <Setter Property="MinWidth" Value="100" />
             <Setter Property="Height" Value="44" />
@@ -169,24 +182,30 @@
             <Setter Property="Margin" Value="16,0,0,0" />
             <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
+
         <Style x:Key="RowDangerButton" TargetType="Button" BasedOn="{StaticResource RowButton}">
             <Setter Property="BorderBrush" Value="#EF4444" />
         </Style>
+
         <Style x:Key="AccountGridText" TargetType="TextBlock">
             <Setter Property="TextTrimming" Value="CharacterEllipsis" />
             <Setter Property="VerticalAlignment" Value="Center" />
             <Setter Property="ToolTip" Value="{Binding RelativeSource={RelativeSource Self}, Path=Text}" />
         </Style>
+
         <Style x:Key="AccountGridPasswordText" TargetType="TextBlock" BasedOn="{StaticResource AccountGridText}">
             <Setter Property="ToolTip" Value="{x:Null}" />
         </Style>
+
         <Style x:Key="AccountGridCenteredText" TargetType="TextBlock" BasedOn="{StaticResource AccountGridText}">
             <Setter Property="TextAlignment" Value="Center" />
             <Setter Property="HorizontalAlignment" Value="Center" />
         </Style>
+
         <Style x:Key="AccountGridCell" TargetType="DataGridCell" BasedOn="{StaticResource ModernDataGridCell}">
             <Setter Property="Padding" Value="7,4" />
         </Style>
+
         <Style x:Key="AccountActionPopupButton" TargetType="Button">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
@@ -221,12 +240,17 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
         <Style x:Key="AccountActionPopupDangerButton" TargetType="Button" BasedOn="{StaticResource AccountActionPopupButton}">
             <Setter Property="Foreground" Value="#EF4444" />
         </Style>
+
     </Window.Resources>
+
     <Grid>
+
         <DockPanel x:Name="shellMain">
+
             <StatusBar DockPanel.Dock="Bottom">
                 <StatusBarItem>
                     <TextBlock x:Name="lblTheme"
@@ -236,6 +260,7 @@
                     <TextBlock x:Name="lblStorage" />
                 </StatusBarItem>
             </StatusBar>
+
             <Border DockPanel.Dock="Top" Padding="12,8,16,2">
                 <StackPanel Orientation="Horizontal">
                     <Button x:Name="btnToggleSidebar"
@@ -250,13 +275,16 @@
                     </StackPanel>
                 </StackPanel>
             </Border>
+
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
+
                 <Border x:Name="panelSidebar" Grid.Column="0" Width="250" ClipToBounds="True">
                     <DockPanel Width="226" HorizontalAlignment="Left" Margin="14,6,10,10">
+
                         <StackPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
                             <Button x:Name="btnUser"
                                     Style="{StaticResource UserChip}"
@@ -268,6 +296,7 @@
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
+
                                     <Border Grid.Column="0"
                                             Width="32" Height="32"
                                             CornerRadius="16"
@@ -281,6 +310,7 @@
                                                    HorizontalAlignment="Center"
                                                    VerticalAlignment="Center" />
                                     </Border>
+
                                     <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0,6,0">
                                         <TextBlock x:Name="lblUserName"
                                                    FontSize="13"
@@ -292,6 +322,7 @@
                                                    Foreground="{DynamicResource TextSecondaryBrush}"
                                                    Margin="0,1,0,0" />
                                     </StackPanel>
+
                                     <TextBlock Grid.Column="2"
                                                Text="&#xE70D;"
                                                FontFamily="Segoe MDL2 Assets"
@@ -301,6 +332,7 @@
                                                VerticalAlignment="Center" />
                                 </Grid>
                             </Button>
+
                             <Popup x:Name="popUserMenu"
                                    PlacementTarget="{Binding ElementName=btnUser}"
                                    Placement="Top"
@@ -326,6 +358,7 @@
                                                    Foreground="{DynamicResource TextSecondaryBrush}"
                                                    TextTrimming="CharacterEllipsis"
                                                    Margin="10,6,10,6" />
+
                                         <Button Style="{StaticResource UserMenuItem}" Tag="settings" Click="UserMenu_Click">
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
@@ -340,10 +373,13 @@
                                                            VerticalAlignment="Center" />
                                             </Grid>
                                         </Button>
+
                                         <Separator />
+
                                         <Button Style="{StaticResource UserMenuItem}" Tag="logout" Click="UserMenu_Click">
                                             <TextBlock Text="🚪  Đăng xuất" FontSize="14" Margin="0" />
                                         </Button>
+
                                         <Button Style="{StaticResource UserMenuItem}" Tag="exit" Click="UserMenu_Click">
                                             <TextBlock Text="⏻  Thoát" FontSize="14" Margin="0" />
                                         </Button>
@@ -351,6 +387,7 @@
                                 </Border>
                             </Popup>
                         </StackPanel>
+
                         <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                             <StackPanel Margin="0,10,0,0">
                                 <RadioButton x:Name="navAccounts" GroupName="Nav" Tag="accounts" Content="🔐  Tài khoản"
@@ -361,11 +398,13 @@
                         </ScrollViewer>
                     </DockPanel>
                 </Border>
+
                 <Border Grid.Column="1"
                         Background="{DynamicResource SurfaceBrush}"
                         BorderBrush="{DynamicResource BorderBrush}"
                         BorderThickness="1,0,0,0">
                     <Grid>
+
                         <Grid x:Name="pageAccounts" Margin="24,20" Visibility="Collapsed">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
@@ -373,7 +412,9 @@
                                 <RowDefinition Height="*" />
                                 <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
+
                             <TextBlock Grid.Row="0" Text="Tài khoản đã lưu" Style="{StaticResource PageTitle}" />
+
                             <Border Grid.Row="1"
                                     Background="{DynamicResource BackgroundBrush}"
                                     BorderBrush="{DynamicResource BorderBrush}"
@@ -386,6 +427,7 @@
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
+
                                     <StackPanel Grid.Column="0" Orientation="Horizontal">
                                         <TextBlock Text="🔍 Tìm:"
                                                    VerticalAlignment="Center"
@@ -406,6 +448,7 @@
                                                    VerticalAlignment="Center"
                                                    Margin="8,0,0,0" />
                                     </StackPanel>
+
                                     <StackPanel Grid.Column="1" Orientation="Horizontal">
                                         <Button Height="34" Padding="15,6" Click="BtnAddAccount_Click">
                                             <StackPanel Orientation="Horizontal">
@@ -413,6 +456,7 @@
                                                 <TextBlock Text="Thêm mới" VerticalAlignment="Center" />
                                             </StackPanel>
                                         </Button>
+
                                         <Button Height="34" Padding="15,6"
                                                 Click="BtnRefreshAccounts_Click"
                                                 Style="{StaticResource OutlineButton}">
@@ -421,6 +465,7 @@
                                                 <TextBlock Text="Làm mới" VerticalAlignment="Center" />
                                             </StackPanel>
                                         </Button>
+
                                         <Button Height="34" Padding="15,6" Click="BtnOpenTrash_Click"
                                                 Style="{StaticResource OutlineButton}">
                                             <StackPanel Orientation="Horizontal">
@@ -431,6 +476,7 @@
                                     </StackPanel>
                                 </Grid>
                             </Border>
+
                             <Border Grid.Row="2"
                                     Background="{DynamicResource SurfaceBrush}"
                                     BorderBrush="{DynamicResource BorderBrush}"
@@ -451,27 +497,28 @@
                                     <DataGrid.Columns>
                                         <DataGridTextColumn Header="★" Binding="{Binding FavoriteText}" Width="42"
                                                             ElementStyle="{StaticResource AccountGridCenteredText}" />
-                                        <DataGridTextColumn Header="Dịch vụ" Binding="{Binding ServiceName}" Width="1.2*" MinWidth="110"
+                                        <DataGridTextColumn Header="Dịch vụ" Binding="{Binding ServiceName}" Width="230"
                                                             ElementStyle="{StaticResource AccountGridText}" />
-                                        <DataGridTextColumn Header="Tên đăng nhập" Binding="{Binding Username}" Width="1.6*" MinWidth="140"
+                                        <DataGridTextColumn Header="Tên đăng nhập" Binding="{Binding Username}" Width="280"
                                                             ElementStyle="{StaticResource AccountGridText}" />
-                                        <DataGridTextColumn Header="Mật khẩu" Binding="{Binding PasswordMasked}" Width="120"
+                                        <DataGridTextColumn Header="Mật khẩu" Binding="{Binding PasswordMasked}" Width="140"
                                                             ElementStyle="{StaticResource AccountGridPasswordText}" />
-                                        <DataGridTextColumn Header="Trang web" Binding="{Binding WebsiteDisplay}" Width="1.1*" MinWidth="110"
+                                        <DataGridTextColumn Header="Trang web" Binding="{Binding WebsiteDisplay}" Width="240"
                                                             ElementStyle="{StaticResource AccountGridText}" />
-                                        <DataGridTextColumn Header="Thư mục / nhãn" Binding="{Binding FolderAndTagsText}" Width="1.3*" MinWidth="125"
+                                        <DataGridTextColumn Header="Thư mục / nhãn" Binding="{Binding FolderAndTagsText}" Width="230"
                                                             ElementStyle="{StaticResource AccountGridText}" />
-                                        <DataGridTextColumn Header="Ghi chú" Binding="{Binding Note}" Width="1.6*" MinWidth="140"
+                                        <DataGridTextColumn Header="Ghi chú" Binding="{Binding Note}" Width="300"
                                                             ElementStyle="{StaticResource AccountGridText}" />
-                                        <DataGridTextColumn Header="Ngày đổi MK" Binding="{Binding PasswordChangedText, Converter={StaticResource LocalizedTextConverter}}" Width="130"
+                                        <DataGridTextColumn Header="Ngày đổi MK" Binding="{Binding PasswordChangedText, Converter={StaticResource LocalizedTextConverter}}" Width="180"
                                                             ElementStyle="{StaticResource AccountGridText}" />
-                                        <DataGridTextColumn Header="TOTP" Binding="{Binding TotpState, Converter={StaticResource LocalizedTextConverter}}" Width="70"
+                                        <DataGridTextColumn Header="TOTP" Binding="{Binding TotpState, Converter={StaticResource LocalizedTextConverter}}" Width="90"
                                                             ElementStyle="{StaticResource AccountGridCenteredText}" />
-                                        <DataGridTextColumn Header="Cập nhật" Binding="{Binding UpdatedAt, StringFormat='dd/MM/yyyy HH:mm'}" Width="140"
+                                        <DataGridTextColumn Header="Cập nhật" Binding="{Binding UpdatedAt, StringFormat='dd/MM/yyyy HH:mm'}" Width="185"
                                                             ElementStyle="{StaticResource AccountGridText}" />
                                     </DataGrid.Columns>
                                 </DataGrid>
                             </Border>
+
                             <Border Grid.Row="3"
                                     Background="{DynamicResource BackgroundBrush}"
                                     BorderBrush="{DynamicResource BorderBrush}"
@@ -487,24 +534,28 @@
                                             <TextBlock Text="Hiện / Ẩn MK" VerticalAlignment="Center" />
                                         </StackPanel>
                                     </Button>
+
                                     <Button Height="38" Margin="3" Padding="12,6" Click="BtnCopyUsername_Click" Style="{StaticResource OutlineButton}">
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="📋" FontSize="14" Margin="0,0,6,0" VerticalAlignment="Center" />
                                             <TextBlock Text="Sao chép tên đăng nhập" VerticalAlignment="Center" />
                                         </StackPanel>
                                     </Button>
+
                                     <Button Height="38" Margin="3" Padding="12,6" Click="BtnCopyPassword_Click" Style="{StaticResource OutlineButton}">
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="📋" FontSize="14" Margin="0,0,6,0" VerticalAlignment="Center" />
                                             <TextBlock Text="Sao chép mật khẩu" VerticalAlignment="Center" />
                                         </StackPanel>
                                     </Button>
+
                                     <Button Height="38" Margin="3" Padding="12,6" Click="BtnEditAccount_Click" Style="{StaticResource OutlineButton}">
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="✏" FontSize="14" Margin="0,0,6,0" VerticalAlignment="Center" />
                                             <TextBlock Text="Sửa" VerticalAlignment="Center" />
                                         </StackPanel>
                                     </Button>
+
                                     <Button x:Name="btnMoreAccountActions" Height="38" Margin="3" Padding="12,6"
                                             Style="{StaticResource OutlineButton}" Click="BtnMoreAccountActions_Click"
                                             ToolTip="Thao tác khác">
@@ -550,13 +601,16 @@
                                 </Grid>
                             </Border>
                         </Grid>
+
                         <Grid x:Name="pageFiles" Margin="24,20" Visibility="Collapsed">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="*" />
                             </Grid.RowDefinitions>
+
                             <TextBlock Grid.Row="0" Text="Tài liệu cá nhân" Style="{StaticResource PageTitle}" />
+
                             <WrapPanel Grid.Row="1" Orientation="Horizontal" Margin="0,8,0,0">
                                 <Button Height="38" Padding="15,8" Click="BtnImport_Click">
                                     <StackPanel Orientation="Horizontal">
@@ -564,24 +618,28 @@
                                         <TextBlock Text="Nhập" VerticalAlignment="Center" />
                                     </StackPanel>
                                 </Button>
+
                                 <Button Height="38" Padding="15,8" Click="BtnExport_Click" Style="{StaticResource OutlineButton}">
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="📤" FontSize="14" Margin="0,0,6,0" VerticalAlignment="Center" />
                                         <TextBlock Text="Xuất" VerticalAlignment="Center" />
                                     </StackPanel>
                                 </Button>
+
                                 <Button Height="38" Padding="15,8" Click="BtnCreateText_Click" Style="{StaticResource OutlineButton}">
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="📝" FontSize="14" Margin="0,0,6,0" VerticalAlignment="Center" />
                                         <TextBlock Text="Tạo text" VerticalAlignment="Center" />
                                     </StackPanel>
                                 </Button>
+
                                 <Button Height="38" Padding="15,8" Background="#EF4444" Foreground="White" BorderThickness="0" Click="BtnDeleteFile_Click">
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="🗑" FontSize="14" Margin="0,0,6,0" VerticalAlignment="Center" />
                                         <TextBlock Text="Xóa" VerticalAlignment="Center" />
                                     </StackPanel>
                                 </Button>
+
                                 <Button Height="38" Padding="15,8" Click="BtnRefreshFiles_Click" Style="{StaticResource OutlineButton}">
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="↻" FontSize="15" Margin="0,0,6,0" VerticalAlignment="Center" />
@@ -589,6 +647,7 @@
                                     </StackPanel>
                                 </Button>
                             </WrapPanel>
+
                             <Border Grid.Row="2"
                                     Background="{DynamicResource SurfaceBrush}"
                                     BorderBrush="{DynamicResource BorderBrush}"
@@ -609,12 +668,16 @@
                                 </DataGrid>
                             </Border>
                         </Grid>
+
                     </Grid>
                 </Border>
             </Grid>
         </DockPanel>
+
         <Grid x:Name="settingsOverlay" Visibility="Collapsed">
+
             <Border Background="#99000000" MouseLeftButtonDown="SettingsScrim_MouseDown" />
+
             <Border MaxWidth="960" MaxHeight="660" Margin="24"
                     Background="{DynamicResource SurfaceBrush}"
                     BorderBrush="{DynamicResource BorderBrush}"
@@ -623,11 +686,13 @@
                 <Border.Effect>
                     <DropShadowEffect Color="Black" Opacity="0.35" BlurRadius="24" ShadowDepth="4" />
                 </Border.Effect>
+
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
+
                     <Grid Grid.Row="0" Margin="24,12,12,10">
                         <TextBlock Text="Cài đặt" FontSize="18" FontWeight="Bold" Margin="0" VerticalAlignment="Center" />
                         <Button x:Name="btnCloseSettings"
@@ -638,17 +703,20 @@
                                 ToolTip="Đóng (Esc)"
                                 Click="BtnCloseSettings_Click" />
                     </Grid>
+
                     <Grid Grid.Row="1">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="240" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
+
                         <Border Grid.Column="0"
                                 Background="{DynamicResource BackgroundBrush}"
                                 BorderBrush="{DynamicResource BorderBrush}"
                                 BorderThickness="0,1,1,0"
                                 CornerRadius="0,0,0,13">
                             <DockPanel Margin="12,12,12,12">
+
                                 <Grid DockPanel.Dock="Top" Margin="0,0,0,6">
                                     <TextBox x:Name="txtSettingsSearch"
                                              Height="36"
@@ -663,8 +731,10 @@
                                                Margin="12,0,0,0"
                                                VerticalAlignment="Center" />
                                 </Grid>
+
                                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                                     <StackPanel x:Name="panelSettingsNav">
+
                                         <StackPanel>
                                             <TextBlock Text="Tài khoản" Style="{StaticResource NavGroup}" />
                                             <RadioButton x:Name="navProfile" GroupName="SettingsNav" Tag="profile" Content="👤  Thông tin cá nhân"
@@ -672,11 +742,13 @@
                                             <RadioButton GroupName="SettingsNav" Tag="security" Content="🛡️  Bảo mật"
                                                          Style="{StaticResource NavItem}" Checked="Nav_Checked" />
                                         </StackPanel>
+
                                         <StackPanel>
                                             <TextBlock Text="Tùy chỉnh" Style="{StaticResource NavGroup}" />
                                             <RadioButton GroupName="SettingsNav" Tag="appearance" Content="🎨  Giao diện"
                                                          Style="{StaticResource NavItem}" Checked="Nav_Checked" />
                                         </StackPanel>
+
                                         <StackPanel>
                                             <TextBlock Text="Sao lưu" Style="{StaticResource NavGroup}" />
                                             <RadioButton GroupName="SettingsNav" Tag="backup" Content="💾  Xuất / nhập dữ liệu"
@@ -684,6 +756,7 @@
                                             <RadioButton GroupName="SettingsNav" Tag="drive" Content="☁️  Google Drive (BETA)"
                                                          Style="{StaticResource NavItem}" Checked="Nav_Checked" />
                                         </StackPanel>
+
                                         <StackPanel>
                                             <TextBlock Text="Hệ thống" Style="{StaticResource NavGroup}" />
                                             <RadioButton GroupName="SettingsNav" Tag="system" Content="⚙️  Hệ thống"
@@ -692,6 +765,7 @@
                                                          Visibility="Collapsed"
                                                          Style="{StaticResource NavItem}" Checked="Nav_Checked" />
                                         </StackPanel>
+
                                         <TextBlock x:Name="lblSettingsNoResult"
                                                    Text="Không có mục nào khớp."
                                                    Foreground="{DynamicResource TextSecondaryBrush}"
@@ -702,24 +776,33 @@
                                 </ScrollViewer>
                             </DockPanel>
                         </Border>
+
                         <Grid Grid.Column="1">
+
                             <ScrollViewer x:Name="pageProfile" Visibility="Collapsed"
                                           VerticalScrollBarVisibility="Auto" PanningMode="VerticalOnly">
                                 <StackPanel Margin="28,8,28,24">
                                     <TextBlock Text="Thông tin cá nhân" Style="{StaticResource PageTitle}" />
                                     <TextBlock Text="Cập nhật họ tên, Gmail, số điện thoại và đăng nhập bằng Windows Hello." Style="{StaticResource PageSub}" />
+
                                     <TextBlock Text="Tên đăng nhập (không đổi):" FontWeight="SemiBold" Margin="0,8,0,5" />
                                     <TextBox x:Name="txtProfileUsername" Height="38" IsReadOnly="True" VerticalContentAlignment="Center" Background="{DynamicResource BackgroundBrush}" Margin="0,0,0,15" />
+
                                     <TextBlock Text="Họ tên:" FontWeight="SemiBold" Margin="0,0,0,5" />
                                     <TextBox x:Name="txtProfileFullName" Height="38" VerticalContentAlignment="Center" Margin="0,0,0,15" />
+
                                     <TextBlock Text="Gmail:" FontWeight="SemiBold" Margin="0,0,0,5" />
                                     <TextBox x:Name="txtProfileEmail" Height="38" VerticalContentAlignment="Center" Margin="0,0,0,15" />
+
                                     <TextBlock Text="Số điện thoại:" FontWeight="SemiBold" Margin="0,0,0,5" />
                                     <TextBox x:Name="txtProfilePhone" Height="38" VerticalContentAlignment="Center" Margin="0,0,0,15" />
+
                                     <TextBlock Text="Vai trò:" FontWeight="SemiBold" Margin="0,0,0,5" />
                                     <TextBlock x:Name="lblProfileRole" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,15" />
+
                                     <TextBlock Text="Ngày tạo tài khoản:" FontWeight="SemiBold" Margin="0,0,0,5" />
                                     <TextBlock x:Name="lblProfileCreatedAt" FontSize="13" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,10" />
+
                                     <Border Style="{StaticResource SettingRow}" BorderThickness="0,1,0,1" Margin="0,10,0,0">
                                         <DockPanel>
                                             <Button x:Name="btnToggleWindowsHello"
@@ -737,6 +820,7 @@
                                             </StackPanel>
                                         </DockPanel>
                                     </Border>
+
                                     <Button Height="40" Padding="20,8"
                                             HorizontalAlignment="Left"
                                             Margin="0,20,0,0"
@@ -748,11 +832,13 @@
                                     </Button>
                                 </StackPanel>
                             </ScrollViewer>
+
                             <ScrollViewer x:Name="pageSecurity" Visibility="Collapsed"
                                           VerticalScrollBarVisibility="Auto" PanningMode="VerticalOnly">
                                 <StackPanel Margin="28,8,28,24">
                                     <TextBlock Text="Bảo mật" Style="{StaticResource PageTitle}" />
                                     <TextBlock Text="Bảo vệ đăng nhập và các thao tác nhạy cảm." Style="{StaticResource PageSub}" />
+
                                     <Border Style="{StaticResource SettingRow}" Margin="0,0,0,14">
                                         <StackPanel>
                                             <WrapPanel Margin="0,0,0,8">
@@ -803,6 +889,7 @@
                                             </ListBox>
                                         </StackPanel>
                                     </Border>
+
                                     <Border Style="{StaticResource SettingRow}" Margin="0,0,0,14">
                                         <StackPanel>
                                             <TextBlock Text="Tự khóa ứng dụng" Style="{StaticResource RowTitle}" />
@@ -820,6 +907,7 @@
                                             </WrapPanel>
                                         </StackPanel>
                                     </Border>
+
                                     <Border Style="{StaticResource SettingRow}" Margin="0,0,0,14">
                                         <StackPanel>
                                             <TextBlock Text="Ngôn ngữ" Style="{StaticResource RowTitle}" />
@@ -830,6 +918,7 @@
                                             </ComboBox>
                                         </StackPanel>
                                     </Border>
+
                                     <Border Style="{StaticResource SettingRow}">
                                         <DockPanel>
                                             <Button DockPanel.Dock="Right" Content="Đổi mật khẩu" Style="{StaticResource RowButton}" Click="MnuChangePwd_Click" />
@@ -839,6 +928,7 @@
                                             </StackPanel>
                                         </DockPanel>
                                     </Border>
+
                                     <Border Style="{StaticResource SettingRow}">
                                         <DockPanel>
                                             <Button DockPanel.Dock="Right" Content="Bật / Tắt" Style="{StaticResource RowButton}" Click="Mnu2FA_Click" />
@@ -849,6 +939,7 @@
                                             </StackPanel>
                                         </DockPanel>
                                     </Border>
+
                                     <Border x:Name="card2FARegen" Style="{StaticResource SettingRow}" Visibility="Collapsed">
                                         <DockPanel>
                                             <Button DockPanel.Dock="Right" Content="Tạo lại" Style="{StaticResource RowButton}" Click="Mnu2FARegen_Click" />
@@ -858,6 +949,7 @@
                                             </StackPanel>
                                         </DockPanel>
                                     </Border>
+
                                     <Border Style="{StaticResource SettingRow}">
                                         <DockPanel>
                                             <Button DockPanel.Dock="Right" Content="Mở" Style="{StaticResource RowButton}" Click="GoProfile_Click" />
@@ -869,11 +961,13 @@
                                     </Border>
                                 </StackPanel>
                             </ScrollViewer>
+
                             <ScrollViewer x:Name="pageAppearance" Visibility="Collapsed"
                                           VerticalScrollBarVisibility="Auto" PanningMode="VerticalOnly">
                                 <StackPanel Margin="28,8,28,24">
                                     <TextBlock Text="Giao diện" Style="{StaticResource PageTitle}" />
                                     <TextBlock Text="Màu sắc và vị trí cửa sổ." Style="{StaticResource PageSub}" />
+
                                     <Border Style="{StaticResource SettingRow}">
                                         <DockPanel>
                                             <Button DockPanel.Dock="Right" Content="Đổi" Style="{StaticResource RowButton}" Click="MnuToggleTheme_Click" />
@@ -883,6 +977,7 @@
                                             </StackPanel>
                                         </DockPanel>
                                     </Border>
+
                                     <Border Style="{StaticResource SettingRow}">
                                         <DockPanel>
                                             <Button DockPanel.Dock="Right" Content="Bật / Tắt" Style="{StaticResource RowButton}" Click="MnuAutoTheme_Click" />
@@ -893,6 +988,7 @@
                                             </StackPanel>
                                         </DockPanel>
                                     </Border>
+
                                     <Border Style="{StaticResource SettingRow}">
                                         <DockPanel>
                                             <Button DockPanel.Dock="Right" Content="Đưa về giữa" Style="{StaticResource RowButton}" Click="MnuCenterWindow_Click" />
@@ -904,11 +1000,13 @@
                                     </Border>
                                 </StackPanel>
                             </ScrollViewer>
+
                             <ScrollViewer x:Name="pageBackup" Visibility="Collapsed"
                                           VerticalScrollBarVisibility="Auto" PanningMode="VerticalOnly">
                                 <StackPanel Margin="28,8,28,24">
                                     <TextBlock Text="Xuất / nhập dữ liệu" Style="{StaticResource PageTitle}" />
                                     <TextBlock Text="Sao lưu tài khoản ra tệp trên máy, hoặc nhập từ tệp." Style="{StaticResource PageSub}" />
+
                                     <Border Style="{StaticResource SettingRow}">
                                         <DockPanel>
                                             <Button DockPanel.Dock="Right" Content="Xuất" Style="{StaticResource RowButton}" Click="MnuExportVault_Click" />
@@ -918,6 +1016,7 @@
                                             </StackPanel>
                                         </DockPanel>
                                     </Border>
+
                                     <Border Style="{StaticResource SettingRow}">
                                         <DockPanel>
                                             <Button DockPanel.Dock="Right" Content="Nhập" Style="{StaticResource RowButton}" Click="MnuImportVault_Click" />
@@ -927,6 +1026,7 @@
                                             </StackPanel>
                                         </DockPanel>
                                     </Border>
+
                                     <Border Style="{StaticResource SettingRow}">
                                         <DockPanel>
                                             <Button DockPanel.Dock="Right" Content="Kiểm tra" Style="{StaticResource RowButton}" Click="MnuVerifyBackup_Click" />
@@ -936,6 +1036,7 @@
                                             </StackPanel>
                                         </DockPanel>
                                     </Border>
+
                                     <Border Style="{StaticResource SettingRow}">
                                         <DockPanel>
                                             <Button DockPanel.Dock="Right" Content="Xuất" Style="{StaticResource RowButton}" Click="MnuExportCsv_Click" />
@@ -945,6 +1046,7 @@
                                             </StackPanel>
                                         </DockPanel>
                                     </Border>
+
                                     <Border Style="{StaticResource SettingRow}">
                                         <DockPanel>
                                             <Button DockPanel.Dock="Right" Content="Nhập" Style="{StaticResource RowButton}" Click="MnuImportCsv_Click" />
@@ -954,6 +1056,7 @@
                                             </StackPanel>
                                         </DockPanel>
                                     </Border>
+
                                     <Border Style="{StaticResource SettingRow}">
                                         <DockPanel>
                                             <Button DockPanel.Dock="Right" Content="Mở chia sẻ" Style="{StaticResource RowButton}" Click="MnuImportShare_Click" />
@@ -965,11 +1068,13 @@
                                     </Border>
                                 </StackPanel>
                             </ScrollViewer>
+
                             <ScrollViewer x:Name="pageDrive" Visibility="Collapsed"
                                           VerticalScrollBarVisibility="Auto" PanningMode="VerticalOnly">
                                 <StackPanel Margin="28,8,28,24">
                                     <TextBlock Text="Google Drive (BETA)" Style="{StaticResource PageTitle}" />
                                     <TextBlock Text="Bản sao lưu nằm trong thư mục 'TQLTK Backup' trên Google Drive của bạn." Style="{StaticResource PageSub}" />
+
                                     <Border Style="{StaticResource SettingRow}">
                                         <DockPanel LastChildFill="True">
                                             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
@@ -983,6 +1088,7 @@
                                             </StackPanel>
                                         </DockPanel>
                                     </Border>
+
                                     <Border Style="{StaticResource SettingRow}">
                                         <DockPanel>
                                             <Button DockPanel.Dock="Right" Content="Đồng bộ" Style="{StaticResource RowButton}" Click="MnuSyncGoogleDrive_Click" />
@@ -992,6 +1098,7 @@
                                             </StackPanel>
                                         </DockPanel>
                                     </Border>
+
                                     <Border Style="{StaticResource SettingRow}">
                                         <DockPanel>
                                             <Button DockPanel.Dock="Right" Content="Quản lý liên kết" Style="{StaticResource RowButton}" Click="BtnManageDriveShares_Click" />
@@ -1001,6 +1108,7 @@
                                             </StackPanel>
                                         </DockPanel>
                                     </Border>
+
                                     <Border Style="{StaticResource SettingRow}">
                                         <DockPanel>
                                             <Button DockPanel.Dock="Right" Content="Khôi phục" Style="{StaticResource RowButton}" Click="MnuRestoreGoogleDrive_Click" />
@@ -1010,6 +1118,7 @@
                                             </StackPanel>
                                         </DockPanel>
                                     </Border>
+
                                     <Border Style="{StaticResource SettingRow}">
                                         <DockPanel>
                                             <Button DockPanel.Dock="Right" Content="Sao lưu" Style="{StaticResource RowButton}" Click="MnuSyncFilesGoogleDrive_Click" />
@@ -1019,6 +1128,7 @@
                                             </StackPanel>
                                         </DockPanel>
                                     </Border>
+
                                     <Border Style="{StaticResource SettingRow}">
                                         <DockPanel>
                                             <Button DockPanel.Dock="Right" Content="Khôi phục" Style="{StaticResource RowButton}" Click="MnuRestoreFilesGoogleDrive_Click" />
@@ -1028,6 +1138,7 @@
                                             </StackPanel>
                                         </DockPanel>
                                     </Border>
+
                                     <Border Style="{StaticResource SettingRow}">
                                         <DockPanel>
                                             <Button DockPanel.Dock="Right" Content="Đặt / Đổi" Style="{StaticResource RowButton}" Click="MnuBackupPassphrase_Click" />
@@ -1039,11 +1150,13 @@
                                     </Border>
                                 </StackPanel>
                             </ScrollViewer>
+
                             <ScrollViewer x:Name="pageSystem" Visibility="Collapsed"
                                           VerticalScrollBarVisibility="Auto" PanningMode="VerticalOnly">
                                 <StackPanel Margin="28,8,28,24">
                                     <TextBlock Text="Hệ thống" Style="{StaticResource PageTitle}" />
                                     <TextBlock Text="Thông tin máy và đặt lại cài đặt." Style="{StaticResource PageSub}" />
+
                                     <Border Style="{StaticResource SettingRow}">
                                         <DockPanel>
                                             <Button DockPanel.Dock="Right" Content="Xem" Style="{StaticResource RowButton}" Click="MnuSysInfo_Click" />
@@ -1053,6 +1166,7 @@
                                             </StackPanel>
                                         </DockPanel>
                                     </Border>
+
                                     <Border Style="{StaticResource SettingRow}">
                                         <DockPanel>
                                             <Button DockPanel.Dock="Right" Style="{StaticResource RowDangerButton}" Click="MnuResetSettings_Click">
@@ -1066,11 +1180,13 @@
                                     </Border>
                                 </StackPanel>
                             </ScrollViewer>
+
                             <ScrollViewer x:Name="pageAdmin" Visibility="Collapsed"
                                           VerticalScrollBarVisibility="Auto" PanningMode="VerticalOnly">
                                 <StackPanel Margin="28,8,28,24">
                                     <TextBlock Text="Quản trị" Style="{StaticResource PageTitle}" />
                                     <TextBlock Text="Chỉ quản trị viên mới thấy mục này." Style="{StaticResource PageSub}" />
+
                                     <Border Style="{StaticResource SettingRow}">
                                         <DockPanel>
                                             <Button DockPanel.Dock="Right" Content="Mở" Style="{StaticResource RowButton}" Click="MnuAdmin_Click" />
@@ -1082,10 +1198,12 @@
                                     </Border>
                                 </StackPanel>
                             </ScrollViewer>
+
                         </Grid>
                     </Grid>
                 </Grid>
             </Border>
         </Grid>
+
     </Grid>
 </Window>
