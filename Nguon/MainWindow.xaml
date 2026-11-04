@@ -171,6 +171,21 @@
         <Style x:Key="RowDangerButton" TargetType="Button" BasedOn="{StaticResource RowButton}">
             <Setter Property="BorderBrush" Value="#EF4444" />
         </Style>
+        <Style x:Key="AccountGridText" TargetType="TextBlock">
+            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="ToolTip" Value="{Binding RelativeSource={RelativeSource Self}, Path=Text}" />
+        </Style>
+        <Style x:Key="AccountGridPasswordText" TargetType="TextBlock" BasedOn="{StaticResource AccountGridText}">
+            <Setter Property="ToolTip" Value="{x:Null}" />
+        </Style>
+        <Style x:Key="AccountGridCenteredText" TargetType="TextBlock" BasedOn="{StaticResource AccountGridText}">
+            <Setter Property="TextAlignment" Value="Center" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+        </Style>
+        <Style x:Key="AccountGridCell" TargetType="DataGridCell" BasedOn="{StaticResource ModernDataGridCell}">
+            <Setter Property="Padding" Value="7,4" />
+        </Style>
     </Window.Resources>
     <Grid>
         <DockPanel x:Name="shellMain">
@@ -385,8 +400,9 @@
                                     CornerRadius="8">
                                 <DataGrid x:Name="dgAccounts"
                                           Style="{StaticResource FadeInDataGrid}"
+                                          CellStyle="{StaticResource AccountGridCell}"
                                           CanUserResizeColumns="True"
-                                          HorizontalScrollBarVisibility="Visible"
+                                          HorizontalScrollBarVisibility="Auto"
                                           VerticalScrollBarVisibility="Auto"
                                           SelectionMode="Extended"
                                           SelectionUnit="FullRow"
@@ -395,17 +411,26 @@
                                           VirtualizingPanel.VirtualizationMode="Recycling"
                                           SelectionChanged="DgAccounts_SelectionChanged">
                                     <DataGrid.Columns>
-                                        <DataGridTextColumn Header="★" Binding="{Binding FavoriteText}" Width="45" />
-                                        <DataGridTextColumn Header="Dịch vụ" Binding="{Binding ServiceName}" Width="220" />
-                                        <DataGridTextColumn Header="Tên đăng nhập" Binding="{Binding Username}" Width="240" />
-                                        <DataGridTextColumn Header="Mật khẩu" Binding="{Binding PasswordMasked}" Width="180" />
-                                        <DataGridTextColumn Header="Trang web" Binding="{Binding WebsiteDisplay}" Width="180" />
-                                        <DataGridTextColumn Header="Thư mục" Binding="{Binding Folder}" Width="130" />
-                                        <DataGridTextColumn Header="Nhãn" Binding="{Binding TagsText}" Width="180" />
-                                        <DataGridTextColumn Header="Ghi chú" Binding="{Binding Note}" Width="280" MinWidth="200" />
-                                        <DataGridTextColumn Header="Ngày đổi MK" Binding="{Binding PasswordChangedText, Converter={StaticResource LocalizedTextConverter}}" Width="180" MinWidth="165" />
-                                        <DataGridTextColumn Header="TOTP" Binding="{Binding TotpState, Converter={StaticResource LocalizedTextConverter}}" Width="75" />
-                                        <DataGridTextColumn Header="Cập nhật" Binding="{Binding UpdatedAt, StringFormat='dd/MM/yyyy HH:mm'}" Width="150" />
+                                        <DataGridTextColumn Header="★" Binding="{Binding FavoriteText}" Width="42"
+                                                            ElementStyle="{StaticResource AccountGridCenteredText}" />
+                                        <DataGridTextColumn Header="Dịch vụ" Binding="{Binding ServiceName}" Width="1.2*" MinWidth="110"
+                                                            ElementStyle="{StaticResource AccountGridText}" />
+                                        <DataGridTextColumn Header="Tên đăng nhập" Binding="{Binding Username}" Width="1.6*" MinWidth="140"
+                                                            ElementStyle="{StaticResource AccountGridText}" />
+                                        <DataGridTextColumn Header="Mật khẩu" Binding="{Binding PasswordMasked}" Width="120"
+                                                            ElementStyle="{StaticResource AccountGridPasswordText}" />
+                                        <DataGridTextColumn Header="Trang web" Binding="{Binding WebsiteDisplay}" Width="1.1*" MinWidth="110"
+                                                            ElementStyle="{StaticResource AccountGridText}" />
+                                        <DataGridTextColumn Header="Thư mục / nhãn" Binding="{Binding FolderAndTagsText}" Width="1.3*" MinWidth="125"
+                                                            ElementStyle="{StaticResource AccountGridText}" />
+                                        <DataGridTextColumn Header="Ghi chú" Binding="{Binding Note}" Width="1.6*" MinWidth="140"
+                                                            ElementStyle="{StaticResource AccountGridText}" />
+                                        <DataGridTextColumn Header="Ngày đổi MK" Binding="{Binding PasswordChangedText, Converter={StaticResource LocalizedTextConverter}}" Width="130"
+                                                            ElementStyle="{StaticResource AccountGridText}" />
+                                        <DataGridTextColumn Header="TOTP" Binding="{Binding TotpState, Converter={StaticResource LocalizedTextConverter}}" Width="70"
+                                                            ElementStyle="{StaticResource AccountGridCenteredText}" />
+                                        <DataGridTextColumn Header="Cập nhật" Binding="{Binding UpdatedAt, StringFormat='dd/MM/yyyy HH:mm'}" Width="140"
+                                                            ElementStyle="{StaticResource AccountGridText}" />
                                     </DataGrid.Columns>
                                 </DataGrid>
                             </Border>
@@ -450,7 +475,54 @@
                                         <Button.ContextMenu>
                                             <ContextMenu Background="{DynamicResource SurfaceBrush}"
                                                          BorderBrush="{DynamicResource BorderBrush}"
+                                                         BorderThickness="1"
+                                                         Padding="4"
+                                                         MinWidth="240"
                                                          Foreground="{DynamicResource TextPrimaryBrush}">
+                                                <ContextMenu.Resources>
+                                                    <Style TargetType="{x:Type MenuItem}">
+                                                        <Setter Property="Background" Value="Transparent" />
+                                                        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+                                                        <Setter Property="FontSize" Value="13" />
+                                                        <Setter Property="MinHeight" Value="34" />
+                                                        <Setter Property="Padding" Value="12,7" />
+                                                        <Setter Property="Margin" Value="2,1" />
+                                                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                                        <Setter Property="Template">
+                                                            <Setter.Value>
+                                                                <ControlTemplate TargetType="{x:Type MenuItem}">
+                                                                    <Border x:Name="MenuItemBorder"
+                                                                            Background="{TemplateBinding Background}"
+                                                                            CornerRadius="5"
+                                                                            Padding="{TemplateBinding Padding}">
+                                                                        <ContentPresenter ContentSource="Header"
+                                                                                          RecognizesAccessKey="True"
+                                                                                          VerticalAlignment="Center" />
+                                                                    </Border>
+                                                                    <ControlTemplate.Triggers>
+                                                                        <Trigger Property="IsHighlighted" Value="True">
+                                                                            <Setter TargetName="MenuItemBorder" Property="Background" Value="{DynamicResource TabHoverBackgroundBrush}" />
+                                                                        </Trigger>
+                                                                        <Trigger Property="IsEnabled" Value="False">
+                                                                            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+                                                                        </Trigger>
+                                                                    </ControlTemplate.Triggers>
+                                                                </ControlTemplate>
+                                                            </Setter.Value>
+                                                        </Setter>
+                                                    </Style>
+                                                    <Style TargetType="{x:Type Separator}">
+                                                        <Setter Property="Height" Value="1" />
+                                                        <Setter Property="Margin" Value="10,4" />
+                                                        <Setter Property="Template">
+                                                            <Setter.Value>
+                                                                <ControlTemplate TargetType="{x:Type Separator}">
+                                                                    <Border Height="1" Background="{DynamicResource BorderBrush}" />
+                                                                </ControlTemplate>
+                                                            </Setter.Value>
+                                                        </Setter>
+                                                    </Style>
+                                                </ContextMenu.Resources>
                                                 <MenuItem Header="Lịch sử mật khẩu" Click="BtnPasswordHistory_Click" />
                                                 <MenuItem Header="Mã TOTP" Click="BtnShowTotp_Click" />
                                                 <Separator />

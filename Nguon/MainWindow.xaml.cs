@@ -382,24 +382,29 @@ namespace PersonalInfoManager
                 LockNow("Tài khoản đã bị khóa.");
                 return;
             }
-            var viewList = _accounts.Select(a => new
+            var viewList = _accounts.Select(a =>
             {
-                a.Id,
-                a.ServiceName,
-                a.Username,
-                PasswordMasked = _showPassword ? a.Password : "••••••••",
-                a.Note,
-                a.WebsiteUrl,
-                WebsiteDisplay = WebsiteDomainService.TryGetHost(a.WebsiteUrl, out string websiteHost)
-                    ? websiteHost : "",
-                a.Folder,
-                TagsText = string.Join(", ", a.Tags ?? new List<string>()),
-                FavoriteText = a.IsFavorite ? "★" : "",
-                a.CreatedAt,
-                a.UpdatedAt,
-                PasswordChangedText = a.PasswordChangedAt?.ToString("dd/MM/yyyy") ?? "Chưa rõ",
-                TotpState = string.IsNullOrWhiteSpace(a.TotpSecret) ? "—" : "Có",
-                _original = a
+                string tagsText = string.Join(", ", a.Tags ?? new List<string>());
+                string folderAndTagsText = string.Join(" · ", new[] { a.Folder, tagsText }
+                    .Where(value => !string.IsNullOrWhiteSpace(value)));
+                return new
+                {
+                    a.Id,
+                    a.ServiceName,
+                    a.Username,
+                    PasswordMasked = _showPassword ? a.Password : "••••••••",
+                    a.Note,
+                    a.WebsiteUrl,
+                    WebsiteDisplay = WebsiteDomainService.TryGetHost(a.WebsiteUrl, out string websiteHost)
+                        ? websiteHost : "",
+                    FolderAndTagsText = string.IsNullOrWhiteSpace(folderAndTagsText) ? "—" : folderAndTagsText,
+                    FavoriteText = a.IsFavorite ? "★" : "",
+                    a.CreatedAt,
+                    a.UpdatedAt,
+                    PasswordChangedText = a.PasswordChangedAt?.ToString("dd/MM/yyyy") ?? "Chưa rõ",
+                    TotpState = string.IsNullOrWhiteSpace(a.TotpSecret) ? "—" : "Có",
+                    _original = a
+                };
             }).ToList();
             dgAccounts.ItemsSource = chkFavoritesOnly.IsChecked == true
                 ? viewList.Where(item => item._original.IsFavorite).ToList()

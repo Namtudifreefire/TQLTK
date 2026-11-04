@@ -455,6 +455,7 @@ internal static class EnglishCatalog
         Add("Thông tin máy và đặt lại cài đặt.", "Device information and reset settings.");
         Add("Thông tin nhạy cảm", "Sensitive information");
         Add("Thư mục", "Folder");
+        Add("Thư mục / nhãn", "Folder / tags");
         Add("Thùng rác", "Trash");
         Add("Thùng rác đang trống.", "Trash is empty.");
         Add("Thuộc về", "Owner");
