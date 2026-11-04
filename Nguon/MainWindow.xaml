@@ -5,7 +5,8 @@
         Height="700" Width="1100"
         MinHeight="500" MinWidth="800"
         Background="{DynamicResource BackgroundBrush}"
-        Style="{StaticResource SlideInWindow}">
+        Style="{StaticResource SlideInWindow}"
+        PreviewMouseDown="MainWindow_PreviewMouseDown">
     <Window.Resources>
         <Style x:Key="NavItem" TargetType="RadioButton">
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
@@ -185,6 +186,43 @@
         </Style>
         <Style x:Key="AccountGridCell" TargetType="DataGridCell" BasedOn="{StaticResource ModernDataGridCell}">
             <Setter Property="Padding" Value="7,4" />
+        </Style>
+        <Style x:Key="AccountActionPopupButton" TargetType="Button">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="12,8" />
+            <Setter Property="Margin" Value="1,1" />
+            <Setter Property="MinHeight" Value="36" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="ActionItemBorder"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="6"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ActionItemBorder" Property="Background" Value="{DynamicResource TabHoverBackgroundBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="ActionItemBorder" Property="Background" Value="{DynamicResource AccentBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="AccountActionPopupDangerButton" TargetType="Button" BasedOn="{StaticResource AccountActionPopupButton}">
+            <Setter Property="Foreground" Value="#EF4444" />
         </Style>
     </Window.Resources>
     <Grid>
@@ -441,7 +479,8 @@
                                     CornerRadius="8"
                                     Padding="10"
                                     Margin="0,10,0,0">
-                                <WrapPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Grid>
+                                    <WrapPanel Orientation="Horizontal" VerticalAlignment="Center">
                                     <Button Height="38" Margin="3" Padding="12,6" Click="BtnToggleShow_Click">
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="👁" FontSize="15" Margin="0,0,6,0" VerticalAlignment="Center" />
@@ -466,81 +505,49 @@
                                             <TextBlock Text="Sửa" VerticalAlignment="Center" />
                                         </StackPanel>
                                     </Button>
-                                    <Button Height="38" Margin="3" Padding="12,6" Style="{StaticResource OutlineButton}"
-                                            Click="BtnMoreAccountActions_Click" ToolTip="Thao tác khác">
+                                    <Button x:Name="btnMoreAccountActions" Height="38" Margin="3" Padding="12,6"
+                                            Style="{StaticResource OutlineButton}" Click="BtnMoreAccountActions_Click"
+                                            ToolTip="Thao tác khác">
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="⋯" FontSize="18" Margin="0,0,6,0" VerticalAlignment="Center" />
                                             <TextBlock Text="Thao tác khác" VerticalAlignment="Center" />
                                         </StackPanel>
-                                        <Button.ContextMenu>
-                                            <ContextMenu Background="{DynamicResource SurfaceBrush}"
-                                                         BorderBrush="{DynamicResource BorderBrush}"
-                                                         BorderThickness="1"
-                                                         Padding="4"
-                                                         MinWidth="240"
-                                                         Foreground="{DynamicResource TextPrimaryBrush}">
-                                                <ContextMenu.Resources>
-                                                    <Style TargetType="{x:Type MenuItem}">
-                                                        <Setter Property="Background" Value="Transparent" />
-                                                        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
-                                                        <Setter Property="FontSize" Value="13" />
-                                                        <Setter Property="MinHeight" Value="34" />
-                                                        <Setter Property="Padding" Value="12,7" />
-                                                        <Setter Property="Margin" Value="2,1" />
-                                                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                                                        <Setter Property="Template">
-                                                            <Setter.Value>
-                                                                <ControlTemplate TargetType="{x:Type MenuItem}">
-                                                                    <Border x:Name="MenuItemBorder"
-                                                                            Background="{TemplateBinding Background}"
-                                                                            CornerRadius="5"
-                                                                            Padding="{TemplateBinding Padding}">
-                                                                        <ContentPresenter ContentSource="Header"
-                                                                                          RecognizesAccessKey="True"
-                                                                                          VerticalAlignment="Center" />
-                                                                    </Border>
-                                                                    <ControlTemplate.Triggers>
-                                                                        <Trigger Property="IsHighlighted" Value="True">
-                                                                            <Setter TargetName="MenuItemBorder" Property="Background" Value="{DynamicResource TabHoverBackgroundBrush}" />
-                                                                        </Trigger>
-                                                                        <Trigger Property="IsEnabled" Value="False">
-                                                                            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
-                                                                        </Trigger>
-                                                                    </ControlTemplate.Triggers>
-                                                                </ControlTemplate>
-                                                            </Setter.Value>
-                                                        </Setter>
-                                                    </Style>
-                                                    <Style TargetType="{x:Type Separator}">
-                                                        <Setter Property="Height" Value="1" />
-                                                        <Setter Property="Margin" Value="10,4" />
-                                                        <Setter Property="Template">
-                                                            <Setter.Value>
-                                                                <ControlTemplate TargetType="{x:Type Separator}">
-                                                                    <Border Height="1" Background="{DynamicResource BorderBrush}" />
-                                                                </ControlTemplate>
-                                                            </Setter.Value>
-                                                        </Setter>
-                                                    </Style>
-                                                </ContextMenu.Resources>
-                                                <MenuItem Header="Lịch sử mật khẩu" Click="BtnPasswordHistory_Click" />
-                                                <MenuItem Header="Mã TOTP" Click="BtnShowTotp_Click" />
-                                                <Separator />
-                                                <MenuItem Header="Mở website" Click="BtnOpenWebsite_Click"
-                                                          ToolTip="Mở URL đã lưu và kiểm tra một số dấu hiệu domain giả mạo phổ biến. Không theo dõi tab trình duyệt." />
-                                                <MenuItem Header="Tệp đính kèm" Click="BtnManageAttachments_Click" />
-                                                <MenuItem Header="Lịch sử sửa" Click="BtnAccountHistory_Click" />
-                                                <Separator />
-                                                <MenuItem Header="Chia sẻ tạm thời" Click="BtnCreateShare_Click" />
-                                                <MenuItem Header="Thao tác hàng loạt" Click="BtnBulkActions_Click" />
-                                                <MenuItem Header="Xuất mục đã chọn" Click="BtnExportSelected_Click" />
-                                                <MenuItem Header="Hoàn tác nhập CSV" Click="BtnUndoCsvImport_Click" />
-                                                <Separator />
-                                                <MenuItem Header="Xóa" Click="BtnDeleteAccount_Click" Foreground="#EF4444" />
-                                            </ContextMenu>
-                                        </Button.ContextMenu>
                                     </Button>
-                                </WrapPanel>
+                                    </WrapPanel>
+                                    <Popup x:Name="popMoreAccountActions"
+                                           AllowsTransparency="True"
+                                           PopupAnimation="Fade"
+                                           StaysOpen="True"
+                                           PreviewKeyDown="AccountActionPopup_PreviewKeyDown">
+                                        <Border Width="270"
+                                                MaxHeight="460"
+                                                Background="{DynamicResource SurfaceBrush}"
+                                                BorderBrush="{DynamicResource BorderBrush}"
+                                                BorderThickness="1"
+                                                CornerRadius="9"
+                                                Padding="6">
+                                            <ScrollViewer MaxHeight="446"
+                                                          VerticalScrollBarVisibility="Auto"
+                                                          HorizontalScrollBarVisibility="Disabled">
+                                                <StackPanel x:Name="accountActionPopupItems">
+                                                    <Button Tag="PasswordHistory" Content="Lịch sử mật khẩu" Style="{StaticResource AccountActionPopupButton}" Click="AccountActionPopupItem_Click" />
+                                                    <Button Tag="Totp" Content="Mã TOTP" Style="{StaticResource AccountActionPopupButton}" Click="AccountActionPopupItem_Click" />
+                                                    <Border Height="1" Margin="8,5" Background="{DynamicResource BorderBrush}" />
+                                                    <Button Tag="Website" Content="Mở website" Style="{StaticResource AccountActionPopupButton}" Click="AccountActionPopupItem_Click" ToolTip="Mở URL đã lưu và kiểm tra một số dấu hiệu domain giả mạo phổ biến. Không theo dõi tab trình duyệt." />
+                                                    <Button Tag="Attachments" Content="Tệp đính kèm" Style="{StaticResource AccountActionPopupButton}" Click="AccountActionPopupItem_Click" />
+                                                    <Button Tag="EditHistory" Content="Lịch sử sửa" Style="{StaticResource AccountActionPopupButton}" Click="AccountActionPopupItem_Click" />
+                                                    <Border Height="1" Margin="8,5" Background="{DynamicResource BorderBrush}" />
+                                                    <Button Tag="Share" Content="Chia sẻ tạm thời" Style="{StaticResource AccountActionPopupButton}" Click="AccountActionPopupItem_Click" />
+                                                    <Button Tag="Bulk" Content="Thao tác hàng loạt" Style="{StaticResource AccountActionPopupButton}" Click="AccountActionPopupItem_Click" />
+                                                    <Button Tag="Export" Content="Xuất mục đã chọn" Style="{StaticResource AccountActionPopupButton}" Click="AccountActionPopupItem_Click" />
+                                                    <Button Tag="UndoImport" Content="Hoàn tác nhập CSV" Style="{StaticResource AccountActionPopupButton}" Click="AccountActionPopupItem_Click" />
+                                                    <Border Height="1" Margin="8,5" Background="{DynamicResource BorderBrush}" />
+                                                    <Button Tag="Delete" Content="Xóa" Style="{StaticResource AccountActionPopupDangerButton}" Click="AccountActionPopupItem_Click" />
+                                                </StackPanel>
+                                            </ScrollViewer>
+                                        </Border>
+                                    </Popup>
+                                </Grid>
                             </Border>
                         </Grid>
                         <Grid x:Name="pageFiles" Margin="24,20" Visibility="Collapsed">

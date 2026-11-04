@@ -548,10 +548,56 @@ namespace PersonalInfoManager
         }
         private void BtnMoreAccountActions_Click(object? sender, RoutedEventArgs e)
         {
-            if (sender is not Button button || button.ContextMenu is not ContextMenu menu) return;
-            menu.PlacementTarget = button;
-            menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
-            menu.IsOpen = true;
+            var labels = new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["PasswordHistory"] = "Lịch sử mật khẩu",
+                ["Totp"] = "Mã TOTP",
+                ["Website"] = "Mở website",
+                ["Attachments"] = "Tệp đính kèm",
+                ["EditHistory"] = "Lịch sử sửa",
+                ["Share"] = "Chia sẻ tạm thời",
+                ["Bulk"] = "Thao tác hàng loạt",
+                ["Export"] = "Xuất mục đã chọn",
+                ["UndoImport"] = "Hoàn tác nhập CSV",
+                ["Delete"] = "Xóa"
+            };
+            foreach (Button item in accountActionPopupItems.Children.OfType<Button>())
+                if (item.Tag is string key && labels.TryGetValue(key, out string? label))
+                    item.Content = LanguageService.Translate(label);
+            popMoreAccountActions.PlacementTarget = btnMoreAccountActions;
+            popMoreAccountActions.Placement = System.Windows.Controls.Primitives.PlacementMode.Top;
+            popMoreAccountActions.VerticalOffset = -6;
+            popMoreAccountActions.IsOpen = !popMoreAccountActions.IsOpen;
+        }
+        private void MainWindow_PreviewMouseDown(object sender, MouseButtonEventArgs e)
+        {
+            if (popMoreAccountActions.IsOpen && !btnMoreAccountActions.IsMouseOver)
+                popMoreAccountActions.IsOpen = false;
+        }
+        private void AccountActionPopup_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key != Key.Escape) return;
+            popMoreAccountActions.IsOpen = false;
+            btnMoreAccountActions.Focus();
+            e.Handled = true;
+        }
+        private void AccountActionPopupItem_Click(object? sender, RoutedEventArgs e)
+        {
+            if (sender is not Button item || item.Tag is not string action) return;
+            popMoreAccountActions.IsOpen = false;
+            switch (action)
+            {
+                case "PasswordHistory": BtnPasswordHistory_Click(sender, e); break;
+                case "Totp": BtnShowTotp_Click(sender, e); break;
+                case "Website": BtnOpenWebsite_Click(sender, e); break;
+                case "Attachments": BtnManageAttachments_Click(sender, e); break;
+                case "EditHistory": BtnAccountHistory_Click(sender, e); break;
+                case "Share": BtnCreateShare_Click(sender, e); break;
+                case "Bulk": BtnBulkActions_Click(sender, e); break;
+                case "Export": BtnExportSelected_Click(sender, e); break;
+                case "UndoImport": BtnUndoCsvImport_Click(sender, e); break;
+                case "Delete": BtnDeleteAccount_Click(sender, e); break;
+            }
         }
         private async void BtnPasswordHistory_Click(object? sender, RoutedEventArgs e)
         {
