@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -32,9 +33,9 @@ namespace PersonalInfoManager.Services
         internal string Fingerprint { get; }
         internal string LocalFingerprint { get; }
     }
-         public static class FileBackupService
+    public static class FileBackupService
     {
-                 public const long MaxTotalBytes = 100L * 1024 * 1024;
+        public const long MaxTotalBytes = 100L * 1024 * 1024;
         private const int CurrentFormatVersion = 1;
         private const string ManifestEntryName = "__tqltk__/manifest.json";
         private static readonly Regex ReservedName =
@@ -47,7 +48,7 @@ namespace PersonalInfoManager.Services
             public int FileCount { get; set; }
             public long TotalBytes { get; set; }
         }
-                 public static (int count, long bytes) Summarize(string username)
+        public static (int count, long bytes) Summarize(string username)
         {
             var fileService = new LocalFileService();
             var files = fileService.ListFiles(username);
@@ -124,7 +125,94 @@ namespace PersonalInfoManager.Services
         }
         public static string FormatSize(long bytes) =>
             bytes < 1024 * 1024 ? $"{bytes / 1024.0:0.#} KB" : $"{bytes / 1048576.0:0.#} MB";
-                 public static (bool ok, string message, int count, long bytes) CreateArchive(
+        public static (bool ok, string message, int count, long bytes) DrillRestore(
+            string username, string sourcePath, string? passphrase = null,
+            Func<string?, string?>? askPassphrase = null,
+            CancellationToken cancellationToken = default)
+        {
+            var stopwatch = Stopwatch.StartNew();
+            byte[]? archiveBytes = null;
+            string? drillDirectory = null;
+            try
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (!File.Exists(sourcePath)) return (false, "File không tồn tại.", 0, 0);
+                if (new FileInfo(sourcePath).Length > MaxTotalBytes + 16L * 1024 * 1024)
+                    return (false, "File quá lớn so với một bản sao lưu File cá nhân của TQLTK.", 0, 0);
+                byte[] encrypted = File.ReadAllBytes(sourcePath);
+                if (!BackupCrypto.IsBinaryFormat(encrypted))
+                    return (false, "File này không phải bản sao lưu File cá nhân của TQLTK.", 0, 0);
+                archiveBytes = DecryptWithPrompts(encrypted, username, passphrase, askPassphrase);
+                CryptographicOperations.ZeroMemory(encrypted);
+                if (archiveBytes == null)
+                    return (false, "Chưa giải mã được bản sao lưu. Hãy kiểm tra cụm mật khẩu hoặc file.", 0, 0);
+                using var memory = new MemoryStream(archiveBytes, writable: false);
+                using var zip = new ZipArchive(memory, ZipArchiveMode.Read);
+                var entries = zip.Entries.Where(IsUserFileEntry).ToList();
+                long total = 0;
+                foreach (var entry in entries)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    total = checked(total + entry.Length);
+                    if (entry.Length < 0 || total > MaxTotalBytes)
+                        return (false, "Bản sao lưu vượt giới hạn dung lượng cho phép.", 0, 0);
+                }
+                if (entries.Count == 0 || !TryReadAndValidateManifest(zip, entries.Count, total, out _))
+                    return (false, "Manifest không khớp số lượng hoặc dung lượng dữ liệu trong bản sao lưu.", 0, 0);
+                if (entries.Select(entry => entry.Name).Distinct(StringComparer.OrdinalIgnoreCase).Count() != entries.Count)
+                    return (false, "Bản sao lưu có tên file trùng nhau nên không thể diễn tập an toàn.", 0, 0);
+                string tempRoot = Path.GetFullPath(Path.GetTempPath());
+                drillDirectory = Path.GetFullPath(Path.Combine(tempRoot, "TQLTK-Restore-Drill-" + Guid.NewGuid().ToString("N")));
+                if (!drillDirectory.StartsWith(tempRoot.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar,
+                        StringComparison.OrdinalIgnoreCase))
+                    throw new IOException("Thư mục diễn tập không nằm trong thư mục tạm.");
+                Directory.CreateDirectory(drillDirectory);
+                if ((File.GetAttributes(drillDirectory) & FileAttributes.ReparsePoint) != 0)
+                    throw new IOException("Thư mục diễn tập không được là liên kết hệ thống.");
+                foreach (var entry in entries)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    string destination = Path.Combine(drillDirectory, entry.Name);
+                    using Stream content = entry.Open();
+                    LocalFileEncryptionService.EncryptStreamAtomic(
+                        content, entry.Length, destination, overwrite: false,
+                        lastWriteTimeUtc: null, cancellationToken);
+                    using Stream comparison = entry.Open();
+                    if (LocalFileEncryptionService.GetPlaintextLength(destination) != entry.Length ||
+                        !LocalFileEncryptionService.ContentEqualsStored(
+                            destination, comparison, entry.Length, cancellationToken))
+                        throw new InvalidDataException($"Nội dung kiểm tra sau khôi phục không khớp: {entry.Name}");
+                }
+                return (true,
+                    $"Diễn tập thành công: đã khôi phục thử {entries.Count} file ({FormatSize(total)}) vào kho tạm được mã hóa, xác minh từng file trong {stopwatch.Elapsed.TotalSeconds:0.0} giây rồi xóa kho tạm. Kho File cá nhân thật không thay đổi.",
+                    entries.Count, total);
+            }
+            catch (OperationCanceledException)
+            {
+                return (false, "Đã hủy diễn tập khôi phục; kho thật không thay đổi.", 0, 0);
+            }
+            catch (Exception ex)
+            {
+                return (false, $"Diễn tập khôi phục thất bại; kho thật không thay đổi. {ex.Message}", 0, 0);
+            }
+            finally
+            {
+                if (archiveBytes != null) CryptographicOperations.ZeroMemory(archiveBytes);
+                if (drillDirectory != null)
+                {
+                    try
+                    {
+                        string full = Path.GetFullPath(drillDirectory);
+                        string root = Path.GetFullPath(Path.GetTempPath()).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+                        if (full.StartsWith(root, StringComparison.OrdinalIgnoreCase) &&
+                            Path.GetFileName(full).StartsWith("TQLTK-Restore-Drill-", StringComparison.Ordinal))
+                            Directory.Delete(full, recursive: true);
+                    }
+                    catch { }
+                }
+            }
+        }
+        public static (bool ok, string message, int count, long bytes) CreateArchive(
             string username, string destPath, string passphrase)
         {
             try
@@ -202,7 +290,7 @@ namespace PersonalInfoManager.Services
                 return (false, $"Lỗi: {ex.Message}", 0, 0);
             }
         }
-                 public static (bool ok, string message, FileRestorePreview? preview) PreviewRestore(
+        public static (bool ok, string message, FileRestorePreview? preview) PreviewRestore(
             string username, string sourcePath, string? passphrase = null,
             Func<string?, string?>? askPassphrase = null,
             CancellationToken cancellationToken = default)
@@ -426,7 +514,7 @@ namespace PersonalInfoManager.Services
                 if (zipBytes != null) CryptographicOperations.ZeroMemory(zipBytes);
             }
         }
-                 private static byte[]? DecryptWithPrompts(
+        private static byte[]? DecryptWithPrompts(
             byte[] data, string username, string? passphrase, Func<string?, string?>? askPassphrase)
         {
             string? candidate = passphrase ?? BackupCrypto.GetStoredPassphrase(username);
@@ -588,7 +676,7 @@ namespace PersonalInfoManager.Services
             try { return Convert.ToHexString(digest); }
             finally { CryptographicOperations.ZeroMemory(digest); }
         }
-                 private static bool IsUserFileEntry(ZipArchiveEntry e)
+        private static bool IsUserFileEntry(ZipArchiveEntry e)
         {
             string name = e.Name;
             return name.Length > 0

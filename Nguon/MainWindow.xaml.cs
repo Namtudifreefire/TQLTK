@@ -24,7 +24,11 @@ namespace PersonalInfoManager
         private bool _pwnedResultsAreCurrent;
         private readonly HashSet<Guid> _pwnedBreachedAccountIds = new();
         private readonly Dictionary<Guid, DateTime> _pwnedCheckedAccountVersions = new();
-        private sealed record SecurityFindingViewItem(Guid AccountId, string Description);
+        private sealed record SecurityFindingViewItem(
+            Guid AccountId,
+            PasswordSecurityFindingKind Kind,
+            string Description,
+            string ReviewStatus);
         private int AutoLockMinutes = 5;
         private bool _lockWhenMinimized;
         private const int AutoHidePasswordSeconds = 30;
@@ -205,12 +209,14 @@ namespace PersonalInfoManager
             _lastActivity = DateTime.UtcNow;
             InputManager.Current.PreProcessInput += OnPreProcessInput;
             SystemEvents.SessionSwitch += OnSessionSwitch;
+            SystemEvents.PowerModeChanged += OnPowerModeChanged;
             _idleTimer.Start();
         }
         private void StopAutoLock()
         {
             try { InputManager.Current.PreProcessInput -= OnPreProcessInput; } catch { }
             try { SystemEvents.SessionSwitch -= OnSessionSwitch; } catch { }
+            try { SystemEvents.PowerModeChanged -= OnPowerModeChanged; } catch { }
             _idleTimer.Stop();
             _hidePasswordTimer.Stop();
             _searchTimer.Stop();
@@ -223,15 +229,33 @@ namespace PersonalInfoManager
         }
         private void OnSessionSwitch(object sender, SessionSwitchEventArgs e)
         {
-            if (e.Reason is SessionSwitchReason.SessionLock
-                or SessionSwitchReason.ConsoleDisconnect
-                or SessionSwitchReason.RemoteDisconnect)
+            if (ShouldLockForSessionSwitch(e.Reason))
             {
                 string why = e.Reason == SessionSwitchReason.SessionLock
                     ? "Windows bị khóa (Win+L)"
                     : $"Phiên Windows ngắt kết nối ({e.Reason})";
                 Dispatcher.BeginInvoke(new Action(() => LockNow(why)));
             }
+        }
+        internal static bool ShouldLockForSessionSwitch(SessionSwitchReason reason) =>
+            reason is SessionSwitchReason.SessionLock or
+                SessionSwitchReason.ConsoleDisconnect or
+                SessionSwitchReason.RemoteDisconnect;
+        internal static bool ShouldLockForPowerMode(PowerModes mode) =>
+            mode is PowerModes.Suspend or PowerModes.Resume;
+        private void OnPowerModeChanged(object? sender, PowerModeChangedEventArgs e)
+        {
+            if (!ShouldLockForPowerMode(e.Mode)) return;
+            string reason = e.Mode == PowerModes.Suspend
+                ? "Windows chuyển sang chế độ ngủ."
+                : "Windows vừa tiếp tục sau chế độ ngủ.";
+            try
+            {
+                if (Dispatcher.CheckAccess()) LockNow(reason);
+                else Dispatcher.Invoke(new Action(() => LockNow(reason)), DispatcherPriority.Send,
+                    TimeSpan.FromSeconds(5));
+            }
+            catch { }
         }
         private void IdleTimer_Tick(object? sender, EventArgs e)
         {
@@ -244,6 +268,7 @@ namespace PersonalInfoManager
         {
             AutoLockMinutes = RegistryService.GetAutoLockMinutes();
             _lockWhenMinimized = RegistryService.GetLockWhenMinimized();
+            chkFipsCompatiblePasswordHash.IsChecked = RegistryService.GetFipsCompatiblePasswordHash();
             foreach (var item in cmbAutoLockMinutes.Items.OfType<ComboBoxItem>())
             {
                 if (int.TryParse(item.Tag?.ToString(), out int value) && value == AutoLockMinutes)
@@ -259,15 +284,118 @@ namespace PersonalInfoManager
             if (cmbAutoLockMinutes.SelectedItem is not ComboBoxItem item ||
                 !int.TryParse(item.Tag?.ToString(), out int minutes) || minutes is not (1 or 5 or 10 or 15))
             {
-                MessageBox.Show("Chọn thời gian tự khóa hợp lệ.", "Cài đặt bảo mật", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(LanguageService.Translate("Chọn thời gian tự khóa hợp lệ."),
+                    LanguageService.Translate("Cài đặt bảo mật"), MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
             AutoLockMinutes = minutes;
             _lockWhenMinimized = chkLockWhenMinimized.IsChecked == true;
             RegistryService.SetAutoLockMinutes(AutoLockMinutes);
             RegistryService.SetLockWhenMinimized(_lockWhenMinimized);
-            MessageBox.Show("Đã lưu cài đặt tự khóa.", "Cài đặt bảo mật", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show(LanguageService.Translate("Đã lưu cài đặt tự khóa."),
+                LanguageService.Translate("Cài đặt bảo mật"), MessageBoxButton.OK, MessageBoxImage.Information);
         }
+        private void BtnSavePasswordHashSettings_Click(object sender, RoutedEventArgs e)
+        {
+            bool enabled = chkFipsCompatiblePasswordHash.IsChecked == true;
+            if (enabled != RegistryService.GetFipsCompatiblePasswordHash() &&
+                MessageBox.Show(LanguageService.Translate(
+                    enabled
+                        ? "Mật khẩu mới và hash được nâng cấp sau đăng nhập sẽ dùng PBKDF2-HMAC-SHA256 600.000 vòng. Hash Argon2id hiện tại vẫn được xác minh bình thường."
+                        : "Mật khẩu mới và hash được nâng cấp sau đăng nhập sẽ dùng Argon2id. Hash PBKDF2 hiện tại vẫn được xác minh bình thường."),
+                    LanguageService.Translate("Đổi thuật toán băm mật khẩu"), MessageBoxButton.OKCancel, MessageBoxImage.Information) != MessageBoxResult.OK)
+            {
+                chkFipsCompatiblePasswordHash.IsChecked = RegistryService.GetFipsCompatiblePasswordHash();
+                return;
+            }
+            RegistryService.SetFipsCompatiblePasswordHash(enabled);
+            MessageBox.Show(LanguageService.Translate("Đã lưu lựa chọn thuật toán băm cho mật khẩu mới và lần nâng cấp hash tiếp theo."),
+                LanguageService.Translate("Cài đặt bảo mật"), MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        private async void BtnRotateVaultKey_Click(object sender, RoutedEventArgs e)
+        {
+            if (!await RequireAuthAsync("xoay khóa vault", "VAULT_KEY_ROTATION_DENIED")) return;
+            User? authenticatedUser = SessionService.CurrentUser;
+            User? currentUser = authenticatedUser == null ? null : _userService.FindById(authenticatedUser.Id);
+            if (!CanRotateVaultKey(currentUser))
+            {
+                try { ActivityLogger.Log(authenticatedUser?.Username ?? "SYSTEM", "VAULT_KEY_ROTATION_DENIED", "Chỉ quản trị viên đang hoạt động được xoay khóa dùng chung."); } catch { }
+                MessageBox.Show(
+                    LanguageService.Translate("Chỉ quản trị viên đang hoạt động mới được phép xoay khóa vault."),
+                    LanguageService.Translate("Không đủ quyền"), MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            string username = currentUser!.Username;
+            if (!BackupCrypto.HasStoredPassphrase(username))
+            {
+                MessageBox.Show(
+                    LanguageService.Translate("Trước khi xoay khóa, hãy đặt cụm mật khẩu sao lưu trong Tiện ích → Cụm mật khẩu sao lưu. " +
+                    "Bạn cần tạo một bản phục hồi mở được độc lập với khóa Windows cũ."),
+                    LanguageService.Translate("Cần chuẩn bị bản phục hồi"), MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            var dialog = new SaveFileDialog
+            {
+                Title = "Lưu bản phục hồi trước khi xoay khóa",
+                Filter = "Bản sao lưu vault (*.vault)|*.vault",
+                FileName = $"vault-before-key-rotation-{DateTime.Now:yyyyMMdd-HHmmss}.vault",
+                AddExtension = true,
+                DefaultExt = ".vault"
+            };
+            LocalizedFileDialog.Apply(dialog);
+            if (dialog.ShowDialog(this) != true || !EnsureActiveSession()) return;
+            if (MessageBox.Show(
+                    LanguageService.Translate("Ứng dụng sẽ tạo và xác minh bản backup có cụm mật khẩu, sau đó mã hóa lại vault, ghi chú và các backup cục bộ đã nhận diện. " +
+                    "Khóa cũ được giữ dưới DPAPI để mở bản xuất lịch sử. Tệp cá nhân dùng khóa riêng và không bị thay đổi. Tiếp tục?"),
+                    LanguageService.Translate("Xác nhận xoay khóa vault"), MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+                return;
+            bool wasEnabled = IsEnabled;
+            IsEnabled = false;
+            Mouse.OverrideCursor = Cursors.Wait;
+            try
+            {
+                var operation = await Task.Run(() =>
+                {
+                    using var storageLock = AesCrypto.AcquireStorageLock();
+                    var export = VaultBackupService.ExportToFile(username, dialog.FileName);
+                    if (!export.ok)
+                        throw new InvalidDataException("Không tạo được bản phục hồi: " + export.message);
+                    var verification = VaultBackupService.InspectBackup(username, dialog.FileName);
+                    if (!verification.ok)
+                        throw new InvalidDataException("Bản phục hồi không qua xác minh: " + verification.message);
+                    AutoBackupService.RecordBackup(username, dialog.FileName);
+                    var result = VaultKeyRotationService.Rotate(username);
+                    return (result, verification.accountCount);
+                });
+                if (_isLocked || !EnsureActiveSession()) return;
+                AccountVaultService.ClearCache();
+                try { ActivityLogger.Log(username, "VAULT_KEY_ROTATION", $"Đã mã hóa lại {operation.result.ReencryptedFiles} tệp; giữ {operation.result.PreservedLegacyBackups} backup dùng cụm mật khẩu."); } catch { }
+                RefreshAccounts();
+                RefreshSecurityOverview();
+                string details = string.Format(LanguageService.Translate(
+                    "Đã xoay khóa và mã hóa lại {0} tệp cục bộ.\nBản phục hồi đã xác minh ({1} tài khoản): {2}\nCác backup có cụm mật khẩu vẫn độc lập; khóa cũ được lưu mã hóa để đọc bản xuất lịch sử."),
+                    operation.result.ReencryptedFiles, operation.accountCount, dialog.FileName);
+                if (operation.result.PreservedLegacyBackups > 0)
+                    details += "\n" + string.Format(LanguageService.Translate("Đã giữ nguyên {0} backup dùng cụm mật khẩu."),
+                        operation.result.PreservedLegacyBackups);
+                MessageBox.Show(details, LanguageService.Translate("Xoay khóa hoàn tất"), MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    string.Format(LanguageService.Translate(
+                        "Không thể hoàn tất xoay khóa. Dữ liệu gốc và nhật ký phục hồi được giữ lại; không xóa thư mục dữ liệu ứng dụng. Lần đọc tiếp theo sẽ thử tiếp tục giao dịch.\n\n{0}"),
+                        LanguageService.Translate(ex.Message)),
+                    LanguageService.Translate("Xoay khóa chưa hoàn tất"), MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+                if (!_isLocked) IsEnabled = wasEnabled;
+            }
+        }
+        internal static bool CanRotateVaultKey(User? user) =>
+            user is { IsActive: true, Role: UserRole.Admin };
         private bool EnsureActiveSession()
         {
             if (_isLocked) return false;
@@ -1601,6 +1729,7 @@ namespace PersonalInfoManager
                 if (!await RequireAuthAsync("xuất kho mật khẩu", "EXPORT_VAULT_DENIED")) return;
                 string username = SessionService.CurrentUser!.Username;
                 var result = VaultBackupService.ExportToFile(username, dlg.FileName);
+                if (result.ok) AutoBackupService.RecordBackup(username, dlg.FileName);
                 MessageBox.Show(result.message, result.ok ? "Thành công" : "Lỗi", MessageBoxButton.OK, result.ok ? MessageBoxImage.Information : MessageBoxImage.Warning);
             }
             catch (Exception ex) { MessageBox.Show($"Lỗi: {ex.Message}"); }
@@ -1675,6 +1804,7 @@ namespace PersonalInfoManager
                         },
                         _sessionRevocationCts.Token));
                     if (_isLocked || !EnsureActiveSession()) return;
+                    AutoBackupService.RecordBackupVerification(username, dlg.FileName, inspection.ok);
                     try { ActivityLogger.Log(username, "VERIFY_FILE_BACKUP", Path.GetFileName(dlg.FileName)); } catch { }
                     MessageBox.Show(inspection.message,
                         inspection.ok ? "Bản sao lưu hợp lệ" : "Không thể xác minh",
@@ -1689,6 +1819,7 @@ namespace PersonalInfoManager
                     var inspection = await Task.Run(() => VaultBackupService.InspectBackup(
                         username, dlg.FileName, passphrase));
                     if (_isLocked || !EnsureActiveSession()) return;
+                    AutoBackupService.RecordBackupVerification(username, dlg.FileName, inspection.ok);
                     try { ActivityLogger.Log(username, "VERIFY_VAULT_BACKUP", Path.GetFileName(dlg.FileName)); } catch { }
                     MessageBox.Show(inspection.message,
                         inspection.ok ? "Bản sao lưu hợp lệ" : "Không thể xác minh",
@@ -1712,6 +1843,62 @@ namespace PersonalInfoManager
             {
                 Mouse.OverrideCursor = null;
             }
+        }
+        private async void MnuDrillRestore_Click(object? sender, RoutedEventArgs e)
+        {
+            if (!await RequireAuthAsync("diễn tập khôi phục bản sao lưu", "BACKUP_RESTORE_DRILL_DENIED")) return;
+            var dialog = new OpenFileDialog
+            {
+                Title = "Chọn bản sao lưu để diễn tập khôi phục",
+                Filter = "Bản sao lưu TQLTK (*.vault;*.tqf)|*.vault;*.tqf|Tất cả tệp (*.*)|*.*"
+            };
+            LocalizedFileDialog.Apply(dialog);
+            if (dialog.ShowDialog() != true || !EnsureActiveSession()) return;
+            string username = SessionService.CurrentUser!.Username;
+            Mouse.OverrideCursor = Cursors.Wait;
+            try
+            {
+                if (FileBackupService.IsBackupFile(dialog.FileName))
+                {
+                    string? enteredPassphrase = null;
+                    var result = await Task.Run(() => FileBackupService.DrillRestore(
+                        username, dialog.FileName, null,
+                        error =>
+                        {
+                            enteredPassphrase = AskOnUi(() => PromptRestorePassphrase(error));
+                            return enteredPassphrase;
+                        }, _sessionRevocationCts.Token));
+                    if (_isLocked || !EnsureActiveSession()) return;
+                    AutoBackupService.RecordRestoreDrill(username, dialog.FileName, result.ok, result.message);
+                    try { ActivityLogger.Log(username, "FILE_BACKUP_RESTORE_DRILL", $"{Path.GetFileName(dialog.FileName)}: {result.ok}"); } catch { }
+                    MessageBox.Show(LanguageService.Translate(result.message), LanguageService.Translate(result.ok ? "Diễn tập hoàn tất" : "Diễn tập thất bại"),
+                        MessageBoxButton.OK, result.ok ? MessageBoxImage.Information : MessageBoxImage.Warning);
+                }
+                else
+                {
+                    if (!TryGetImportPassphrase(dialog.FileName, out string? passphrase)) return;
+                    if (!EnsureActiveSession()) return;
+                    var result = await Task.Run(() => VaultBackupService.DrillRestore(
+                        username, dialog.FileName, passphrase));
+                    if (_isLocked || !EnsureActiveSession()) return;
+                    AutoBackupService.RecordRestoreDrill(username, dialog.FileName, result.ok, result.message);
+                    try { ActivityLogger.Log(username, "VAULT_BACKUP_RESTORE_DRILL", $"{Path.GetFileName(dialog.FileName)}: {result.ok}"); } catch { }
+                    MessageBox.Show(LanguageService.Translate(result.message), LanguageService.Translate(result.ok ? "Diễn tập hoàn tất" : "Diễn tập thất bại"),
+                        MessageBoxButton.OK, result.ok ? MessageBoxImage.Information : MessageBoxImage.Warning);
+                }
+                RefreshSecurityOverview();
+            }
+            catch (OperationCanceledException)
+            {
+                if (!_isLocked) MessageBox.Show(LanguageService.Translate("Đã hủy diễn tập vì phiên đăng nhập không còn hoạt động."), LanguageService.Translate("Đã hủy"),
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                if (!_isLocked) MessageBox.Show(LanguageService.Translate($"Không thể diễn tập khôi phục: {ex.Message}"), LanguageService.Translate("Lỗi"),
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+            finally { Mouse.OverrideCursor = null; }
         }
         private void RefreshDriveTokenStatus()
         {
@@ -2664,6 +2851,7 @@ namespace PersonalInfoManager
                 var findings = PasswordSecurityAuditService.Analyze(
                     accounts, _pwnedBreachedAccountIds, _pwnedResultsAreCurrent, DateTime.Now);
                 var accountById = accounts.ToDictionary(account => account.Id);
+                var reviewStates = SecurityFindingReviewService.SyncFindings(username, findings, accountById);
                 var findingItems = findings
                     .Where(finding => accountById.ContainsKey(finding.AccountId))
                     .Take(50)
@@ -2679,7 +2867,25 @@ namespace PersonalInfoManager
                             _ => "Chưa rõ ngày đổi mật khẩu"
                         };
                         string description = $"{LanguageService.Translate(issue)} — {account.ServiceName} ({account.Username})";
-                        return new SecurityFindingViewItem(account.Id, description);
+                        SecurityFindingReviewState review = reviewStates[SecurityFindingReviewService.Key(account.Id, finding.Kind)];
+                        string reviewText = review.Status switch
+                        {
+                            SecurityFindingReviewStatus.Fixed => string.Format(
+                                LanguageService.Translate("Đã đánh dấu xử lý • kiểm tra {0}"),
+                                review.LastCheckedUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")),
+                            SecurityFindingReviewStatus.Snoozed => string.Format(
+                                LanguageService.Translate("Nhắc lại {0} • kiểm tra {1}"),
+                                review.RemindAtUtc?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "",
+                                review.LastCheckedUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")),
+                            SecurityFindingReviewStatus.Ignored => string.Format(
+                                LanguageService.Translate("Đã bỏ qua: {0} • kiểm tra {1}"),
+                                review.Reason,
+                                review.LastCheckedUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")),
+                            _ => string.Format(
+                                LanguageService.Translate("Đang mở • kiểm tra {0}"),
+                                review.LastCheckedUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm"))
+                        };
+                        return new SecurityFindingViewItem(account.Id, finding.Kind, description, reviewText);
                     })
                     .ToList();
                 listSecurityFindings.ItemsSource = findingItems;
@@ -2714,21 +2920,7 @@ namespace PersonalInfoManager
                             ? (LanguageService.IsEnglish ? "set" : "đã đặt")
                             : (LanguageService.IsEnglish ? "not set" : "chưa đặt")
                     });
-                DateTime? lastBackup = AutoBackupService.GetLastBackupUtc(username);
-                if (lastBackup == null)
-                {
-                    LanguageService.SetLocalizedText(lblSecurityBackupAudit, "Sao lưu kho mật khẩu: chưa ghi nhận bản sao lưu nào.");
-                }
-                else
-                {
-                    string backupDate = lastBackup.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm");
-                    LanguageService.SetLocalizedFormattedText(
-                        lblSecurityBackupAudit,
-                        AutoBackupService.NeedsBackup(username)
-                            ? "Sao lưu kho mật khẩu gần nhất: {0} • dữ liệu đã thay đổi sau lần sao lưu."
-                            : "Sao lưu kho mật khẩu gần nhất: {0} • chưa phát hiện thay đổi mới.",
-                        () => new object?[] { backupDate });
-                }
+                LanguageService.SetLocalizedText(lblSecurityBackupAudit, AutoBackupService.GetHealthLine(username));
                 var fileStatus = _fileService.GetEncryptionStatus(username);
                 if (fileStatus.invalid > 0)
                     LanguageService.SetLocalizedFormattedText(lblSecurityFileAudit,
@@ -2801,6 +2993,45 @@ namespace PersonalInfoManager
                 dgAccounts.ScrollIntoView(item);
                 dgAccounts.Focus();
                 return;
+            }
+        }
+        private void BtnReviewSecurityFinding_Click(object? sender, RoutedEventArgs e)
+        {
+            if (!EnsureActiveSession() || sender is not Button { Tag: SecurityFindingViewItem item }) return;
+            string username = SessionService.CurrentUser!.Username;
+            SavedAccount? account;
+            try
+            {
+                account = _vaultService.Load(username)
+                    .FirstOrDefault(current => current.Id == item.AccountId && !current.IsDeleted);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, ex.Message, LanguageService.Translate("Không thể đọc mục"),
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            if (account == null)
+            {
+                RefreshSecurityOverview();
+                return;
+            }
+            var finding = new PasswordSecurityFinding(account.Id, item.Kind);
+            var states = SecurityFindingReviewService.SyncFindings(
+                username, new[] { finding }, new Dictionary<Guid, SavedAccount> { [account.Id] = account });
+            var current = states[SecurityFindingReviewService.Key(account.Id, item.Kind)];
+            var dialog = new SecurityFindingReviewWindow(item.Description, current) { Owner = this };
+            if (dialog.ShowDialog() != true || !EnsureActiveSession()) return;
+            try
+            {
+                SecurityFindingReviewService.Set(username, account, item.Kind,
+                    dialog.SelectedStatus, dialog.RemindAtUtc, dialog.Reason);
+                RefreshSecurityOverview();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, ex.Message, LanguageService.Translate("Không lưu được trạng thái"),
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
     }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -32,9 +33,9 @@ namespace PersonalInfoManager.Services
         internal List<SavedAccount> Accounts { get; }
         internal string TargetVaultFingerprint { get; }
     }
-         public static class VaultBackupService
+    public static class VaultBackupService
     {
-                 public static (bool ok, string message) ExportToFile(string username, string destPath)
+        public static (bool ok, string message) ExportToFile(string username, string destPath)
             => ExportToFile(username, destPath, out _);
         public static (bool ok, string message) ExportToFile(
             string username, string destPath, out string snapshotFingerprint)
@@ -91,12 +92,12 @@ namespace PersonalInfoManager.Services
                 return (false, $"Lỗi: {ex.Message}");
             }
         }
-                 public static bool IsPassphraseProtected(string sourcePath)
+        public static bool IsPassphraseProtected(string sourcePath)
         {
             try { return BackupCrypto.IsPassphraseFormat(File.ReadAllText(sourcePath)); }
             catch { return false; }
         }
-                 public static bool PassphraseWorks(string username, string sourcePath, string? passphrase = null)
+        public static bool PassphraseWorks(string username, string sourcePath, string? passphrase = null)
         {
             try
             {
@@ -143,6 +144,7 @@ namespace PersonalInfoManager.Services
                     return (false, "Backup có mục tài khoản không hợp lệ.", 0);
                 if (package.AccountCount > 0 && package.AccountCount != package.Accounts.Count)
                     return (false, "Số lượng tài khoản trong manifest không khớp dữ liệu.", 0);
+                AccountVaultService.ValidateAttachments(package.Accounts);
                 string owner = string.IsNullOrWhiteSpace(package.ExportedBy)
                     ? "không rõ người tạo"
                     : $"người tạo: {package.ExportedBy.Trim()}";
@@ -157,6 +159,72 @@ namespace PersonalInfoManager.Services
             catch (Exception ex)
             {
                 return (false, $"Không thể xác minh bản sao lưu: {ex.Message}", 0);
+            }
+        }
+        public static (bool ok, string message, int accountCount) DrillRestore(
+            string username, string sourcePath, string? passphrase = null)
+        {
+            var stopwatch = Stopwatch.StartNew();
+            string? drillDirectory = null;
+            byte[]? drillKey = null;
+            byte[]? serialized = null;
+            byte[]? encrypted = null;
+            try
+            {
+                var prepared = PrepareImport(username, sourcePath, passphrase);
+                if (!prepared.ok || prepared.preview == null)
+                    return (false, prepared.message, 0);
+                var preview = prepared.preview;
+                string tempRoot = Path.GetFullPath(Path.GetTempPath());
+                drillDirectory = Path.GetFullPath(Path.Combine(tempRoot, "TQLTK-Vault-Drill-" + Guid.NewGuid().ToString("N")));
+                if (!drillDirectory.StartsWith(tempRoot.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar,
+                        StringComparison.OrdinalIgnoreCase))
+                    throw new IOException("Thư mục diễn tập không nằm trong thư mục tạm.");
+                Directory.CreateDirectory(drillDirectory);
+                if ((File.GetAttributes(drillDirectory) & FileAttributes.ReparsePoint) != 0)
+                    throw new IOException("Thư mục diễn tập không được là liên kết hệ thống.");
+                serialized = JsonSerializer.SerializeToUtf8Bytes(preview.Accounts);
+                string json = Encoding.UTF8.GetString(serialized);
+                drillKey = RandomNumberGenerator.GetBytes(32);
+                encrypted = AesCrypto.EncryptWithKey(drillKey, json);
+                string probePath = Path.Combine(drillDirectory, "vault-drill.v2");
+                AtomicFileService.WriteAllBytes(probePath, encrypted);
+                byte[] onDisk = File.ReadAllBytes(probePath);
+                string probeCipher = Encoding.UTF8.GetString(onDisk);
+                CryptographicOperations.ZeroMemory(onDisk);
+                string restoredJson = AesCrypto.DecryptWithKey(drillKey, probeCipher);
+                var restored = JsonSerializer.Deserialize<List<SavedAccount>>(restoredJson);
+                if (restored == null || restored.Count != preview.IncomingCount ||
+                    !string.Equals(
+                        VaultSyncCheckpointStore.ComputeFingerprint(restored),
+                        VaultSyncCheckpointStore.ComputeFingerprint(preview.Accounts),
+                        StringComparison.Ordinal))
+                    throw new InvalidDataException("Nội dung tài khoản, TOTP hoặc tệp đính kèm sau khôi phục thử không khớp bản sao lưu.");
+                return (true,
+                    $"Diễn tập khôi phục thành công: đã đọc, giải mã, ghi thử an toàn vào kho tạm, đọc lại và đối chiếu {restored.Count} tài khoản trong {stopwatch.Elapsed.TotalSeconds:0.0} giây. Vault thật không thay đổi.",
+                    restored.Count);
+            }
+            catch (Exception ex)
+            {
+                return (false, $"Diễn tập khôi phục thất bại; vault thật không thay đổi. {ex.Message}", 0);
+            }
+            finally
+            {
+                if (serialized != null) CryptographicOperations.ZeroMemory(serialized);
+                if (encrypted != null) CryptographicOperations.ZeroMemory(encrypted);
+                if (drillKey != null) CryptographicOperations.ZeroMemory(drillKey);
+                if (drillDirectory != null)
+                {
+                    try
+                    {
+                        string full = Path.GetFullPath(drillDirectory);
+                        string root = Path.GetFullPath(Path.GetTempPath()).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+                        if (full.StartsWith(root, StringComparison.OrdinalIgnoreCase) &&
+                            Path.GetFileName(full).StartsWith("TQLTK-Vault-Drill-", StringComparison.Ordinal))
+                            Directory.Delete(full, recursive: true);
+                    }
+                    catch { }
+                }
             }
         }
         public static (bool ok, string message, VaultImportPreview? preview) PrepareImport(
@@ -198,6 +266,7 @@ namespace PersonalInfoManager.Services
                     return (false, "Bản sao lưu có mục tài khoản không hợp lệ.", null);
                 if (package.AccountCount > 0 && package.AccountCount != package.Accounts.Count)
                     return (false, "Số lượng tài khoản trong manifest không khớp dữ liệu.", null);
+                AccountVaultService.ValidateAttachments(package.Accounts);
                 string owner = (package.ExportedBy ?? "").Trim();
                 var existing = new AccountVaultService().Load(username);
                 string targetVaultFingerprint = ComputeVaultFingerprint(existing);
@@ -290,7 +359,7 @@ namespace PersonalInfoManager.Services
                 return (false, $"Lỗi: {ex.Message}", 0);
             }
         }
-                 public static (bool ok, string message, int importedCount) ImportFromFile(
+        public static (bool ok, string message, int importedCount) ImportFromFile(
             string username, string sourcePath, string? passphrase = null,
             Func<string, bool>? confirmForeignOwner = null)
         {
@@ -299,7 +368,7 @@ namespace PersonalInfoManager.Services
                 return (false, prepared.message, 0);
             return CommitImport(username, prepared.preview, confirmForeignOwner);
         }
-                 private class VaultPackage
+        private class VaultPackage
         {
             public DateTime ExportedAt { get; set; }
             public string ExportedBy { get; set; } = "";

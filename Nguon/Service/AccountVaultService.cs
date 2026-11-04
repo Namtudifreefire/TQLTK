@@ -7,12 +7,12 @@ using System.Text.Json;
 using PersonalInfoManager.Models;
 namespace PersonalInfoManager.Services
 {
-         public class VaultUnreadableException : Exception
+    public class VaultUnreadableException : Exception
     {
         public VaultUnreadableException(string message, Exception? inner = null)
             : base(message, inner) { }
     }
-         public class AccountVaultService
+    public class AccountVaultService
     {
         public const int TrashRetentionDays = 30;
         private static readonly JsonSerializerOptions JsonOpts =
@@ -27,7 +27,7 @@ namespace PersonalInfoManager.Services
             new(StringComparer.OrdinalIgnoreCase);
         private static readonly object CacheLock = new();
         private readonly string _root = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            ApplicationDataPath.Root,
             "PersonalInfoManager");
         private string GetVaultFile(string username)
         {
@@ -56,7 +56,7 @@ namespace PersonalInfoManager.Services
                 legacyPath + ".bak", isolatedPath + ".bak", user.Id);
             return isolatedPath;
         }
-                 public static void ClearCache()
+        public static void ClearCache()
         {
             lock (CacheLock) Cache.Clear();
         }
@@ -78,7 +78,7 @@ namespace PersonalInfoManager.Services
         {
             lock (CacheLock) Cache.Remove(file);
         }
-                 private static List<SavedAccount>? TryRead(string file, out Exception? error)
+        private static List<SavedAccount>? TryRead(string file, out Exception? error)
         {
             error = null;
             if (!File.Exists(file)) return null;
@@ -99,7 +99,7 @@ namespace PersonalInfoManager.Services
                 return null;
             }
         }
-                 private List<SavedAccount> LoadShared(string username)
+        private List<SavedAccount> LoadShared(string username)
         {
             string file = GetVaultFile(username);
             var info = new FileInfo(file);
@@ -135,7 +135,7 @@ namespace PersonalInfoManager.Services
                 (mainError != null ? "Chi tiết: " + mainError.Message : ""),
                 mainError);
         }
-                 public List<SavedAccount> Load(string username) => CloneAll(LoadShared(username));
+        public List<SavedAccount> Load(string username) => CloneAll(LoadShared(username));
         public int PurgeExpiredTrash(string username)
         {
             var accounts = Load(username);
@@ -150,8 +150,9 @@ namespace PersonalInfoManager.Services
             if (removed > 0) Save(username, accounts);
             return removed;
         }
-                 public void Save(string username, List<SavedAccount> accounts)
+        public void Save(string username, List<SavedAccount> accounts)
         {
+            using var storageLock = AesCrypto.AcquireStorageLock();
             ValidateAttachments(accounts);
             Directory.CreateDirectory(_root);
             string file = GetVaultFile(username);
@@ -180,7 +181,7 @@ namespace PersonalInfoManager.Services
             try { StoreCache(file, new FileInfo(file), CloneAll(accounts)); }
             catch { DropCache(file); }
         }
-        private static void ValidateAttachments(IEnumerable<SavedAccount> accounts)
+        internal static void ValidateAttachments(IEnumerable<SavedAccount> accounts)
         {
             foreach (var account in accounts)
             {
@@ -223,8 +224,8 @@ namespace PersonalInfoManager.Services
                 )
             ));
         }
-                 public int Count(string username) => LoadShared(username).Count(account => !account.IsDeleted);
-                 public DateTime? GetLastWriteUtc(string username)
+        public int Count(string username) => LoadShared(username).Count(account => !account.IsDeleted);
+        public DateTime? GetLastWriteUtc(string username)
         {
             var info = new FileInfo(GetVaultFile(username));
             return info.Exists ? info.LastWriteTimeUtc : null;

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Windows;
 using PersonalInfoManager.Services;
 namespace PersonalInfoManager
@@ -70,7 +70,7 @@ namespace PersonalInfoManager
                 Shutdown(1);
             }
         }
-                 protected override void OnExit(ExitEventArgs e)
+        protected override void OnExit(ExitEventArgs e)
         {
             try { AutoThemeService.Stop(); } catch { }
             try

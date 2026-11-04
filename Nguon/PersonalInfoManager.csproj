@@ -20,11 +20,18 @@
 		<ApplicationManifest>app.manifest</ApplicationManifest>
 	</PropertyGroup>
 
+	<PropertyGroup Condition="'$(SecurityRegressionBuild)' == 'true'">
+		<DefineConstants>$(DefineConstants);SECURITY_TEST</DefineConstants>
+	</PropertyGroup>
+
 	<ItemGroup>
+		<Compile Remove="tests/**/*.cs" />
+		<Compile Remove="artifacts/**/*.cs" />
 		<PackageReference Include="HaemmerElectronics.SeppPenner.WindowsHello" Version="1.1.5" />
 		<PackageReference Include="QRCoder" Version="1.8.1" />
 		<PackageReference Include="ZXing.Net" Version="0.16.11" />
 		<PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.13" />
+		<PackageReference Include="Konscious.Security.Cryptography.Argon2" Version="1.3.1" />
 		<PackageReference Include="Google.Apis.Drive.v3" Version="1.77.0.4276" />
 	</ItemGroup>
 

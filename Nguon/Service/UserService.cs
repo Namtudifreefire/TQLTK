@@ -10,19 +10,19 @@ using System.Threading;
 using PersonalInfoManager.Models;
 namespace PersonalInfoManager.Services
 {
-         public class UsersFileUnreadableException : Exception
+    public class UsersFileUnreadableException : Exception
     {
         public UsersFileUnreadableException(string message, Exception? inner = null)
             : base(message, inner) { }
     }
-         public class UserService
+    public class UserService
     {
         private static readonly object Sync = new();
         private static readonly JsonSerializerOptions JsonOpts = new() { WriteIndented = true };
         private static readonly byte[] UsersEntropy = Encoding.UTF8.GetBytes("TQLTK.Users.v1");
         private const string ProtectedUsersPrefix = "TQLTK.USERS.v1:";
         private readonly string _usersFile = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            ApplicationDataPath.Root,
             "PersonalInfoManager", "users.json");
         private const string LegacyDefaultAdminPassword = "admin123";
         private bool RequireAdmin(out string message)
@@ -82,8 +82,8 @@ namespace PersonalInfoManager.Services
             message = "Từ chối thao tác: chỉ người dùng đang hoạt động mới được thay đổi thiết lập đăng nhập của chính mình.";
             return false;
         }
-                 public const int MaxFailedAttempts = 5;
-                 public static readonly TimeSpan LockoutDuration = TimeSpan.FromMinutes(5);
+        public const int MaxFailedAttempts = 5;
+        public static readonly TimeSpan LockoutDuration = TimeSpan.FromMinutes(5);
         public static readonly TimeSpan MaximumLockoutDuration = TimeSpan.FromMinutes(60);
         private static TimeSpan GetLockoutDuration(int lockoutLevel)
         {
@@ -109,7 +109,7 @@ namespace PersonalInfoManager.Services
                     Save();
             }
         }
-                 private List<User> ReadUsers(out bool needsProtection)
+        private List<User> ReadUsers(out bool needsProtection)
         {
             needsProtection = false;
             if (!File.Exists(_usersFile)) return new List<User>();
@@ -384,7 +384,7 @@ namespace PersonalInfoManager.Services
         {
             return CreateUserFull(username, password, role, username, "", "");
         }
-                 public (bool ok, string message) CreateInitialAdmin(
+        public (bool ok, string message) CreateInitialAdmin(
             string username, string password, string fullName, string email, string phone)
         {
             lock (Sync)
@@ -423,7 +423,11 @@ namespace PersonalInfoManager.Services
                 catch (Exception ex)
                 {
                     _users.Remove(admin);
+#if SECURITY_TEST
+                    return (false, $"Could not save the test administrator: {ex}");
+#else
                     return (false, $"Không lưu được tài khoản quản trị viên: {ex.Message}");
+#endif
                 }
             }
         }
@@ -465,7 +469,7 @@ namespace PersonalInfoManager.Services
                 return (true, "Tạo tài khoản thành công.");
             }
         }
-                 public (bool ok, string message, User? user) Authenticate(
+        public (bool ok, string message, User? user) Authenticate(
             string username, string password)
         {
             lock (Sync)
@@ -573,7 +577,7 @@ namespace PersonalInfoManager.Services
                 return (true, "Đổi mật khẩu thành công.");
             }
         }
-                 public (bool ok, string message) ResetPassword(Guid userId, string newPassword)
+        public (bool ok, string message) ResetPassword(Guid userId, string newPassword)
         {
             lock (Sync)
             {
@@ -650,7 +654,7 @@ namespace PersonalInfoManager.Services
                 return (true, "Cập nhật thành công.");
             }
         }
-                 public void SetActive(Guid userId, bool active)
+        public void SetActive(Guid userId, bool active)
         {
             lock (Sync)
             {
@@ -668,7 +672,7 @@ namespace PersonalInfoManager.Services
                 Save();
             }
         }
-                 public (bool ok, string message) DeleteUser(Guid userId, Guid currentUserId)
+        public (bool ok, string message) DeleteUser(Guid userId, Guid currentUserId)
         {
             lock (Sync)
             {
@@ -687,7 +691,7 @@ namespace PersonalInfoManager.Services
                 return (true, "Đã xóa tài khoản.");
             }
         }
-                 public (bool ok, string message) SetRole(Guid userId, UserRole role)
+        public (bool ok, string message) SetRole(Guid userId, UserRole role)
         {
             lock (Sync)
             {
@@ -731,7 +735,7 @@ namespace PersonalInfoManager.Services
                 }
             }
         }
-                 public (bool ok, string message) SetWindowsHello(
+        public (bool ok, string message) SetWindowsHello(
             Guid userId, bool enabled, string sid)
         {
             lock (Sync)
@@ -754,7 +758,7 @@ namespace PersonalInfoManager.Services
                     : "Đã tắt đăng nhập bằng Windows Hello.");
             }
         }
-                 public User? FindByWindowsHelloSid(string sid)
+        public User? FindByWindowsHelloSid(string sid)
         {
             if (string.IsNullOrWhiteSpace(sid)) return null;
             lock (Sync)
@@ -768,7 +772,7 @@ namespace PersonalInfoManager.Services
                         StringComparison.OrdinalIgnoreCase));
             }
         }
-                 public List<User> GetWindowsHelloUsers()
+        public List<User> GetWindowsHelloUsers()
         {
             lock (Sync)
             {

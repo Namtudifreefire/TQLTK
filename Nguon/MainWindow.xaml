@@ -905,13 +905,31 @@
                                                             <Grid.ColumnDefinitions>
                                                                 <ColumnDefinition Width="*" />
                                                                 <ColumnDefinition Width="Auto" />
+                                                                <ColumnDefinition Width="Auto" />
                                                             </Grid.ColumnDefinitions>
-                                                            <TextBlock Text="{Binding Description}"
-                                                                       TextWrapping="Wrap"
-                                                                       Foreground="{DynamicResource TextPrimaryBrush}"
-                                                                       VerticalAlignment="Center"
-                                                                       Margin="4,3,8,3" />
+                                                            <StackPanel VerticalAlignment="Center" Margin="4,3,8,3">
+                                                                <TextBlock Text="{Binding Description}"
+                                                                           TextWrapping="Wrap"
+                                                                           Foreground="{DynamicResource TextPrimaryBrush}" />
+                                                                <TextBlock Text="{Binding ReviewStatus}"
+                                                                           TextWrapping="Wrap"
+                                                                           FontSize="11"
+                                                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                                                           Margin="0,3,0,0" />
+                                                            </StackPanel>
                                                             <Button Grid.Column="1"
+                                                                    Content="Trạng thái"
+                                                                    Tag="{Binding}"
+                                                                    Style="{StaticResource RowButton}"
+                                                                    Click="BtnReviewSecurityFinding_Click"
+                                                                    Margin="0,0,6,0">
+                                                                <Button.ContentTemplate>
+                                                                    <DataTemplate>
+                                                                        <TextBlock Text="{Binding Converter={StaticResource LocalizedTextConverter}}" />
+                                                                    </DataTemplate>
+                                                                </Button.ContentTemplate>
+                                                            </Button>
+                                                            <Button Grid.Column="2"
                                                                     Content="Mở mục"
                                                                     Tag="{Binding AccountId}"
                                                                     Style="{StaticResource RowButton}"
@@ -945,6 +963,27 @@
                                                 <Button Content="Lưu" Style="{StaticResource RowButton}" Click="BtnSaveLockSettings_Click" Margin="14,0,0,0" />
                                             </WrapPanel>
                                         </StackPanel>
+                                    </Border>
+
+                                    <Border Style="{StaticResource SettingRow}" Margin="0,0,0,14">
+                                        <StackPanel>
+                                            <TextBlock Text="Băm mật khẩu đăng nhập" Style="{StaticResource RowTitle}" />
+                                            <TextBlock Text="Mặc định dùng Argon2id. Có thể bật PBKDF2-HMAC-SHA256 cho môi trường cần tương thích FIPS; hash cũ được nâng cấp sau lần đăng nhập thành công." Style="{StaticResource RowDesc}" Margin="0,3,0,8" TextWrapping="Wrap" />
+                                            <WrapPanel>
+                                                <CheckBox x:Name="chkFipsCompatiblePasswordHash" Content="Dùng PBKDF2-HMAC-SHA256 (tương thích FIPS)" VerticalAlignment="Center" />
+                                                <Button Content="Lưu" Style="{StaticResource RowButton}" Click="BtnSavePasswordHashSettings_Click" Margin="14,0,0,0" />
+                                            </WrapPanel>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <Border Style="{StaticResource SettingRow}" Margin="0,0,0,14">
+                                        <DockPanel>
+                                            <Button DockPanel.Dock="Right" Content="Xoay khóa" Style="{StaticResource RowButton}" Click="BtnRotateVaultKey_Click" />
+                                            <StackPanel VerticalAlignment="Center">
+                                                <TextBlock Text="Xoay khóa vault" Style="{StaticResource RowTitle}" />
+                                                <TextBlock Text="Mã hóa lại vault, ghi chú và bản sao lưu cục bộ đã nhận diện. Hãy đặt cụm mật khẩu sao lưu trước; khóa cũ được giữ mã hóa để mở các bản xuất lịch sử." Style="{StaticResource RowDesc}" TextWrapping="Wrap" Margin="0,3,12,0" />
+                                            </StackPanel>
+                                        </DockPanel>
                                     </Border>
 
                                     <Border Style="{StaticResource SettingRow}" Margin="0,0,0,14">
@@ -1068,7 +1107,10 @@
 
                                     <Border Style="{StaticResource SettingRow}">
                                         <DockPanel>
-                                            <Button DockPanel.Dock="Right" Content="Kiểm tra" Style="{StaticResource RowButton}" Click="MnuVerifyBackup_Click" />
+                                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                                <Button Content="Kiểm tra" Style="{StaticResource RowButton}" Click="MnuVerifyBackup_Click" Margin="0,0,8,0" />
+                                                <Button Content="Diễn tập" Style="{StaticResource RowButton}" Click="MnuDrillRestore_Click" />
+                                            </StackPanel>
                                             <StackPanel VerticalAlignment="Center">
                                                 <TextBlock Text="Kiểm tra bản sao lưu" Style="{StaticResource RowTitle}" />
                                                 <TextBlock Text="Xác minh tệp .vault hoặc .tqf và xem số lượng dữ liệu trước khi khôi phục; không sửa kho mật khẩu." Style="{StaticResource RowDesc}" />

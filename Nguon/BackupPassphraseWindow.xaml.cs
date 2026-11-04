@@ -4,7 +4,7 @@ using System.Windows;
 using PersonalInfoManager.Services;
 namespace PersonalInfoManager
 {
-         public partial class BackupPassphraseWindow : Window
+    public partial class BackupPassphraseWindow : Window
     {
         private readonly bool _confirmMode;
         public string Passphrase { get; private set; } = "";

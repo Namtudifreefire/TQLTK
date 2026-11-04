@@ -6,7 +6,7 @@ using System.Windows;
 using System.Windows.Threading;
 namespace PersonalInfoManager.Services
 {
-         public static class ClipboardGuard
+    public static class ClipboardGuard
     {
         public const int ClearAfterSeconds = 30;
         private static DispatcherTimer? _timer;
@@ -39,7 +39,7 @@ namespace PersonalInfoManager.Services
             }
             return true;
         }
-                 public static void ClearNow()
+        public static void ClearNow()
         {
             _timer?.Stop();
             _timer = null;

@@ -16,7 +16,7 @@ namespace PersonalInfoManager.Services
     {
         public AmbiguousLegacyUserStorageException(string message) : base(message) { }
     }
-         internal static class UserStorageIdentity
+    internal static class UserStorageIdentity
     {
         public static string GetDirectoryName(Guid userId) => "user_" + userId.ToString("N");
         public static string GetLegacyPath(

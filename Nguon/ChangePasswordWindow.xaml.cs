@@ -9,9 +9,9 @@ namespace PersonalInfoManager
     {
         private readonly UserService _userService = new();
         private readonly bool _forced;
-                 public bool Changed { get; private set; }
+        public bool Changed { get; private set; }
         public ChangePasswordWindow() : this(false) { }
-                 public ChangePasswordWindow(bool forced)
+        public ChangePasswordWindow(bool forced)
         {
             InitializeComponent();
             _forced = forced;

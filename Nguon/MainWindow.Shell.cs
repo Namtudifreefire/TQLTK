@@ -11,7 +11,7 @@ using PersonalInfoManager.Models;
 using PersonalInfoManager.Services;
 namespace PersonalInfoManager
 {
-         public partial class MainWindow
+    public partial class MainWindow
     {
         private Dictionary<string, FrameworkElement> _pages = new();
         private static readonly HashSet<string> SettingsTags = new()
@@ -54,7 +54,7 @@ namespace PersonalInfoManager
             if (tag == "drive") RefreshDriveTokenStatus();
         }
         private DateTime _userMenuClosedAt = DateTime.MinValue;
-                 private void UpdateUserChip()
+        private void UpdateUserChip()
         {
             var u = SessionService.CurrentUser;
             if (u == null) return;
@@ -103,7 +103,7 @@ namespace PersonalInfoManager
         }
         private bool _settingsOpen;
         private Dictionary<string, string>? _settingsIndex;
-                 private void OpenSettings(string tag = "profile")
+        private void OpenSettings(string tag = "profile")
         {
             if (_isLocked || !SessionService.IsLoggedIn || _pages.Count == 0) return;
             if (_settingsOpen)
@@ -156,7 +156,7 @@ namespace PersonalInfoManager
                 txtSettingsSearch.Text.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
             ApplySettingsFilter();
         }
-                 private void ApplySettingsFilter()
+        private void ApplySettingsFilter()
         {
             if (_pages.Count == 0) return;
             string q = Fold(txtSettingsSearch.Text.Trim());
@@ -216,7 +216,7 @@ namespace PersonalInfoManager
                 if (child is DependencyObject d) CollectText(d, sb);
             }
         }
-                 private static string Fold(string s)
+        private static string Fold(string s)
         {
             string decomposed = s.Normalize(NormalizationForm.FormD);
             var sb = new StringBuilder(decomposed.Length);

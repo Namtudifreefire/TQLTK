@@ -64,7 +64,7 @@ Requires the .NET 10 SDK on Windows.
     cd Nguon
     dotnet build
 
-`Nguon\publish.bat` builds the single-file EXE, packages the EXE and MIT `LICENSE` at the ZIP root, verifies the ZIP contents, and writes `SHA256SUMS.txt`. To sign the EXE, install a trusted code-signing certificate in the current Windows user's Personal certificate store and set `TQLTK_SIGNING_CERT_THUMBPRINT` to its thumbprint, or pass `-CertificateThumbprint` to `release-artifacts.ps1`. Pass `-RequireSignature` to fail a release build if no certificate is configured. Builds without a certificate are unsigned; checksums do not prove publisher identity.
+`Nguon\publish.bat` runs `release-artifacts.ps1`. A release build requires a valid code-signing certificate with a private key in the current Windows user's Personal certificate store; set `TQLTK_SIGNING_CERT_THUMBPRINT` or pass `-CertificateThumbprint`. The script runs the security regression suite first, signs and verifies the EXE with an HTTPS timestamp, then writes a ZIP containing the EXE and MIT `LICENSE` at its root, a release manifest, and SHA-256 checksums. Unsigned output is available only with `-AllowUnsignedForTesting` and must not be published. Verify a package with `verify-release.ps1`, supplying the expected version and publisher thumbprint; provide an independently obtained package SHA-256 when available. The checksum file alone does not prove publisher identity.
 
 Google Drive features need your own OAuth client. In Google Cloud Console, create an OAuth client ID of type **Desktop app**, save it as credentials.json next to PersonalInfoManager.csproj, then build. The file is embedded at build time and is git-ignored, so it is not part of this repository. Without it, the rest of the app works but Drive sync is unavailable.
 
@@ -76,11 +76,16 @@ See the [Releases page](https://github.com/Namtudifreefire/TQLTK/releases) for d
 
 - Verify backup manifests, entry counts and total sizes before a restore preview succeeds; new encrypted backups are verified before replacing the destination.
 - Use durable temporary-file writes for vaults, notes, recovery settings, CSV exports and backups so an interrupted write keeps the prior file intact.
-- Increase temporary sign-in lockouts from 5 to 10, 20, 40 and then 60 minutes after repeated failed-attempt groups; a successful sign-in or password reset clears the escalation. Password hashes already use PBKDF2-HMAC-SHA256 with 600,000 iterations and rehash older entries after sign-in.
+- Increase temporary sign-in lockouts from 5 to 10, 20, 40 and then 60 minutes after repeated failed-attempt groups; a successful sign-in or password reset clears the escalation. Use Argon2id by default and PBKDF2-HMAC-SHA256 with 600,000 iterations for FIPS-compatible mode; older hashes are upgraded after a successful sign-in.
 - Show the linked Google Drive account and allow removing this device's locally stored token without deleting Drive backups. Removing the local token does not revoke Google account access.
 - Expand the security overview with account-level findings for weak, reused, old, unknown-age and breached passwords, with an action to open the affected account. Breach results are marked stale after the vault changes.
 - Show recovery-code count, backup-passphrase status and the Windows-account dependency of personal-file encryption. Clarify that changing the TQLTK sign-in password does not rotate the vault encryption key, and guide users to make a passphrase-protected backup before moving Windows accounts or reinstalling Windows.
-- Add a repeatable release script that creates a root-level EXE + LICENSE ZIP and SHA-256 file, and signs/verifies the EXE when a trusted code-signing certificate is configured.
+- Rotate the vault encryption key after making and verifying a passphrase-protected recovery backup. Re-encrypt vaults, notes and recognized local vault backups through a recoverable staged transaction; keep historical key material protected by DPAPI. Only an active administrator can start rotation.
+- Add restore drills that validate a backup, write it to an encrypted temporary store, read it back and compare its contents without changing the active vault or personal-file store. Record the last drill and warn when it fails or becomes old.
+- Lock the app when Windows locks the session, disconnects it or enters/resumes from sleep; clear decrypted account caches and close child windows.
+- Add persistent security-finding review states: open, fixed, snoozed or ignored with a required reason, plus the last checked time. Changing the account reopens its finding.
+- Show backup health for missing, stale, changed, unverified or failed backups and for missing, failed or overdue restore drills.
+- Run the security regression suite before creating release artifacts. Require a code-signing certificate for release builds, verify the signed executable and publisher, and generate a versioned manifest and SHA-256 checksums.
 - Store account attachments inside the encrypted vault and include them in vault backups. Each file is limited to 10 MB and each account to 25 MB total.
 - Add a bounded metadata edit history with preview and undo for service name, username, website URL, folder, tags, favorites, notes and custom fields. Passwords remain in the separate password history.
 - Add CSV duplicate handling to skip, overwrite or create a copy, plus undo for the latest import batch. Undo is refused if any affected account changed afterward.
@@ -181,11 +186,16 @@ Xem [trang Releases](https://github.com/Namtudifreefire/TQLTK/releases) để t�
 
 - Kiểm tra manifest, số lượng và tổng dung lượng trước khi chấp nhận bước xem trước khôi phục; bản sao lưu mới được xác minh trước khi thay file đích.
 - Ghi vault, ghi chú, thiết lập khôi phục, CSV và backup qua file tạm bền vững để lần ghi bị gián đoạn vẫn giữ file cũ.
-- Tăng thời gian khóa đăng nhập tạm thời theo từng nhóm nhập sai: 5, 10, 20, 40 rồi 60 phút; đăng nhập thành công hoặc đặt lại mật khẩu sẽ xóa mức tăng. Hash mật khẩu đã dùng PBKDF2-HMAC-SHA256 với 600.000 vòng; hash cũ được nâng cấp sau lần đăng nhập thành công.
+- Tăng thời gian khóa đăng nhập tạm thời theo từng nhóm nhập sai: 5, 10, 20, 40 rồi 60 phút; đăng nhập thành công hoặc đặt lại mật khẩu sẽ xóa mức tăng. Mặc định dùng Argon2id; có thể chọn PBKDF2-HMAC-SHA256 600.000 vòng cho môi trường cần tương thích FIPS. Hash cũ được nâng cấp sau lần đăng nhập thành công.
 - Hiển thị tài khoản Google Drive đã liên kết và cho phép xóa token lưu cục bộ trên thiết bị này mà không xóa backup trên Drive. Xóa token cục bộ không thu hồi quyền ứng dụng trong tài khoản Google.
 - Mở rộng tổng quan bảo mật với cảnh báo theo từng tài khoản về mật khẩu yếu, dùng lại, lâu chưa đổi, chưa rõ ngày đổi hoặc bị lộ; có nút mở nhanh mục cần xử lý. Kết quả kiểm tra rò rỉ được đánh dấu cũ khi vault thay đổi.
 - Hiển thị số mã khôi phục còn lại, trạng thái cụm mật khẩu sao lưu và lưu ý khóa mã hóa file cá nhân gắn với tài khoản Windows. Nêu rõ đổi mật khẩu đăng nhập TQLTK không đổi khóa mã hóa vault; khuyến nghị tạo backup có cụm mật khẩu trước khi đổi tài khoản Windows hoặc cài lại Windows.
-- Thêm script phát hành có thể lặp lại: tạo ZIP có EXE và LICENSE ở gốc, tạo SHA-256, đồng thời ký và xác minh EXE khi đã cấu hình chứng thư code-signing đáng tin cậy.
+- Thêm xoay khóa mã hóa vault sau khi tạo và xác minh bản phục hồi có cụm mật khẩu. Vault, ghi chú và backup vault cục bộ đã nhận diện được mã hóa lại theo giao dịch có khả năng phục hồi; khóa cũ được giữ dưới DPAPI. Chỉ quản trị viên đang hoạt động mới được xoay khóa.
+- Thêm diễn tập khôi phục: xác minh backup, ghi vào kho tạm đã mã hóa, đọc lại và so sánh nội dung mà không đổi vault hoặc kho file cá nhân đang dùng. Lưu lần diễn tập gần nhất và cảnh báo khi thất bại hoặc đã quá hạn.
+- Tự khóa ứng dụng khi Windows khóa phiên, ngắt kết nối hoặc chuyển sang/thoát chế độ ngủ; xóa cache đã giải mã và đóng cửa sổ con.
+- Lưu trạng thái xem xét cảnh báo bảo mật: đang mở, đã xử lý, nhắc lại sau hoặc bỏ qua kèm lý do bắt buộc; ghi thời điểm kiểm tra gần nhất. Khi tài khoản thay đổi, cảnh báo được mở lại.
+- Hiển thị tình trạng backup bị thiếu, cũ, thay đổi, chưa xác minh hoặc thất bại; cảnh báo nếu chưa diễn tập khôi phục, lần diễn tập thất bại hoặc đã quá hạn.
+- Chạy bộ kiểm tra hồi quy bảo mật trước khi tạo file phát hành. Bản phát hành bắt buộc ký code-signing, xác minh chữ ký và nhà phát hành, đồng thời tạo manifest phiên bản và checksum SHA-256.
 - Lưu tệp đính kèm của tài khoản bên trong vault đã mã hóa và kèm chúng trong bản sao lưu vault. Mỗi tệp tối đa 10 MB, tổng mỗi tài khoản tối đa 25 MB.
 - Thêm lịch sử chỉnh sửa có giới hạn, cho xem trước và hoàn tác tên dịch vụ, tên đăng nhập, URL website, thư mục, nhãn, mục yêu thích, ghi chú và trường tùy chỉnh. Mật khẩu vẫn dùng lịch sử riêng.
 - Khi nhập CSV, cho chọn bỏ qua, ghi đè hoặc tạo bản sao đối với mục trùng; hỗ trợ hoàn tác lô nhập gần nhất. Ứng dụng từ chối hoàn tác nếu tài khoản liên quan đã thay đổi sau lần nhập.
@@ -230,7 +240,7 @@ Cần cài .NET 10 SDK trên Windows.
     cd Nguon
     dotnet build
 
-`Nguon\publish.bat` tạo EXE đơn, ZIP đặt EXE và giấy phép MIT ở thư mục gốc, kiểm tra nội dung ZIP và ghi `SHA256SUMS.txt`. Muốn ký EXE, cài chứng thư code-signing được Windows tin cậy trong kho Personal của tài khoản Windows hiện tại rồi đặt thumbprint vào `TQLTK_SIGNING_CERT_THUMBPRINT` hoặc truyền `-CertificateThumbprint` cho `release-artifacts.ps1`. Dùng `-RequireSignature` để build thất bại nếu chưa cấu hình chứng thư. Nếu không có chứng thư, file phát hành chưa được ký; SHA-256 không xác nhận danh tính nhà phát hành.
+`Nguon\publish.bat` chạy `release-artifacts.ps1`. Bản phát hành yêu cầu chứng thư code-signing hợp lệ có private key trong kho Personal của tài khoản Windows hiện tại; đặt thumbprint vào `TQLTK_SIGNING_CERT_THUMBPRINT` hoặc truyền `-CertificateThumbprint`. Script chạy bộ kiểm tra hồi quy bảo mật trước, ký và xác minh EXE bằng timestamp HTTPS, rồi tạo ZIP chứa EXE và giấy phép MIT ở gốc, manifest phát hành và checksum SHA-256. Chỉ tạo file chưa ký bằng `-AllowUnsignedForTesting` để thử nghiệm; không phát hành file đó. Dùng `verify-release.ps1` với phiên bản và thumbprint nhà phát hành dự kiến để kiểm tra; nếu có, cung cấp thêm SHA-256 của ZIP lấy từ một nguồn độc lập. Riêng checksum không chứng minh danh tính nhà phát hành.
 
 Tính năng Google Drive cần OAuth client của bạn. Trong Google Cloud Console, tạo OAuth client ID loại **Desktop app**, lưu thành credentials.json cạnh PersonalInfoManager.csproj rồi build. File được nhúng lúc build và bị git-ignore nên không nằm trong repo. Nếu không có file này, các phần còn lại vẫn hoạt động nhưng không dùng được Drive sync.
 

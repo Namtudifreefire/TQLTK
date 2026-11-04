@@ -8,9 +8,9 @@ using System.Text.Json;
 using PersonalInfoManager.Models;
 namespace PersonalInfoManager.Services
 {
-         public static class CsvService
+    public static class CsvService
     {
-                 public static (bool ok, string message) ExportToFile(
+        public static (bool ok, string message) ExportToFile(
             List<SavedAccount> accounts, string filePath)
         {
             try
@@ -47,7 +47,7 @@ namespace PersonalInfoManager.Services
                 return (false, $"Lỗi xuất CSV: {ex.Message}");
             }
         }
-                 private static string EscapeCsv(string? value)
+        private static string EscapeCsv(string? value)
         {
             if (string.IsNullOrEmpty(value)) return "\"\"";
             if (StartsWithSpreadsheetFormula(value))
@@ -67,7 +67,7 @@ namespace PersonalInfoManager.Services
                 index++;
             return index < value.Length && value[index] is '=' or '+' or '-' or '@';
         }
-                 public static (bool ok, string message, List<SavedAccount> accounts)
+        public static (bool ok, string message, List<SavedAccount> accounts)
             ImportFromFile(string filePath)
         {
             try
@@ -103,7 +103,7 @@ namespace PersonalInfoManager.Services
                 return (false, $"Lỗi đọc CSV: {ex.Message}", new List<SavedAccount>());
             }
         }
-                 private static string DetectFormat(List<string> header)
+        private static string DetectFormat(List<string> header)
         {
             var h = header.Select(x => x.Trim().ToLowerInvariant()).ToList();
             if (h.Contains("login_username") || h.Contains("login_password"))
@@ -127,7 +127,7 @@ namespace PersonalInfoManager.Services
                 return "TQLTK";
             return "Generic";
         }
-                 private static SavedAccount? ParseRow(
+        private static SavedAccount? ParseRow(
             List<string> row, List<string> header, string format)
         {
             string Get(string colName)
@@ -350,7 +350,7 @@ namespace PersonalInfoManager.Services
             }
             return fields;
         }
-                 private static List<List<string>> ParseCsvLines(string content)
+        private static List<List<string>> ParseCsvLines(string content)
         {
             var result = new List<List<string>>();
             var currentRow = new List<string>();
@@ -413,7 +413,7 @@ namespace PersonalInfoManager.Services
             }
             return result;
         }
-                 public static List<SavedAccount> RemoveDuplicates(
+        public static List<SavedAccount> RemoveDuplicates(
             List<SavedAccount> imported, List<SavedAccount> existing)
         {
             var existingKeys = new HashSet<string>(

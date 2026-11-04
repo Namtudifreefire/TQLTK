@@ -19,18 +19,18 @@ using Google.Apis.Util.Store;
 using DriveFile = Google.Apis.Drive.v3.Data.File;
 namespace PersonalInfoManager.Services
 {
-         public enum BackupKind
+    public enum BackupKind
     {
-                 Vault,
-                 Files
+        Vault,
+        Files
     }
-         public enum BackupOwner
+    public enum BackupOwner
     {
-                 Mine,
-                 Legacy,
-                 Other
+        Mine,
+        Legacy,
+        Other
     }
-         public sealed class BackupInfo
+    public sealed class BackupInfo
     {
         public string Id { get; init; } = "";
         public string Name { get; init; } = "";
@@ -65,7 +65,7 @@ namespace PersonalInfoManager.Services
         public DateTimeOffset? Created { get; init; }
         public DateTimeOffset? Expires { get; init; }
     }
-         public class CloudSyncService
+    public class CloudSyncService
     {
         private const string ResourceName = "credentials.json";
         private const string ApplicationName = "TQLTK";
@@ -84,12 +84,12 @@ namespace PersonalInfoManager.Services
         private readonly string[] Scopes = { DriveService.Scope.DriveFile };
         private readonly string _tag;
         private readonly string _tokenDir;
-                 private string MyPrefixOf(BackupKind kind) => $"{PrefixOf(kind)}{_tag}_";
-                 public string? LastError { get; private set; }
-                 public string? LastUploadedName { get; private set; }
+        private string MyPrefixOf(BackupKind kind) => $"{PrefixOf(kind)}{_tag}_";
+        public string? LastError { get; private set; }
+        public string? LastUploadedName { get; private set; }
         public string? LastUploadedId { get; private set; }
         public bool HasLocallyStoredDriveToken => new DpapiDataStore(_tokenDir).HasStoredTokens;
-                 public CloudSyncService(string username)
+        public CloudSyncService(string username)
         {
             if (string.IsNullOrWhiteSpace(username))
                 throw new ArgumentException("Thiếu tên người dùng.", nameof(username));
@@ -163,10 +163,10 @@ namespace PersonalInfoManager.Services
             var store = new DpapiDataStore(tokenDirectory);
             store.ClearAsync().GetAwaiter().GetResult();
         }
-                 public Task<bool> UploadVaultAsync(
+        public Task<bool> UploadVaultAsync(
             string localFilePath, int keep = 5, CancellationToken ct = default)
             => UploadAsync(BackupKind.Vault, localFilePath, keep, ct);
-                 public Task<bool> UploadFilesBackupAsync(
+        public Task<bool> UploadFilesBackupAsync(
             string localFilePath, int keep = 3, CancellationToken ct = default)
             => UploadAsync(BackupKind.Files, localFilePath, keep, ct);
         private async Task<bool> UploadAsync(
@@ -450,10 +450,10 @@ namespace PersonalInfoManager.Services
                 return false;
             }
         }
-                 public Task<List<BackupInfo>?> ListBackupsAsync(
+        public Task<List<BackupInfo>?> ListBackupsAsync(
             bool includeOthers = false, CancellationToken ct = default)
             => ListBackupsAsync(BackupKind.Vault, includeOthers, ct);
-                 public async Task<List<BackupInfo>?> ListBackupsAsync(
+        public async Task<List<BackupInfo>?> ListBackupsAsync(
             BackupKind kind, bool includeOthers = false, CancellationToken ct = default)
         {
             LastError = null;
@@ -468,7 +468,7 @@ namespace PersonalInfoManager.Services
                 return null;
             }
         }
-                 public async Task<bool> DownloadBackupAsync(
+        public async Task<bool> DownloadBackupAsync(
             string fileId, string destPath, CancellationToken ct = default)
         {
             LastError = null;
@@ -487,7 +487,7 @@ namespace PersonalInfoManager.Services
             catch (Exception ex)
             {
                 LastError = Explain(ex);
-                try { if (File.Exists(destPath)) File.Delete(destPath); } catch {   }
+                try { if (File.Exists(destPath)) File.Delete(destPath); } catch {  }
                 return false;
             }
         }
@@ -532,7 +532,7 @@ namespace PersonalInfoManager.Services
             if (TaggedNameOf(kind).IsMatch(name)) return BackupOwner.Other;
             return BackupOwner.Legacy;
         }
-                 private async Task<T> WithAuthRetryAsync<T>(Func<Task<T>> op, CancellationToken ct)
+        private async Task<T> WithAuthRetryAsync<T>(Func<Task<T>> op, CancellationToken ct)
         {
             try
             {
@@ -586,7 +586,7 @@ namespace PersonalInfoManager.Services
             create.Fields = "id";
             return (await create.ExecuteAsync(ct)).Id;
         }
-                 private static async Task<List<DriveFile>> ListBackupFilesAsync(
+        private static async Task<List<DriveFile>> ListBackupFilesAsync(
             DriveService service, string folderId, string prefix, CancellationToken ct)
         {
             var all = new List<DriveFile>();
@@ -608,7 +608,7 @@ namespace PersonalInfoManager.Services
             while (!string.IsNullOrEmpty(pageToken));
             return all;
         }
-                 private async Task TrimOldBackupsAsync(
+        private async Task TrimOldBackupsAsync(
             DriveService service, string folderId, BackupKind kind, int keep, CancellationToken ct)
         {
             if (keep < 1) return;
@@ -618,7 +618,7 @@ namespace PersonalInfoManager.Services
             foreach (var old in mineFiles.Skip(keep))
                 await service.Files.Update(new DriveFile { Trashed = true }, old.Id).ExecuteAsync(ct);
         }
-                 public static string Explain(Exception ex)
+        public static string Explain(Exception ex)
         {
             string detail = ex.Message;
             return ex switch

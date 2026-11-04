@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -7,13 +7,13 @@ using System.Text;
 using System.Text.RegularExpressions;
 namespace PersonalInfoManager.Services
 {
-         public static class LoginHistory
+    public static class LoginHistory
     {
         private static readonly Regex LineRx = new(
             @"^\[(?<t>[^\]]+)\] \[(?<u>[^\]]*)\] \[(?<a>[^\]]+)\]",
             RegexOptions.Compiled);
-                 private const int IgnoreRecentMinutes = 2;
-                 public static string? BuildWarning(string username)
+        private const int IgnoreRecentMinutes = 2;
+        public static string? BuildWarning(string username)
         {
             try { return BuildWarningCore(username, DateTime.Now); }
             catch { return null; }

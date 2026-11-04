@@ -1,7 +1,7 @@
 using PersonalInfoManager.Models;
 namespace PersonalInfoManager.Services
 {
-         public static class SessionService
+    public static class SessionService
     {
         public static User? CurrentUser { get; private set; }
         public static bool IsLoggedIn => CurrentUser != null;

@@ -8,9 +8,11 @@
         ResizeMode="CanResize"
         Background="{DynamicResource BackgroundBrush}"
         Style="{StaticResource SlideInWindow}">
+
     <ScrollViewer VerticalScrollBarVisibility="Auto"
                   HorizontalScrollBarVisibility="Disabled"
                   PanningMode="VerticalOnly">
+
         <Grid Margin="35,25,35,30">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
@@ -24,6 +26,7 @@
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
+
             <TextBlock x:Name="lblFormTitle"
                        Grid.Row="0"
                        Text="📝 Đăng ký tài khoản"
@@ -32,6 +35,7 @@
                        Foreground="{DynamicResource TextPrimaryBrush}"
                        HorizontalAlignment="Center"
                        Margin="0,0,0,6" />
+
             <TextBlock x:Name="lblFormDescription"
                        Grid.Row="1"
                        Text="Tạo tài khoản mới để sử dụng TQLTK"
@@ -39,6 +43,7 @@
                        Foreground="{DynamicResource TextSecondaryBrush}"
                        HorizontalAlignment="Center"
                        Margin="0,0,0,25" />
+
             <StackPanel Grid.Row="2">
                 <TextBlock Text="Tên đăng nhập (*):"
                            FontWeight="SemiBold"
@@ -55,6 +60,7 @@
                            Foreground="{DynamicResource TextSecondaryBrush}"
                            Margin="0,4,0,0" />
             </StackPanel>
+
             <StackPanel Grid.Row="3" Margin="0,15,0,0">
                 <TextBlock Text="Mật khẩu (*):"
                            FontWeight="SemiBold"
@@ -73,6 +79,7 @@
                            Foreground="{DynamicResource TextSecondaryBrush}"
                            Margin="0,4,0,0" />
             </StackPanel>
+
             <StackPanel Grid.Row="4" Margin="0,15,0,0">
                 <TextBlock Text="Xác nhận mật khẩu (*):"
                            FontWeight="SemiBold"
@@ -91,6 +98,7 @@
                            Foreground="{DynamicResource TextSecondaryBrush}"
                            Margin="0,4,0,0" />
             </StackPanel>
+
             <StackPanel Grid.Row="5" Margin="0,15,0,0">
                 <TextBlock Text="Họ tên (*):"
                            FontWeight="SemiBold"
@@ -103,6 +111,7 @@
                          Padding="12,10"
                          VerticalContentAlignment="Center" />
             </StackPanel>
+
             <StackPanel Grid.Row="6" Margin="0,15,0,0">
                 <TextBlock Text="Gmail:"
                            FontWeight="SemiBold"
@@ -119,6 +128,7 @@
                            Foreground="{DynamicResource TextSecondaryBrush}"
                            Margin="0,4,0,0" />
             </StackPanel>
+
             <StackPanel Grid.Row="7" Margin="0,15,0,0">
                 <TextBlock Text="Số điện thoại:"
                            FontWeight="SemiBold"
@@ -131,11 +141,13 @@
                          Padding="12,10"
                          VerticalContentAlignment="Center" />
             </StackPanel>
+
             <Grid Grid.Row="8" Margin="0,30,0,0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
+
                 <Button Grid.Column="0"
                         Height="46"
                         Margin="0,0,6,0"
@@ -146,6 +158,7 @@
                                VerticalAlignment="Center"
                                HorizontalAlignment="Center" />
                 </Button>
+
                 <Button Grid.Column="1"
                         Height="46"
                         Margin="6,0,0,0"
@@ -159,6 +172,7 @@
                                HorizontalAlignment="Center" />
                 </Button>
             </Grid>
+
             <TextBlock Grid.Row="9"
                        FontSize="12"
                        Foreground="{DynamicResource TextSecondaryBrush}"
@@ -168,6 +182,7 @@
                        TextAlignment="Center">
                 Đã có tài khoản? Đóng cửa sổ này để quay lại đăng nhập.
             </TextBlock>
+
         </Grid>
     </ScrollViewer>
 </Window>

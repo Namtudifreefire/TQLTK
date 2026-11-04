@@ -112,7 +112,8 @@ public static class LanguageService
             ["IMPORT_VAULT_DENIED"] = "Vault import denied",
             ["VERIFY_BACKUP_DENIED"] = "Backup verification denied",
             ["VERIFY_FILE_BACKUP"] = "Verify file backup",
-            ["VERIFY_VAULT_BACKUP"] = "Verify vault backup"
+            ["VERIFY_VAULT_BACKUP"] = "Verify vault backup",
+            ["VAULT_KEY_ROTATION_DENIED"] = "Vault key rotation denied"
         };
     private static string _currentCode = RegistryService.GetLanguage();
     public static string CurrentCode => _currentCode;

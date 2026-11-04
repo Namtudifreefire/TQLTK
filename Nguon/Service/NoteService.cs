@@ -6,12 +6,12 @@ using System.Text.Json;
 using PersonalInfoManager.Models;
 namespace PersonalInfoManager.Services
 {
-         public class NoteService
+    public class NoteService
     {
         private readonly string _dataFile = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            ApplicationDataPath.Root,
             "PersonalInfoManager", "notes.json");
-                 public List<Note> Load()
+        public List<Note> Load()
         {
             if (!File.Exists(_dataFile)) return new List<Note>();
             return DecryptNotes(File.ReadAllText(_dataFile));
@@ -43,8 +43,9 @@ namespace PersonalInfoManager.Services
                     "Nội dung ghi chú không hợp lệ; file được giữ nguyên.", ex);
             }
         }
-                 public void Save(List<Note> notes)
+        public void Save(List<Note> notes)
         {
+            using var storageLock = AesCrypto.AcquireStorageLock();
             if (File.Exists(_dataFile))
             {
                 string existing = File.ReadAllText(_dataFile);

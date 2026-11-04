@@ -8,7 +8,7 @@ using System.Text.Json;
 using System.Threading;
 namespace PersonalInfoManager.Services
 {
-         public static class TwoFactorService
+    public static class TwoFactorService
     {
         public const string Issuer = "TQLTK";
         private const int StepSeconds = 30;
@@ -31,7 +31,7 @@ namespace PersonalInfoManager.Services
             public int FailedVerificationAttempts { get; set; }
             public long LockedUntilUnixSeconds { get; set; }
         }
-                 private static IDisposable AcquireCrossProcessLock(string username)
+        private static IDisposable AcquireCrossProcessLock(string username)
         {
             var user = new UserService().FindByUsername(username)
                 ?? throw new InvalidOperationException("Không tìm thấy tài khoản để khóa dữ liệu 2FA.");
@@ -187,14 +187,14 @@ namespace PersonalInfoManager.Services
             foreach (string username in userService.GetUsernamesForSecurityMigration())
                 _ = IsEnabled(username);
         }
-                 public static string GenerateSecret() => Base32Encode(RandomNumberGenerator.GetBytes(20));
-                 public static string BuildOtpAuthUri(string username, string secret)
+        public static string GenerateSecret() => Base32Encode(RandomNumberGenerator.GetBytes(20));
+        public static string BuildOtpAuthUri(string username, string secret)
         {
             string label = Uri.EscapeDataString($"{Issuer}:{username}");
             string issuer = Uri.EscapeDataString(Issuer);
             return $"otpauth://totp/{label}?secret={secret}&issuer={issuer}&algorithm=SHA1&digits=6&period={StepSeconds}";
         }
-                 public static string FormatSecret(string secret)
+        public static string FormatSecret(string secret)
         {
             var sb = new StringBuilder();
             for (int i = 0; i < secret.Length; i++)
@@ -204,7 +204,7 @@ namespace PersonalInfoManager.Services
             }
             return sb.ToString();
         }
-                 public static (bool ok, string message, List<string> recoveryCodes) Enable(string username, string secret, string code)
+        public static (bool ok, string message, List<string> recoveryCodes) Enable(string username, string secret, string code)
         {
             lock (ValidationSync)
             {
@@ -240,7 +240,7 @@ namespace PersonalInfoManager.Services
                 return (true, "Đã bật xác thực 2 bước.", recoveryCodes);
             }
         }
-                 public static (bool ok, string message) Validate(string username, string input)
+        public static (bool ok, string message) Validate(string username, string input)
         {
             lock (ValidationSync)
             {
@@ -248,7 +248,7 @@ namespace PersonalInfoManager.Services
                 return ValidateCore(username, input);
             }
         }
-                 public static (bool ok, string message) Disable(string username, string input)
+        public static (bool ok, string message) Disable(string username, string input)
         {
             lock (ValidationSync)
             {
@@ -269,7 +269,7 @@ namespace PersonalInfoManager.Services
                 return (true, "");
             }
         }
-                 public static int GetRecoveryCodeCount(string username)
+        public static int GetRecoveryCodeCount(string username)
         {
             lock (ValidationSync)
             {
@@ -278,7 +278,7 @@ namespace PersonalInfoManager.Services
                 return data?.RecoveryHashes.Count ?? -1;
             }
         }
-                 public static (bool ok, string message, List<string> recoveryCodes) PrepareRecoveryCodes(string username, string input)
+        public static (bool ok, string message, List<string> recoveryCodes) PrepareRecoveryCodes(string username, string input)
         {
             lock (ValidationSync)
             {
@@ -307,7 +307,7 @@ namespace PersonalInfoManager.Services
                 return (true, "", GenerateRecoveryCodes());
             }
         }
-                 public static (bool ok, string message) CommitRecoveryCodes(string username, List<string> newCodes)
+        public static (bool ok, string message) CommitRecoveryCodes(string username, List<string> newCodes)
         {
             lock (ValidationSync)
             {

@@ -5,7 +5,7 @@ using System.Windows;
 using System.Windows.Media;
 namespace PersonalInfoManager.Services
 {
-         public static class ThemeService
+    public static class ThemeService
     {
         private const string LightThemePath = "Themes/LightTheme.xaml";
         private const string DarkThemePath  = "Themes/DarkTheme.xaml";
@@ -57,7 +57,7 @@ namespace PersonalInfoManager.Services
                 dicts.Remove(oldTheme);
             dicts.Insert(0, newDict);
         }
-                 private static void RefreshAllWindows()
+        private static void RefreshAllWindows()
         {
             try
             {
@@ -68,7 +68,7 @@ namespace PersonalInfoManager.Services
             }
             catch { }
         }
-                 private static void RefreshWindow(Window w)
+        private static void RefreshWindow(Window w)
         {
             try
             {
@@ -93,7 +93,7 @@ namespace PersonalInfoManager.Services
             }
             catch { }
         }
-                 private static IEnumerable<T> FindVisualChildren<T>(DependencyObject depObj)
+        private static IEnumerable<T> FindVisualChildren<T>(DependencyObject depObj)
             where T : DependencyObject
         {
             if (depObj == null) yield break;

@@ -3,13 +3,13 @@ using System.IO;
 using System.Text;
 namespace PersonalInfoManager.Services
 {
-         public static class ActivityLogger
+    public static class ActivityLogger
     {
         private static readonly string _logRoot = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "PersonalInfoManager", "Logs");
         private static readonly object _lock = new();
-                 public static void Log(string username, string action, string detail = "")
+        public static void Log(string username, string action, string detail = "")
         {
             try
             {
@@ -94,7 +94,7 @@ namespace PersonalInfoManager.Services
             }
             return decoded.ToString();
         }
-                 public static string ReadTodayLog()
+        public static string ReadTodayLog()
         {
             try
             {
@@ -109,12 +109,12 @@ namespace PersonalInfoManager.Services
                 return $"Lỗi đọc log: {ex.Message}";
             }
         }
-                 public static string[] ListLogFiles()
+        public static string[] ListLogFiles()
         {
             if (!Directory.Exists(_logRoot)) return Array.Empty<string>();
             return Directory.GetFiles(_logRoot, "activity_*.log");
         }
-                 public static void CleanupOldLogs(int keepDays = 30)
+        public static void CleanupOldLogs(int keepDays = 30)
         {
             if (!Directory.Exists(_logRoot)) return;
             var cutoff = DateTime.Now.AddDays(-keepDays);

@@ -16,7 +16,7 @@ namespace PersonalInfoManager
         private readonly List<DeletedNoteEntry> _deletedNotes = new();
         private readonly List<AccountCustomField> _customFields = new();
         private bool _noteMovedToTrash;
-                 public SavedAccount Result { get; private set; } = new();
+        public SavedAccount Result { get; private set; } = new();
         public EditAccountWindow(SavedAccount? existing)
         {
             InitializeComponent();

@@ -21,26 +21,32 @@
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
+
             <TextBlock Grid.Row="0" Text="✏️ Sửa thông tin người dùng"
                        FontSize="16" FontWeight="Bold"
                        HorizontalAlignment="Center" Margin="0,0,0,20" />
+
             <StackPanel Grid.Row="1">
                 <TextBlock Text="Tên đăng nhập (không đổi):" />
                 <TextBox x:Name="txtUsername" Height="30"
                          IsReadOnly="True" />
             </StackPanel>
+
             <StackPanel Grid.Row="2" Margin="0,10,0,0">
                 <TextBlock Text="Họ tên:" />
                 <TextBox x:Name="txtFullName" Height="30" />
             </StackPanel>
+
             <StackPanel Grid.Row="3" Margin="0,10,0,0">
                 <TextBlock Text="Gmail:" />
                 <TextBox x:Name="txtEmail" Height="30" />
             </StackPanel>
+
             <StackPanel Grid.Row="4" Margin="0,10,0,0">
                 <TextBlock Text="Số điện thoại:" />
                 <TextBox x:Name="txtPhone" Height="30" />
             </StackPanel>
+
             <StackPanel Grid.Row="5" Orientation="Horizontal"
                         HorizontalAlignment="Right" Margin="0,20,0,0">
                 <Button Content="Hủy" Width="90" Height="32"

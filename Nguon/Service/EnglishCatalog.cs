@@ -7,6 +7,82 @@ internal static class EnglishCatalog
     {
         var values = new Dictionary<string, string>(StringComparer.Ordinal);
         void Add(string source, string translation) => values[source] = translation;
+        Add("Mật khẩu mới và hash được nâng cấp sau đăng nhập sẽ dùng PBKDF2-HMAC-SHA256 600.000 vòng. Hash Argon2id hiện tại vẫn được xác minh bình thường.", "New passwords and hashes upgraded after sign-in will use PBKDF2-HMAC-SHA256 with 600,000 iterations. Existing Argon2id hashes will still be verified normally.");
+        Add("Mật khẩu mới và hash được nâng cấp sau đăng nhập sẽ dùng Argon2id. Hash PBKDF2 hiện tại vẫn được xác minh bình thường.", "New passwords and hashes upgraded after sign-in will use Argon2id. Existing PBKDF2 hashes will still be verified normally.");
+        Add("Đã lưu lựa chọn thuật toán băm cho mật khẩu mới và lần nâng cấp hash tiếp theo.", "The hashing choice for new passwords and the next hash upgrade has been saved.");
+        Add("Ứng dụng sẽ tạo và xác minh bản backup có cụm mật khẩu, sau đó mã hóa lại vault, ghi chú và các backup cục bộ đã nhận diện. Khóa cũ được giữ dưới DPAPI để mở bản xuất lịch sử. Tệp cá nhân dùng khóa riêng và không bị thay đổi. Tiếp tục?", "The app will create and verify a passphrase-protected backup, then re-encrypt the vault, notes, and recognized local backups. The old key is retained under DPAPI for historical exports. Personal files use a separate key and will not change. Continue?");
+        Add("Không thể đọc trạng thái sao lưu.", "Could not read backup health.");
+        Add("Trạng thái sao lưu: bản gần nhất bị thiếu, thay đổi hoặc chưa xác minh.", "Backup health: the latest backup is missing, has changed, or has not been verified.");
+        Add("Trạng thái sao lưu: bản gần nhất đã cũ ({0}).", "Backup health: the most recent backup is old ({0}).");
+        Add("Diễn tập thành công: đã khôi phục thử {0} file ({1}) vào kho tạm được mã hóa, xác minh từng file trong {2} giây rồi xóa kho tạm. Kho File cá nhân thật không thay đổi.", "Restore drill succeeded: restored {0} files ({1}) to an encrypted temporary store, verified each file in {2} seconds, and removed the temporary store. The actual personal-file store was unchanged.");
+        Add("Diễn tập khôi phục thành công: đã đọc, giải mã, ghi thử an toàn vào kho tạm, đọc lại và đối chiếu {0} tài khoản trong {1} giây. Vault thật không thay đổi.", "Restore drill succeeded: read, decrypted, wrote to a safe temporary store, read back, and compared {0} accounts in {1} seconds. The actual vault was unchanged.");
+        Add("Xoay khóa hoàn tất", "Key rotation complete");
+        Add("Xoay khóa chưa hoàn tất", "Key rotation incomplete");
+        Add("Đã xoay khóa và mã hóa lại {0} tệp cục bộ.\nBản phục hồi đã xác minh ({1} tài khoản): {2}\nCác backup có cụm mật khẩu vẫn độc lập; khóa cũ được lưu mã hóa để đọc bản xuất lịch sử.", "The key was rotated and {0} local files were re-encrypted.\nVerified recovery copy ({1} accounts): {2}\nPassphrase-protected backups remain independent; the old key is stored in protected form for historical exports.");
+        Add("Không thể hoàn tất xoay khóa. Dữ liệu gốc và nhật ký phục hồi được giữ lại; không xóa thư mục dữ liệu ứng dụng. Lần đọc tiếp theo sẽ thử tiếp tục giao dịch.\n\n{0}", "Key rotation could not be completed. Original data and the recovery journal were retained; do not delete the application data folder. The next read will try to resume the transaction.\n\n{0}");
+        Add("Trước khi xoay khóa, hãy đặt cụm mật khẩu sao lưu trong Tiện ích → Cụm mật khẩu sao lưu. Bạn cần tạo một bản phục hồi mở được độc lập với khóa Windows cũ.", "Before rotating the key, set a backup passphrase under Utilities → Backup passphrase. Create a recovery copy that can be opened independently of the old Windows key.");
+        Add("Không tạo được bản phục hồi: {0}", "Could not create the recovery copy: {0}");
+        Add("Bản phục hồi không qua xác minh: {0}", "The recovery copy did not pass verification: {0}");
+        Add("Đã giữ nguyên {0} backup dùng cụm mật khẩu.", "Preserved {0} passphrase-protected backups.");
+        Add("Trạng thái sao lưu: có bản sao lưu nhưng chưa xác minh bản gần nhất.", "Backup health: a backup exists, but the latest one has not been verified.");
+        Add("Băm mật khẩu đăng nhập", "Sign-in password hashing");
+        Add("Mặc định dùng Argon2id. Có thể bật PBKDF2-HMAC-SHA256 cho môi trường cần tương thích FIPS; hash cũ được nâng cấp sau lần đăng nhập thành công.", "Argon2id is used by default. PBKDF2-HMAC-SHA256 is available for environments that require FIPS-compatible hashing; existing hashes are upgraded after a successful sign-in.");
+        Add("Dùng PBKDF2-HMAC-SHA256 (tương thích FIPS)", "Use PBKDF2-HMAC-SHA256 (FIPS-compatible)");
+        Add("Xoay khóa vault", "Rotate vault key");
+        Add("Chỉ quản trị viên đang hoạt động mới được phép xoay khóa vault.", "Only an active administrator can rotate the vault key.");
+        Add("Không đủ quyền", "Insufficient permissions");
+        Add("Mã hóa lại vault, ghi chú và bản sao lưu cục bộ đã nhận diện. Hãy đặt cụm mật khẩu sao lưu trước; khóa cũ được giữ mã hóa để mở các bản xuất lịch sử.", "Re-encrypt the vault, notes, and recognized local backups. Set a backup passphrase first; the old key is retained in protected form for historical exports.");
+        Add("Trạng thái", "Status");
+        Add("Đang mở", "Open");
+        Add("Đã xử lý", "Fixed");
+        Add("Nhắc lại sau 1 ngày", "Remind me in 1 day");
+        Add("Nhắc lại sau 7 ngày", "Remind me in 7 days");
+        Add("Nhắc lại sau 30 ngày", "Remind me in 30 days");
+        Add("Bỏ qua có lý do", "Ignore with a reason");
+        Add("Lý do (bắt buộc khi bỏ qua)", "Reason (required when ignoring)");
+        Add("Lưu trạng thái", "Save status");
+        Add("Hãy ghi lý do khi bỏ qua cảnh báo.", "Enter a reason before ignoring this finding.");
+        Add("Thiếu lý do", "Reason required");
+        Add("Trạng thái cảnh báo bảo mật", "Security finding status");
+        Add("Lần kiểm tra gần nhất: {0}", "Last checked: {0}");
+        Add("Đã đánh dấu xử lý • kiểm tra {0}", "Marked fixed • checked {0}");
+        Add("Nhắc lại {0} • kiểm tra {1}", "Reminder {0} • checked {1}");
+        Add("Đã bỏ qua: {0} • kiểm tra {1}", "Ignored: {0} • checked {1}");
+        Add("Đang mở • kiểm tra {0}", "Open • checked {0}");
+        Add("Trạng thái sao lưu: chưa từng tạo bản sao lưu.", "Backup health: no backup has been created.");
+        Add("Sao lưu gần nhất thất bại: {0}", "Most recent backup failed: {0}");
+        Add("Trạng thái sao lưu: vault có thay đổi sau lần sao lưu {0}.", "Backup health: the vault changed after the backup on {0}.");
+        Add("Trạng thái sao lưu: bản gần nhất đã cũ ({0}).", "Backup health: the most recent backup is old ({0}).");
+        Add("Trạng thái sao lưu: có bản sao lưu nhưng chưa xác minh bản gần nhất.", "Backup health: a backup exists, but the latest one has not been verified.");
+        Add("Trạng thái sao lưu: chưa có diễn tập khôi phục thành công.", "Backup health: no successful restore drill has been recorded.");
+        Add("Trạng thái sao lưu: cần diễn tập khôi phục lại; lần gần nhất {0}.", "Backup health: run another restore drill; the last one was on {0}.");
+        Add("Trạng thái sao lưu tốt: đã xác minh và diễn tập gần đây ({0}).", "Backup health: recently verified and restore-tested ({0}).");
+        Add("Đổi thuật toán băm mật khẩu", "Change password hashing algorithm");
+        Add("Đã hủy diễn tập khôi phục; kho thật không thay đổi.", "Restore drill was cancelled; the actual store was unchanged.");
+        Add("Không thể hoàn tất xoay khóa. Dữ liệu gốc và nhật ký phục hồi được giữ lại; không xóa thư mục dữ liệu ứng dụng. Lần đọc tiếp theo sẽ thử tiếp tục giao dịch.\n\n{0}", "Key rotation could not be completed. Original data and the recovery journal were retained; do not delete the application data folder. The next read will try to resume the transaction.\n\n{0}");
+        Add("Bản phục hồi không qua xác minh: {0}", "The recovery copy did not pass verification: {0}");
+        Add("Không tạo được bản phục hồi: {0}", "Could not create the recovery copy: {0}");
+        Add("Trạng thái sao lưu: bản gần nhất bị thiếu, thay đổi hoặc chưa xác minh.", "Backup health: the latest backup is missing, has changed, or has not been verified.");
+        Add("Không thể đọc mục", "Could not read entry");
+        Add("Không lưu được trạng thái", "Could not save status");
+        Add("Cần chuẩn bị bản phục hồi", "Prepare a recovery copy first");
+        Add("Trước khi xoay khóa, hãy đặt cụm mật khẩu sao lưu trong Tiện ích → Cụm mật khẩu sao lưu. Bạn cần tạo một bản phục hồi mở được độc lập với khóa Windows cũ.", "Before rotating the key, set a backup passphrase under Utilities → Backup passphrase. You need a recovery copy that does not depend on the old Windows key.");
+        Add("Lưu bản phục hồi trước khi xoay khóa", "Save a recovery copy before key rotation");
+        Add("Xác nhận xoay khóa vault", "Confirm vault key rotation");
+        Add("Ứng dụng sẽ tạo và xác minh bản backup có cụm mật khẩu, sau đó mã hóa lại vault, ghi chú và các backup cục bộ đã nhận diện. Khóa cũ được giữ dưới DPAPI để mở bản xuất lịch sử. Tệp cá nhân dùng khóa riêng và không bị thay đổi. Tiếp tục?", "The app will create and verify a passphrase-protected backup, then re-encrypt the vault, notes, and recognized local backups. The old key is retained under DPAPI to open historical exports. Personal files use a separate key and will not change. Continue?");
+        Add("Không tạo được bản phục hồi", "Could not create recovery copy");
+        Add("Xoay khóa hoàn tất", "Key rotation complete");
+        Add("Xoay khóa chưa hoàn tất", "Key rotation incomplete");
+        Add("Đã xoay khóa và mã hóa lại {0} tệp cục bộ.\nBản phục hồi đã xác minh: {1}\nCác backup có cụm mật khẩu vẫn độc lập; khóa cũ được lưu mã hóa để đọc bản xuất lịch sử.", "The key was rotated and {0} local files were re-encrypted.\nVerified recovery copy: {1}\nPassphrase-protected backups remain independent; the old key is stored in protected form for historical exports.");
+        Add("Đã giữ nguyên {0} backup dùng cụm mật khẩu.", "Preserved {0} passphrase-protected backups.");
+        Add("Diễn tập", "Drill");
+        Add("Chọn bản sao lưu để diễn tập khôi phục", "Select a backup for a restore drill");
+        Add("Diễn tập hoàn tất", "Restore drill complete");
+        Add("Diễn tập thất bại", "Restore drill failed");
+        Add("Đã hủy diễn tập vì phiên đăng nhập không còn hoạt động.", "The drill was cancelled because the sign-in session is no longer active.");
+        Add("Không thể diễn tập khôi phục: ", "Could not run the restore drill: ");
+        Add("Khóa vault", "Vault key");
+        Add("Xoay khóa", "Rotate key");
         Add("(tìm theo tên, URL, nhãn, thư mục)", "(search by name, URL, tag, or folder)");
         Add("⏻  Thoát", "⏻  Exit");
         Add("○ Đang tắt", "○ Off");
@@ -1255,7 +1331,20 @@ internal static class EnglishCatalog
     }
     private static IReadOnlyList<KeyValuePair<string, string>> BuildFragments() => new[]
     {
+        new KeyValuePair<string, string>("Diễn tập khôi phục thất bại; kho thật không thay đổi. ", "Restore drill failed; the actual store was unchanged. "),
+        new KeyValuePair<string, string>("Diễn tập thất bại; kho thật không thay đổi. ", "Restore drill failed; the actual store was unchanged. "),
+        new KeyValuePair<string, string>("Không thể diễn tập khôi phục: ", "Could not run the restore drill: "),
+        new KeyValuePair<string, string>("Diễn tập thành công: đã khôi phục thử ", "Restore drill succeeded: restored "),
+        new KeyValuePair<string, string>("Diễn tập khôi phục thành công: đã đọc, giải mã, ghi thử an toàn vào kho tạm, đọc lại và đối chiếu ", "Restore drill succeeded: read, decrypted, safely wrote to a temporary store, read back, and compared "),
+        new KeyValuePair<string, string>(" tài khoản trong ", " accounts in "),
+        new KeyValuePair<string, string>(" vào kho tạm được mã hóa, xác minh từng file trong ", " to an encrypted temporary store, verified each file in "),
+        new KeyValuePair<string, string>(" rồi xóa kho tạm. Kho File cá nhân thật không thay đổi.", " and removed the temporary store. The actual personal-file store was unchanged."),
+        new KeyValuePair<string, string>(" giây. Vault thật không thay đổi.", " seconds. The actual vault was unchanged."),
+        new KeyValuePair<string, string>("Sao lưu gần nhất thất bại: ", "Most recent backup failed: "),
+        new KeyValuePair<string, string>("Trạng thái sao lưu: bản gần nhất bị thiếu, thay đổi hoặc chưa xác minh.", "Backup health: the latest backup is missing, has changed, or has not been verified."),
         new KeyValuePair<string, string>("Bản sao lưu tạo mới không qua kiểm tra: ", "The newly created backup did not pass verification: "),
+        new KeyValuePair<string, string>("Bản phục hồi không qua xác minh: ", "The recovery copy did not pass verification: "),
+        new KeyValuePair<string, string>("Không tạo được bản phục hồi: ", "Could not create the recovery copy: "),
         new KeyValuePair<string, string>(" phút", " minutes"),
         new KeyValuePair<string, string>(" Bỏ qua ", " Skipped "),
         new KeyValuePair<string, string>("Bỏ qua ", "Skipped "),

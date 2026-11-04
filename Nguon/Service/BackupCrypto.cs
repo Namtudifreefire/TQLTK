@@ -5,7 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 namespace PersonalInfoManager.Services
 {
-         public static class BackupCrypto
+    public static class BackupCrypto
     {
         public const string Prefix = "v3p:";
         public const int MinPassphraseLength = 10;
@@ -18,10 +18,10 @@ namespace PersonalInfoManager.Services
         private const int MinIterations = 100_000;
         private const int MaxIterations = 5_000_000;
         private static readonly string PassDir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            ApplicationDataPath.Root,
             "PersonalInfoManager");
         private static readonly string LegacyPassFile = Path.Combine(PassDir, "backup_pass.dat");
-                 public static bool IsPassphraseFormat(string text) =>
+        public static bool IsPassphraseFormat(string text) =>
             text.TrimStart().StartsWith(Prefix, StringComparison.Ordinal);
         public static string Encrypt(string plainText, string passphrase)
         {
@@ -51,7 +51,7 @@ namespace PersonalInfoManager.Services
                 CryptographicOperations.ZeroMemory(plain);
             }
         }
-                 public static string Decrypt(string text, string passphrase)
+        public static string Decrypt(string text, string passphrase)
         {
             text = text.Trim();
             if (!text.StartsWith(Prefix, StringComparison.Ordinal))
@@ -99,14 +99,14 @@ namespace PersonalInfoManager.Services
                 normalized.AsSpan(), salt, iterations, HashAlgorithmName.SHA256, KeySize);
         }
         private static readonly byte[] BinaryMagic = { (byte)'T', (byte)'Q', (byte)'F', (byte)'B', 1 };
-                 public static bool IsBinaryFormat(byte[] data)
+        public static bool IsBinaryFormat(byte[] data)
         {
             if (data.Length < BinaryMagic.Length) return false;
             for (int i = 0; i < BinaryMagic.Length; i++)
                 if (data[i] != BinaryMagic[i]) return false;
             return true;
         }
-                 public static byte[] EncryptBytes(ReadOnlySpan<byte> plain, string passphrase)
+        public static byte[] EncryptBytes(ReadOnlySpan<byte> plain, string passphrase)
         {
             byte[] salt = RandomNumberGenerator.GetBytes(SaltSize);
             byte[] header = BuildHeader(salt, DefaultIterations);
@@ -132,7 +132,7 @@ namespace PersonalInfoManager.Services
                 CryptographicOperations.ZeroMemory(key);
             }
         }
-                 public static byte[] DecryptBytes(byte[] data, string passphrase)
+        public static byte[] DecryptBytes(byte[] data, string passphrase)
         {
             if (!IsBinaryFormat(data))
                 throw new CryptographicException("Không phải định dạng sao lưu nhị phân của TQLTK.");
@@ -170,7 +170,7 @@ namespace PersonalInfoManager.Services
                 CryptographicOperations.ZeroMemory(key);
             }
         }
-                 public static string UserTag(string username)
+        public static string UserTag(string username)
         {
             string normalized = (username ?? "").Trim().ToLowerInvariant();
             byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(normalized));
@@ -178,17 +178,17 @@ namespace PersonalInfoManager.Services
         }
         private static string PassFileFor(string username) =>
             Path.Combine(PassDir, $"backup_pass_{UserTag(username)}.dat");
-                 public static string? GetStoredPassphrase(string username) => ReadPassFile(PassFileFor(username));
+        public static string? GetStoredPassphrase(string username) => ReadPassFile(PassFileFor(username));
         public static bool HasStoredPassphrase(string username) => GetStoredPassphrase(username) != null;
         public static void SaveStoredPassphrase(string username, string passphrase) =>
             WritePassFile(PassFileFor(username), passphrase);
-                 public static bool HasLegacyPassphrase() => File.Exists(LegacyPassFile);
-                 public static bool TryAdoptLegacyPassphrase(string username)
+        public static bool HasLegacyPassphrase() => File.Exists(LegacyPassFile);
+        public static bool TryAdoptLegacyPassphrase(string username)
         {
             string? legacy = ReadPassFile(LegacyPassFile);
             if (legacy == null) return false;
             WritePassFile(PassFileFor(username), legacy);
-            try { File.Delete(LegacyPassFile); } catch {   }
+            try { File.Delete(LegacyPassFile); } catch {  }
             return true;
         }
         private static string? ReadPassFile(string path)

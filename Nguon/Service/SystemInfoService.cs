@@ -4,9 +4,9 @@ using System.Security.Principal;
 using System.Text;
 namespace PersonalInfoManager.Services
 {
-         public static class SystemInfoService
+    public static class SystemInfoService
     {
-                 public static string GetSystemReport()
+        public static string GetSystemReport()
         {
             var sb = new StringBuilder();
             bool english = LanguageService.IsEnglish;
@@ -48,7 +48,7 @@ namespace PersonalInfoManager.Services
         private static string FormatBoolean(bool value, bool english) => value
             ? (english ? "Yes" : "Có")
             : (english ? "No" : "Không");
-                 public static bool IsAdmin()
+        public static bool IsAdmin()
         {
             try
             {
@@ -61,7 +61,7 @@ namespace PersonalInfoManager.Services
                 return false;
             }
         }
-                 public static string GetShortInfo()
+        public static string GetShortInfo()
         {
             return $".NET {Environment.Version} | " +
                    $"{Environment.MachineName} | " +
