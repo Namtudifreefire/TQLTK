@@ -2,17 +2,13 @@ using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
 using PersonalInfoManager.Models;
-
 namespace PersonalInfoManager;
-
 public partial class CustomFieldsWindow : Window
 {
     private readonly ObservableCollection<AccountCustomField> _fields = new();
     private AccountCustomField? _selected;
     private bool _loading;
-
     public List<AccountCustomField> Result { get; private set; } = new();
-
     public CustomFieldsWindow(IEnumerable<AccountCustomField>? fields)
     {
         InitializeComponent();
@@ -22,14 +18,12 @@ public partial class CustomFieldsWindow : Window
         if (_fields.Count > 0) lstFields.SelectedIndex = 0;
         RefreshEditor();
     }
-
     private void Fields_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         CommitEditor();
         _selected = lstFields.SelectedItem as AccountCustomField;
         RefreshEditor();
     }
-
     private void BtnAdd_Click(object sender, RoutedEventArgs e)
     {
         CommitEditor();
@@ -39,7 +33,6 @@ public partial class CustomFieldsWindow : Window
         txtName.Focus();
         txtName.SelectAll();
     }
-
     private void BtnRemove_Click(object sender, RoutedEventArgs e)
     {
         if (_selected == null) return;
@@ -47,7 +40,6 @@ public partial class CustomFieldsWindow : Window
         _fields.Remove(_selected);
         lstFields.SelectedIndex = _fields.Count == 0 ? -1 : Math.Min(index, _fields.Count - 1);
     }
-
     private void TxtName_TextChanged(object sender, TextChangedEventArgs e)
     {
         if (_loading || _selected == null) return;
@@ -56,19 +48,16 @@ public partial class CustomFieldsWindow : Window
         lstFields.Items.Refresh();
         lstFields.SelectedIndex = index;
     }
-
     private void TxtValue_TextChanged(object sender, TextChangedEventArgs e)
     {
         if (!_loading && _selected != null && !_selected.IsSensitive)
             _selected.Value = txtValue.Text;
     }
-
     private void PwdValue_PasswordChanged(object sender, RoutedEventArgs e)
     {
         if (!_loading && _selected != null && _selected.IsSensitive)
             _selected.Value = pwdValue.Password;
     }
-
     private void Sensitive_Changed(object sender, RoutedEventArgs e)
     {
         if (_loading || _selected == null) return;
@@ -76,14 +65,12 @@ public partial class CustomFieldsWindow : Window
         _selected.IsSensitive = chkSensitive.IsChecked == true;
         RefreshEditor();
     }
-
     private void ShowValue_Changed(object sender, RoutedEventArgs e)
     {
         if (_loading || _selected == null || !_selected.IsSensitive) return;
         CommitEditor();
         RefreshValueEditor();
     }
-
     private void RefreshEditor()
     {
         _loading = true;
@@ -99,7 +86,6 @@ public partial class CustomFieldsWindow : Window
         RefreshValueEditor();
         _loading = false;
     }
-
     private void RefreshValueEditor()
     {
         if (_selected == null)
@@ -110,7 +96,6 @@ public partial class CustomFieldsWindow : Window
             pwdValue.Visibility = Visibility.Collapsed;
             return;
         }
-
         if (_selected.IsSensitive && chkShowValue.IsChecked != true)
         {
             txtValue.Visibility = Visibility.Collapsed;
@@ -124,7 +109,6 @@ public partial class CustomFieldsWindow : Window
             txtValue.Text = _selected.Value;
         }
     }
-
     private void CommitEditor()
     {
         if (_selected == null) return;
@@ -134,7 +118,6 @@ public partial class CustomFieldsWindow : Window
         else
             _selected.Value = txtValue.Text;
     }
-
     private void BtnSave_Click(object sender, RoutedEventArgs e)
     {
         CommitEditor();
@@ -150,7 +133,6 @@ public partial class CustomFieldsWindow : Window
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
-
         Result = _fields.Select(field => field.Clone()).ToList();
         DialogResult = true;
     }

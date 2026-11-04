@@ -4,23 +4,18 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using PersonalInfoManager.Models;
 using PersonalInfoManager.Services;
-
 namespace PersonalInfoManager
 {
     public partial class RegisterWindow : Window
     {
         private readonly UserService _userService = new();
         private readonly bool _isInitialAdmin;
-
-        public string RegisteredUsername { get; private set; } = "";
-
+                 public string RegisteredUsername { get; private set; } = "";
         public RegisterWindow() : this(false) { }
-
         public RegisterWindow(bool isInitialAdmin)
         {
             InitializeComponent();
             _isInitialAdmin = isInitialAdmin;
-
             if (_isInitialAdmin)
             {
                 Title = "Tạo quản trị viên đầu tiên - TQLTK";
@@ -28,7 +23,6 @@ namespace PersonalInfoManager
                 lblFormDescription.Text = "Hãy chọn mật khẩu riêng, mạnh để bảo vệ tài khoản quản trị.";
                 lblRegisterButton.Text = "✓ Tạo quản trị viên";
             }
-
             Loaded += (_, _) => txtUsername.Focus();
         }
         private void TxtPassword_PasswordChanged(object sender, RoutedEventArgs e)
@@ -39,7 +33,6 @@ namespace PersonalInfoManager
                 LanguageService.SetLocalizedText(lblStrength, "");
                 return;
             }
-
             int score = CalculateStrength(pwd);
             (string text, Brush color) = score switch
             {
@@ -48,11 +41,9 @@ namespace PersonalInfoManager
                 4 => ("Mạnh", Brushes.Green),
                 _ => ("Rất mạnh", Brushes.DarkGreen)
             };
-
             LanguageService.SetLocalizedText(lblStrength, $"Độ mạnh: {text}");
             lblStrength.Foreground = color;
         }
-
         private void TxtConfirm_PasswordChanged(object sender, RoutedEventArgs e)
         {
             if (string.IsNullOrEmpty(txtConfirm.Password))
@@ -60,7 +51,6 @@ namespace PersonalInfoManager
                 lblConfirmStatus.Text = "";
                 return;
             }
-
             if (txtConfirm.Password == txtPassword.Password)
             {
                 lblConfirmStatus.Text = "✓ Mật khẩu khớp";
@@ -72,7 +62,6 @@ namespace PersonalInfoManager
                 lblConfirmStatus.Foreground = Brushes.Red;
             }
         }
-
         private static int CalculateStrength(string pwd)
         {
             int score = 0;
@@ -103,14 +92,12 @@ namespace PersonalInfoManager
                 txtUsername.Focus();
                 return;
             }
-
             if (string.IsNullOrWhiteSpace(password) || password.Length < 15)
             {
                 ShowError("Tài khoản mới chưa bật 2FA nên mật khẩu phải từ 15 ký tự trở lên.");
                 txtPassword.Focus();
                 return;
             }
-
             if (password != confirm)
             {
                 ShowError("Mật khẩu xác nhận không khớp.");
@@ -118,7 +105,6 @@ namespace PersonalInfoManager
                 txtConfirm.Focus();
                 return;
             }
-
             if (string.IsNullOrWhiteSpace(fullName))
             {
                 ShowError("Vui lòng nhập họ tên.");
@@ -134,7 +120,6 @@ namespace PersonalInfoManager
                     fullName,
                     email,
                     phone);
-
             if (!result.ok)
             {
                 ShowError(result.message);
@@ -146,9 +131,7 @@ namespace PersonalInfoManager
                     $"Họ tên: {fullName}, Email: {email}");
             }
             catch { }
-
             RegisteredUsername = username;
-
             MessageBox.Show(
                 $"Đăng ký thành công!\n\n" +
                 $"Tên đăng nhập: {username}\n" +
@@ -158,7 +141,6 @@ namespace PersonalInfoManager
                 "Thành công",
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);
-
             DialogResult = true;
             Close();
         }

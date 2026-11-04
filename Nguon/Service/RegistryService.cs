@@ -1,13 +1,11 @@
 using System;
 using System.Windows;
 using Microsoft.Win32;
-
 namespace PersonalInfoManager.Services
 {
-    public static class RegistryService
+         public static class RegistryService
     {
         private const string AppKey = @"Software\TQLTK";
-
         public static string GetLanguage()
         {
             try
@@ -18,7 +16,6 @@ namespace PersonalInfoManager.Services
             }
             catch { return "vi"; }
         }
-
         public static void SetLanguage(string language)
         {
             string normalized = string.Equals(language, "en", StringComparison.OrdinalIgnoreCase) ? "en" : "vi";
@@ -29,7 +26,6 @@ namespace PersonalInfoManager.Services
             }
             catch { }
         }
-
         public static int GetAutoLockMinutes()
         {
             try
@@ -42,7 +38,6 @@ namespace PersonalInfoManager.Services
             catch { }
             return 5;
         }
-
         public static void SetAutoLockMinutes(int minutes)
         {
             if (minutes is not (1 or 5 or 10 or 15)) throw new ArgumentOutOfRangeException(nameof(minutes));
@@ -53,7 +48,6 @@ namespace PersonalInfoManager.Services
             }
             catch { }
         }
-
         public static bool GetLockWhenMinimized()
         {
             try
@@ -63,7 +57,6 @@ namespace PersonalInfoManager.Services
             }
             catch { return false; }
         }
-
         public static void SetLockWhenMinimized(bool enabled)
         {
             try
@@ -73,7 +66,7 @@ namespace PersonalInfoManager.Services
             }
             catch { }
         }
-        public static string GetTheme()
+                 public static string GetTheme()
         {
             try
             {
@@ -85,8 +78,7 @@ namespace PersonalInfoManager.Services
                 return "Light";
             }
         }
-
-        public static void SetTheme(string theme)
+                 public static void SetTheme(string theme)
         {
             try
             {
@@ -95,7 +87,7 @@ namespace PersonalInfoManager.Services
             }
             catch { }
         }
-        public static string GetLastUser()
+                 public static string GetLastUser()
         {
             try
             {
@@ -107,8 +99,7 @@ namespace PersonalInfoManager.Services
                 return "";
             }
         }
-
-        public static void SetLastUser(string username)
+                 public static void SetLastUser(string username)
         {
             try
             {
@@ -117,8 +108,7 @@ namespace PersonalInfoManager.Services
             }
             catch { }
         }
-
-        public static void ClearLastUser()
+                 public static void ClearLastUser()
         {
             try
             {
@@ -127,7 +117,7 @@ namespace PersonalInfoManager.Services
             }
             catch { }
         }
-        public static (double width, double height) GetWindowSize(
+                 public static (double width, double height) GetWindowSize(
             double defaultW = 1100, double defaultH = 700)
         {
             try
@@ -135,17 +125,14 @@ namespace PersonalInfoManager.Services
                 using var key = Registry.CurrentUser.OpenSubKey(AppKey);
                 var w = key?.GetValue("WindowWidth");
                 var h = key?.GetValue("WindowHeight");
-
                 double width = w != null
                     ? double.Parse(w.ToString()!)
                     : defaultW;
                 double height = h != null
                     ? double.Parse(h.ToString()!)
                     : defaultH;
-
                 if (width < 800) width = defaultW;
                 if (height < 500) height = defaultH;
-
                 return (width, height);
             }
             catch
@@ -153,8 +140,7 @@ namespace PersonalInfoManager.Services
                 return (defaultW, defaultH);
             }
         }
-
-        public static void SetWindowSize(double width, double height)
+                 public static void SetWindowSize(double width, double height)
         {
             try
             {
@@ -164,27 +150,22 @@ namespace PersonalInfoManager.Services
             }
             catch { }
         }
-        public static (double left, double top) GetWindowPosition()
+                 public static (double left, double top) GetWindowPosition()
         {
             try
             {
                 using var key = Registry.CurrentUser.OpenSubKey(AppKey);
                 var l = key?.GetValue("WindowLeft");
                 var t = key?.GetValue("WindowTop");
-
                 if (l == null || t == null)
                     return (double.NaN, double.NaN);
-
                 double left = double.Parse(l.ToString()!);
                 double top = double.Parse(t.ToString()!);
-
                 double screenW = SystemParameters.PrimaryScreenWidth;
                 double screenH = SystemParameters.PrimaryScreenHeight;
-
                 if (left < -screenW || left > screenW * 2 ||
                     top < -screenH || top > screenH * 2)
                     return (double.NaN, double.NaN);
-
                 return (left, top);
             }
             catch
@@ -192,8 +173,7 @@ namespace PersonalInfoManager.Services
                 return (double.NaN, double.NaN);
             }
         }
-
-        public static void SetWindowPosition(double left, double top)
+                 public static void SetWindowPosition(double left, double top)
         {
             try
             {
@@ -203,8 +183,7 @@ namespace PersonalInfoManager.Services
             }
             catch { }
         }
-
-        public static void ClearWindowPosition()
+                 public static void ClearWindowPosition()
         {
             try
             {
@@ -214,7 +193,7 @@ namespace PersonalInfoManager.Services
             }
             catch { }
         }
-        public static bool GetAutoThemeEnabled()
+                 public static bool GetAutoThemeEnabled()
         {
             try
             {
@@ -227,8 +206,7 @@ namespace PersonalInfoManager.Services
                 return false;
             }
         }
-
-        public static void SetAutoThemeEnabled(bool enabled)
+                 public static void SetAutoThemeEnabled(bool enabled)
         {
             try
             {
@@ -237,7 +215,7 @@ namespace PersonalInfoManager.Services
             }
             catch { }
         }
-        public static void Clear()
+                 public static void Clear()
         {
             try
             {
@@ -246,7 +224,7 @@ namespace PersonalInfoManager.Services
             }
             catch { }
         }
-        public static bool Exists()
+                 public static bool Exists()
         {
             try
             {
@@ -258,14 +236,12 @@ namespace PersonalInfoManager.Services
                 return false;
             }
         }
-
-        public static string DumpAll()
+                 public static string DumpAll()
         {
             try
             {
                 using var key = Registry.CurrentUser.OpenSubKey(AppKey);
                 if (key == null) return "(Registry trống)";
-
                 var sb = new System.Text.StringBuilder();
                 foreach (var name in key.GetValueNames())
                 {

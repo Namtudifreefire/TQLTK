@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Windows;
 using PersonalInfoManager.Services;
-
 namespace PersonalInfoManager
 {
     public partial class BackupRestorePreviewWindow : Window
@@ -18,7 +17,6 @@ namespace PersonalInfoManager
             LanguageService.SetLocalizedFormattedText(txtSummary, summaryTemplate, summaryArguments);
             dgItems.ItemsSource = items;
         }
-
         private void BtnContinue_Click(object sender, RoutedEventArgs e) => DialogResult = true;
     }
 }

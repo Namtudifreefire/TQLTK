@@ -2,20 +2,16 @@ using System;
 using System.Text;
 using System.Windows;
 using PersonalInfoManager.Services;
-
 namespace PersonalInfoManager
 {
-    public partial class BackupPassphraseWindow : Window
+         public partial class BackupPassphraseWindow : Window
     {
         private readonly bool _confirmMode;
-
         public string Passphrase { get; private set; } = "";
-
         public BackupPassphraseWindow(bool confirmMode)
         {
             InitializeComponent();
             _confirmMode = confirmMode;
-
             if (confirmMode)
             {
                 txtTitle.Text = "🔑 Đặt cụm mật khẩu sao lưu";
@@ -33,14 +29,11 @@ namespace PersonalInfoManager
                 txtHint.Visibility = Visibility.Collapsed;
                 btnOk.Content = "Mở";
             }
-
             Loaded += (_, _) => pwdMain.Focus();
         }
-
         private void BtnOk_Click(object sender, RoutedEventArgs e)
         {
             string p = pwdMain.Password;
-
             if (_confirmMode)
             {
                 if (p.Length < BackupCrypto.MinPassphraseLength)
@@ -61,11 +54,9 @@ namespace PersonalInfoManager
                 ShowError("Hãy nhập cụm mật khẩu.");
                 return;
             }
-
             Passphrase = p;
             DialogResult = true;
         }
-
         private void ShowError(string message)
         {
             txtError.Text = message;

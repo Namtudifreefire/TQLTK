@@ -9,7 +9,6 @@
         Background="{DynamicResource BackgroundBrush}"
         Foreground="{DynamicResource TextPrimaryBrush}"
         Style="{StaticResource SlideInWindow}">
-
     <Window.Resources>
         <Style x:Key="PrimaryButton" TargetType="Button"
                BasedOn="{StaticResource RoundedButton}">
@@ -20,7 +19,6 @@
             </Style.Triggers>
         </Style>
     </Window.Resources>
-
     <Grid Margin="25">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -30,15 +28,12 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
-
         <TextBlock x:Name="txtTitle" Grid.Row="0" Text="☁️ Khôi phục từ Google Drive"
                    FontSize="16" FontWeight="Bold"
                    HorizontalAlignment="Center" Margin="0,0,0,12" />
-
         <TextBlock x:Name="txtStatus" Grid.Row="1"
                    Foreground="{DynamicResource TextSecondaryBrush}"
                    FontSize="13" TextWrapping="Wrap" Margin="0,0,0,12" />
-
         <Border Grid.Row="2" Style="{StaticResource Card}" Padding="6" Margin="0">
             <DataGrid x:Name="dgBackups"
                       SelectionMode="Single"
@@ -62,16 +57,13 @@
                 </DataGrid.Columns>
             </DataGrid>
         </Border>
-
         <CheckBox x:Name="chkOthers" Grid.Row="3" Margin="0,12,0,0"
                   Content="Hiện cả bản sao lưu của người dùng khác (khi dùng chung một tài khoản Google)"
                   Checked="ChkOthers_Changed" Unchecked="ChkOthers_Changed" />
-
         <TextBlock x:Name="txtNote" Grid.Row="4"
                    Text="Dữ liệu của bản sao lưu được nhập thêm vào tài khoản hiện tại. Tài khoản trùng sẽ được bỏ qua, dữ liệu hiện có không bị xóa."
                    Foreground="{DynamicResource TextSecondaryBrush}"
                    FontSize="12" TextWrapping="Wrap" Margin="0,8,0,0" />
-
         <StackPanel Grid.Row="5" Orientation="Horizontal"
                     HorizontalAlignment="Right" Margin="0,16,0,0">
             <Button Content="Hủy" MinWidth="90"

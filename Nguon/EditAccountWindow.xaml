@@ -8,11 +8,9 @@
         ResizeMode="CanResize"
         Background="{DynamicResource BackgroundBrush}"
         Style="{StaticResource SlideInWindow}">
-
     <ScrollViewer VerticalScrollBarVisibility="Auto"
                   HorizontalScrollBarVisibility="Disabled"
                   PanningMode="VerticalOnly">
-
         <Grid Margin="35,25,35,30">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
@@ -28,7 +26,6 @@
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
-
             <TextBlock Grid.Row="0"
                        x:Name="lblTitle"
                        Text="🔐 Thêm tài khoản mới"
@@ -37,14 +34,12 @@
                        Foreground="{DynamicResource TextPrimaryBrush}"
                        HorizontalAlignment="Center"
                        Margin="0,0,0,6" />
-
             <TextBlock Grid.Row="1"
                        Text="Điền thông tin tài khoản cần lưu"
                        FontSize="12"
                        Foreground="{DynamicResource TextSecondaryBrush}"
                        HorizontalAlignment="Center"
                        Margin="0,0,0,25" />
-
             <StackPanel Grid.Row="2">
                 <TextBlock Text="Tên dịch vụ / website (*):"
                            FontWeight="SemiBold"
@@ -57,7 +52,6 @@
                          Padding="12,10"
                          VerticalContentAlignment="Center" />
             </StackPanel>
-
             <StackPanel Grid.Row="3" Margin="0,15,0,0">
                 <TextBlock Text="URL chính thức của website:"
                            FontWeight="SemiBold" FontSize="13"
@@ -66,7 +60,6 @@
                          VerticalContentAlignment="Center"
                          ToolTip="Nhập URL http:// hoặc https:// chính thức. Chỉ so khớp chính xác hostname." />
             </StackPanel>
-
             <Grid Grid.Row="4" Margin="0,12,0,0">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
@@ -91,7 +84,6 @@
                           Margin="0,8,0,0"
                           Foreground="{DynamicResource TextPrimaryBrush}" />
             </Grid>
-
             <StackPanel Grid.Row="5" Margin="0,15,0,0">
                 <TextBlock Text="Tên đăng nhập / Email (*):"
                            FontWeight="SemiBold"
@@ -104,7 +96,6 @@
                          Padding="12,10"
                          VerticalContentAlignment="Center" />
             </StackPanel>
-
             <StackPanel Grid.Row="6" Margin="0,15,0,0">
                 <TextBlock Text="Mật khẩu (*):"
                            FontWeight="SemiBold"
@@ -116,7 +107,6 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-
                     <PasswordBox Grid.Column="0"
                                  x:Name="txtPassword"
                                  Height="44"
@@ -124,7 +114,6 @@
                                  Padding="12,10"
                                  VerticalContentAlignment="Center"
                                  PasswordChanged="TxtPassword_PasswordChanged" />
-
                     <TextBox Grid.Column="0"
                              x:Name="txtPasswordVisible"
                              Height="44"
@@ -133,7 +122,6 @@
                              VerticalContentAlignment="Center"
                              TextChanged="TxtPasswordVisible_TextChanged"
                              Visibility="Collapsed" />
-
                     <Button Grid.Column="1"
                             x:Name="btnTogglePwd"
                             Height="44"
@@ -148,7 +136,6 @@
                     </Button>
                 </Grid>
             </StackPanel>
-
             <StackPanel Grid.Row="7" Margin="0,15,0,0">
                 <DockPanel Margin="0,0,0,6">
                     <Button DockPanel.Dock="Right" x:Name="btnDeleteNote" Content="Đưa ghi chú vào thùng rác"
@@ -167,7 +154,6 @@
                          VerticalScrollBarVisibility="Auto"
                          VerticalContentAlignment="Top" />
             </StackPanel>
-
             <StackPanel Grid.Row="8" Margin="0,15,0,0">
                 <TextBlock Text="Mã xác thực cho website (TOTP)" FontWeight="SemiBold" FontSize="13"
                            Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,6" />
@@ -179,7 +165,6 @@
                 <TextBlock x:Name="lblTotpStatus" Text="Chưa có mã xác thực cho website này."
                            Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,5,0,0" />
             </StackPanel>
-
             <StackPanel Grid.Row="9" Margin="0,15,0,0">
                 <TextBlock Text="Trường tùy chỉnh" FontWeight="SemiBold" FontSize="13"
                            Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,6" />
@@ -190,7 +175,6 @@
                                Foreground="{DynamicResource TextSecondaryBrush}" />
                 </WrapPanel>
             </StackPanel>
-
             <StackPanel Grid.Row="10" Orientation="Horizontal" Margin="0,15,0,0">
                 <Button Height="40" Padding="15,8" Click="BtnGeneratePwd_Click">
                     <StackPanel Orientation="Horizontal">
@@ -201,13 +185,11 @@
                 <TextBlock x:Name="lblPwdStrength" VerticalAlignment="Center" Margin="12,0,0,0"
                            FontStyle="Italic" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" />
             </StackPanel>
-
             <Grid Grid.Row="11" Margin="0,24,0,0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
-
                 <Button Grid.Column="0"
                         Height="46"
                         Margin="0,0,6,0"
@@ -218,7 +200,6 @@
                                VerticalAlignment="Center"
                                HorizontalAlignment="Center" />
                 </Button>
-
                 <Button Grid.Column="1"
                         Height="46"
                         Margin="6,0,0,0"
@@ -231,7 +212,6 @@
                                HorizontalAlignment="Center" />
                 </Button>
             </Grid>
-
         </Grid>
     </ScrollViewer>
 </Window>

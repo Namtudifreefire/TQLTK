@@ -1,7 +1,5 @@
 using System.Security.Cryptography;
-
 namespace PersonalInfoManager.Services;
-
 public sealed record PasswordGeneratorOptions(
     int Length,
     bool Uppercase,
@@ -12,7 +10,6 @@ public sealed record PasswordGeneratorOptions(
     bool UsePassphrase,
     int WordCount,
     string Separator);
-
 public static class PasswordGeneratorService
 {
     private const string Upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -84,7 +81,6 @@ public static class PasswordGeneratorService
         .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
         .Distinct(StringComparer.Ordinal)
         .ToArray();
-
     public static string Generate(PasswordGeneratorOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
@@ -98,10 +94,8 @@ public static class PasswordGeneratorService
                 selected[i] = Words[RandomNumberGenerator.GetInt32(Words.Length)];
             return string.Join(separator, selected);
         }
-
         if (options.Length is < 8 or > 64)
             throw new ArgumentOutOfRangeException(nameof(options.Length), "Độ dài phải từ 8 đến 64 ký tự.");
-
         var sets = new List<string>();
         if (options.Uppercase) sets.Add(Upper);
         if (options.Lowercase) sets.Add(Lower);
@@ -111,19 +105,16 @@ public static class PasswordGeneratorService
             throw new InvalidOperationException("Chọn ít nhất một nhóm ký tự.");
         if (options.Length < sets.Count)
             throw new InvalidOperationException("Độ dài phải đủ để có ít nhất một ký tự trong mỗi nhóm đã chọn.");
-
         const string ambiguous = "0O1Il|`'\"";
         if (options.ExcludeAmbiguous)
             sets = sets.Select(set => new string(set.Where(c => !ambiguous.Contains(c)).ToArray())).ToList();
         if (sets.Any(string.IsNullOrEmpty))
             throw new InvalidOperationException("Không còn ký tự hợp lệ trong một nhóm đã chọn.");
-
         string all = string.Concat(sets);
         var chars = new List<char>(options.Length);
         foreach (string set in sets) chars.Add(set[RandomNumberGenerator.GetInt32(set.Length)]);
         while (chars.Count < options.Length)
             chars.Add(all[RandomNumberGenerator.GetInt32(all.Length)]);
-
         for (int i = chars.Count - 1; i > 0; i--)
         {
             int j = RandomNumberGenerator.GetInt32(i + 1);

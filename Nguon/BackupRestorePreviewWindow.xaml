@@ -16,12 +16,10 @@
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
-
         <TextBlock x:Name="txtTitle" Grid.Row="0" Text="Xem trước khôi phục"
                    FontSize="20" FontWeight="Bold" HorizontalAlignment="Center" />
         <TextBlock x:Name="txtSummary" Grid.Row="1" Margin="0,8,0,14"
                    Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" />
-
         <Border Grid.Row="2" Style="{StaticResource Card}" Padding="6">
             <DataGrid x:Name="dgItems" AutoGenerateColumns="False" IsReadOnly="True"
                       CanUserAddRows="False" SelectionMode="Single" BorderThickness="0"
@@ -34,7 +32,6 @@
                 </DataGrid.Columns>
             </DataGrid>
         </Border>
-
         <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
             <Button Content="Hủy" MinWidth="90" IsCancel="True" Style="{StaticResource OutlineButton}" />
             <Button Content="Tiếp tục khôi phục" MinWidth="160" Margin="8,0,0,0"

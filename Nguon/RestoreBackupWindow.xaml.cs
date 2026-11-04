@@ -2,22 +2,18 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using PersonalInfoManager.Services;
-
 namespace PersonalInfoManager
 {
-    public partial class RestoreBackupWindow : Window
+         public partial class RestoreBackupWindow : Window
     {
         private readonly CloudSyncService _cloud;
         private readonly BackupKind _kind;
-
-        public BackupInfo? Selected { get; private set; }
-
+                 public BackupInfo? Selected { get; private set; }
         public RestoreBackupWindow(CloudSyncService cloud, BackupKind kind = BackupKind.Vault)
         {
             InitializeComponent();
             _cloud = cloud;
             _kind = kind;
-
             if (kind == BackupKind.Files)
             {
                 Title = "Khôi phục tệp cá nhân từ Google Drive";
@@ -25,20 +21,16 @@ namespace PersonalInfoManager
                 txtNote.Text = "Không có tệp nào bị ghi đè: tệp trùng nội dung được bỏ qua, " +
                                "tệp trùng tên nhưng khác nội dung được lưu thêm với tên mới.";
             }
-
             Loaded += async (_, _) => await LoadAsync();
         }
-
         private async Task LoadAsync()
         {
             bool includeOthers = chkOthers.IsChecked == true;
             bool files = _kind == BackupKind.Files;
-
             chkOthers.IsEnabled = false;
             btnRestore.IsEnabled = false;
             dgBackups.ItemsSource = null;
             SetStatus("Đang kết nối Google Drive... (lần đầu có thể cần đăng nhập Google trong trình duyệt)");
-
             List<BackupInfo>? items;
             try
             {
@@ -48,13 +40,11 @@ namespace PersonalInfoManager
             {
                 chkOthers.IsEnabled = true;
             }
-
             if (items == null)
             {
                 SetStatus(_cloud.LastError ?? "Không lấy được danh sách sao lưu.");
                 return;
             }
-
             if (items.Count == 0)
             {
                 if (files)
@@ -75,7 +65,6 @@ namespace PersonalInfoManager
                 }
                 return;
             }
-
             dgBackups.ItemsSource = items;
             dgBackups.SelectedIndex = 0;
             SetFormattedStatus(files
@@ -83,23 +72,18 @@ namespace PersonalInfoManager
                 : "Tìm thấy {0} bản sao lưu, mới nhất ở trên cùng. Cột Thuộc về: Của bạn là bản tạo từ tài khoản này, Bản cũ là bản tạo trước khi tách theo người dùng. Chọn một bản rồi bấm Khôi phục.",
                 items.Count);
         }
-
         private void SetStatus(string sourceText) => LanguageService.SetLocalizedText(txtStatus, sourceText);
-
         private void SetFormattedStatus(string sourceTemplate, params object?[] arguments) =>
             LanguageService.SetLocalizedFormattedText(txtStatus, sourceTemplate, () => arguments);
-
         private async void ChkOthers_Changed(object sender, RoutedEventArgs e)
         {
             if (!IsLoaded) return;
             await LoadAsync();
         }
-
         private void DgBackups_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             btnRestore.IsEnabled = dgBackups.SelectedItem is BackupInfo;
         }
-
         private void DgBackups_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
             if (e.OriginalSource is DependencyObject source &&
@@ -108,9 +92,7 @@ namespace PersonalInfoManager
                 Confirm();
             }
         }
-
         private void BtnRestore_Click(object sender, RoutedEventArgs e) => Confirm();
-
         private void Confirm()
         {
             if (dgBackups.SelectedItem is BackupInfo b)

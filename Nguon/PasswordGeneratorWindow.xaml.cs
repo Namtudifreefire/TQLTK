@@ -1,19 +1,15 @@
 using System.Windows;
 using System.Windows.Controls;
 using PersonalInfoManager.Services;
-
 namespace PersonalInfoManager;
-
 public partial class PasswordGeneratorWindow : Window
 {
     public string? GeneratedPassword { get; private set; }
-
     public PasswordGeneratorWindow()
     {
         InitializeComponent();
         Loaded += (_, _) => txtLength.Focus();
     }
-
     private void Mode_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (pnlRandom == null || pnlPassphrase == null || cmbMode == null) return;
@@ -23,7 +19,6 @@ public partial class PasswordGeneratorWindow : Window
         txtPreview?.Clear();
         GeneratedPassword = null;
     }
-
     private void BtnGenerate_Click(object sender, RoutedEventArgs e)
     {
         lblError.Text = "";
@@ -56,10 +51,8 @@ public partial class PasswordGeneratorWindow : Window
             lblError.Text = ex.Message;
         }
     }
-
     private static int ParseNumber(string text, string label) =>
         int.TryParse(text, out int value) ? value : throw new FormatException($"{label} phải là số nguyên.");
-
     private void BtnUse_Click(object sender, RoutedEventArgs e)
     {
         if (string.IsNullOrEmpty(GeneratedPassword))

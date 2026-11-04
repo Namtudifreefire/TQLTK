@@ -2,14 +2,11 @@ using System.Windows;
 using System.Windows.Threading;
 using PersonalInfoManager.Models;
 using PersonalInfoManager.Services;
-
 namespace PersonalInfoManager;
-
 public partial class TotpCodeWindow : Window
 {
     private readonly SavedAccount _account;
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(1) };
-
     public TotpCodeWindow(SavedAccount account)
     {
         InitializeComponent();
@@ -19,7 +16,6 @@ public partial class TotpCodeWindow : Window
         _timer.Tick += (_, _) => RefreshCode();
         Loaded += (_, _) => { RefreshCode(); _timer.Start(); };
     }
-
     private void RefreshCode()
     {
         try
@@ -37,7 +33,6 @@ public partial class TotpCodeWindow : Window
             barLifetime.Value = 0;
         }
     }
-
     private void BtnCopy_Click(object sender, RoutedEventArgs e)
     {
         string code = lblCode.Text;
@@ -51,6 +46,5 @@ public partial class TotpCodeWindow : Window
         MessageBox.Show(this, $"Đã sao chép mã. Bộ nhớ tạm sẽ tự xóa sau {ClipboardGuard.ClearAfterSeconds} giây.",
             "Đã sao chép", MessageBoxButton.OK, MessageBoxImage.Information);
     }
-
     private void Window_Closed(object? sender, EventArgs e) => _timer.Stop();
 }

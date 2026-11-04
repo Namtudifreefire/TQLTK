@@ -8,16 +8,12 @@
         ResizeMode="NoResize"
         ShowInTaskbar="False"
         Background="{DynamicResource BackgroundBrush}">
-
     <Grid Margin="24">
-
         <StackPanel x:Name="pnlStep1">
-
             <TextBlock Text="🔑 Bật xác thực 2 bước"
                        FontSize="20" FontWeight="Bold"
                        Foreground="{DynamicResource TextPrimaryBrush}"
                        Margin="0,0,0,12" />
-
             <TextBlock TextWrapping="Wrap"
                        Foreground="{DynamicResource TextSecondaryBrush}"
                        Margin="0,0,0,12">
@@ -27,24 +23,20 @@
                 <LineBreak />
                 <Run Text="3. Nhập mã 6 số đang hiển thị trong ứng dụng để xác nhận." />
             </TextBlock>
-
             <Border Background="White" CornerRadius="8" Padding="10"
                     HorizontalAlignment="Center" Margin="0,0,0,12">
                 <Image x:Name="imgQr" Width="200" Height="200"
                        RenderOptions.BitmapScalingMode="NearestNeighbor" />
             </Border>
-
             <TextBlock Text="Không quét được? Nhập khóa này thủ công vào ứng dụng:"
                        FontSize="11"
                        Foreground="{DynamicResource TextSecondaryBrush}"
                        Margin="0,0,0,4" />
-
             <Grid Margin="0,0,0,14">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-
                 <Border Grid.Column="0"
                         Height="34"
                         Padding="8,0"
@@ -59,32 +51,27 @@
                                VerticalAlignment="Center"
                                TextWrapping="Wrap" />
                 </Border>
-
                 <Button Grid.Column="1"
                         Content="📋 Sao chép"
                         Height="34" Padding="12,4" Margin="6,0,0,0"
                         Style="{StaticResource OutlineButton}"
                         Click="BtnCopySecret_Click" />
             </Grid>
-
             <TextBlock Text="Mã 6 số trong ứng dụng:"
                        FontWeight="SemiBold"
                        Foreground="{DynamicResource TextPrimaryBrush}"
                        Margin="0,0,0,5" />
-
             <TextBox x:Name="txtCode"
                      Height="44"
                      FontSize="20"
                      MaxLength="7"
                      HorizontalContentAlignment="Center"
                      VerticalContentAlignment="Center" />
-
             <TextBlock x:Name="lblError"
                        Foreground="#EF4444"
                        TextWrapping="Wrap"
                        Margin="0,8,0,0"
                        Visibility="Collapsed" />
-
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,18,0,0">
                 <Button Content="Hủy"
                         Height="38" Padding="20,8" Margin="0,0,8,0"
@@ -96,14 +83,11 @@
                         Click="BtnConfirm_Click" />
             </StackPanel>
         </StackPanel>
-
         <StackPanel x:Name="pnlStep2" Visibility="Collapsed">
-
             <TextBlock Text="✅ Đã bật xác thực 2 bước"
                        FontSize="20" FontWeight="Bold"
                        Foreground="{DynamicResource TextPrimaryBrush}"
                        Margin="0,0,0,12" />
-
             <TextBlock TextWrapping="Wrap"
                        Foreground="{DynamicResource TextSecondaryBrush}"
                        Margin="0,0,0,12">
@@ -111,7 +95,6 @@
                 <LineBreak />
                 <Run Text="Hãy lưu ở nơi an toàn (giấy, két sắt...). Mã chỉ hiển thị MỘT LẦN duy nhất." FontWeight="SemiBold" />
             </TextBlock>
-
             <Border Height="200"
                     Background="{DynamicResource SurfaceBrush}"
                     BorderBrush="{DynamicResource BorderBrush}"
@@ -127,7 +110,6 @@
                                TextWrapping="Wrap" />
                 </ScrollViewer>
             </Border>
-
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,18,0,0">
                 <Button Content="📋 Sao chép mã"
                         Height="38" Padding="20,8" Margin="0,0,8,0"

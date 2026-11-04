@@ -8,14 +8,12 @@
         ResizeMode="CanResize"
         Background="{DynamicResource BackgroundBrush}"
         Style="{StaticResource SlideInWindow}">
-
     <Grid Margin="15">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
-
         <Border Grid.Row="0"
                 Style="{StaticResource Card}"
                 Margin="0,0,0,12">
@@ -25,7 +23,6 @@
                            FontWeight="Bold"
                            Foreground="{DynamicResource TextPrimaryBrush}"
                            Margin="0,0,0,12" />
-
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
@@ -39,7 +36,6 @@
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
-
                     <TextBlock Grid.Row="0" Grid.Column="0"
                                Text="Tên ĐN:"
                                VerticalAlignment="Center"
@@ -50,7 +46,6 @@
                              Height="38"
                              Margin="0,4"
                              VerticalContentAlignment="Center" />
-
                     <TextBlock Grid.Row="0" Grid.Column="2"
                                Text="Mật khẩu:"
                                VerticalAlignment="Center"
@@ -61,7 +56,6 @@
                                  Height="38"
                                  Margin="0,4"
                                  VerticalContentAlignment="Center" />
-
                     <TextBlock Grid.Row="0" Grid.Column="4"
                                Text="Vai trò:"
                                VerticalAlignment="Center"
@@ -76,7 +70,6 @@
                         <ComboBoxItem Content="Người dùng" />
                         <ComboBoxItem Content="Quản trị viên" />
                     </ComboBox>
-
                     <TextBlock Grid.Row="1" Grid.Column="0"
                                Text="Họ tên:"
                                VerticalAlignment="Center"
@@ -87,7 +80,6 @@
                              Height="38"
                              Margin="0,4"
                              VerticalContentAlignment="Center" />
-
                     <TextBlock Grid.Row="1" Grid.Column="2"
                                Text="Gmail:"
                                VerticalAlignment="Center"
@@ -98,7 +90,6 @@
                              Height="38"
                              Margin="0,4"
                              VerticalContentAlignment="Center" />
-
                     <TextBlock Grid.Row="1" Grid.Column="4"
                                Text="SĐT:"
                                VerticalAlignment="Center"
@@ -110,7 +101,6 @@
                              Margin="0,4"
                              VerticalContentAlignment="Center" />
                 </Grid>
-
                 <Button Content="➕ Tạo tài khoản"
                         Width="180"
                         Height="40"
@@ -119,7 +109,6 @@
                         Click="BtnCreate_Click" />
             </StackPanel>
         </Border>
-
         <Border Grid.Row="1"
                 Background="{DynamicResource SurfaceBrush}"
                 BorderBrush="{DynamicResource BorderBrush}"
@@ -160,7 +149,6 @@
                 </DataGrid.Columns>
             </DataGrid>
         </Border>
-
         <Border Grid.Row="2"
                 Background="{DynamicResource SurfaceBrush}"
                 BorderBrush="{DynamicResource BorderBrush}"
@@ -175,7 +163,6 @@
                         <TextBlock Text="Sửa" VerticalAlignment="Center" />
                     </StackPanel>
                 </Button>
-
                 <Button Height="40" Margin="3" Click="BtnResetPwd_Click"
                         Style="{StaticResource OutlineButton}">
                     <StackPanel Orientation="Horizontal">
@@ -183,7 +170,6 @@
                         <TextBlock Text="Đặt lại mật khẩu" VerticalAlignment="Center" />
                     </StackPanel>
                 </Button>
-
                 <Button Height="40" Margin="3" Click="BtnToggleActive_Click"
                         Style="{StaticResource OutlineButton}">
                     <StackPanel Orientation="Horizontal">
@@ -191,7 +177,6 @@
                         <TextBlock Text="Khóa / Mở" VerticalAlignment="Center" />
                     </StackPanel>
                 </Button>
-
                 <Button Height="40" Margin="3" Click="BtnToggleRole_Click"
                         Style="{StaticResource OutlineButton}">
                     <StackPanel Orientation="Horizontal">
@@ -199,7 +184,6 @@
                         <TextBlock Text="Cấp / Thu quyền quản trị" VerticalAlignment="Center" />
                     </StackPanel>
                 </Button>
-
                 <Button Height="40" Margin="3" Background="#EF4444"
                         Foreground="White" BorderThickness="0"
                         Click="BtnDelete_Click">
@@ -208,7 +192,6 @@
                         <TextBlock Text="Xóa" VerticalAlignment="Center" />
                     </StackPanel>
                 </Button>
-
                 <Button Height="40" Margin="3" Click="BtnRefresh_Click"
                         Style="{StaticResource OutlineButton}">
                     <StackPanel Orientation="Horizontal">
@@ -216,7 +199,6 @@
                         <TextBlock Text="Làm mới" VerticalAlignment="Center" />
                     </StackPanel>
                 </Button>
-
                 <Button Height="40" Margin="3" Click="BtnViewLog_Click"
                         Style="{StaticResource OutlineButton}">
                     <StackPanel Orientation="Horizontal">

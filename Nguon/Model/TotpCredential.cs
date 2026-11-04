@@ -1,5 +1,4 @@
 namespace PersonalInfoManager.Models;
-
 public sealed record TotpCredential(
     string Name,
     string Issuer,

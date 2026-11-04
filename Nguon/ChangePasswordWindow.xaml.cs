@@ -3,23 +3,18 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using PersonalInfoManager.Services;
-
 namespace PersonalInfoManager
 {
     public partial class ChangePasswordWindow : Window
     {
         private readonly UserService _userService = new();
         private readonly bool _forced;
-
-        public bool Changed { get; private set; }
-
+                 public bool Changed { get; private set; }
         public ChangePasswordWindow() : this(false) { }
-
-        public ChangePasswordWindow(bool forced)
+                 public ChangePasswordWindow(bool forced)
         {
             InitializeComponent();
             _forced = forced;
-
             if (_forced)
             {
                 Title = "Bắt buộc đổi mật khẩu - TQLTK";
@@ -27,19 +22,16 @@ namespace PersonalInfoManager
                     "Mật khẩu hiện tại là mật khẩu mặc định hoặc do quản trị viên cấp. " +
                     "Hãy đặt mật khẩu mới để tiếp tục.";
             }
-
             Loaded += (_, _) => txtOldPwd.Focus();
         }
         private void TxtNewPwd_PasswordChanged(object sender, RoutedEventArgs e)
         {
             string pwd = txtNewPwd.Password;
-
             if (string.IsNullOrEmpty(pwd))
             {
                 LanguageService.SetLocalizedText(lblStrength, "");
                 return;
             }
-
             int score = PasswordStrengthService.CalculateScore(pwd);
             (string text, Brush color) = score switch
             {
@@ -48,11 +40,9 @@ namespace PersonalInfoManager
                 4 => (PasswordStrengthService.GetLabel(score), Brushes.Green),
                 _ => (PasswordStrengthService.GetLabel(score), Brushes.DarkGreen)
             };
-
             LanguageService.SetLocalizedText(lblStrength, $"Độ mạnh: {text}");
             lblStrength.Foreground = color;
         }
-
         private void TxtConfirmPwd_PasswordChanged(object sender, RoutedEventArgs e)
         {
             if (string.IsNullOrEmpty(txtConfirmPwd.Password))
@@ -60,7 +50,6 @@ namespace PersonalInfoManager
                 lblConfirm.Text = "";
                 return;
             }
-
             if (txtConfirmPwd.Password == txtNewPwd.Password)
             {
                 lblConfirm.Text = "✓ Mật khẩu khớp";
@@ -77,7 +66,6 @@ namespace PersonalInfoManager
             string oldPwd = txtOldPwd.Password;
             string newPwd = txtNewPwd.Password;
             string confirm = txtConfirmPwd.Password;
-
             lblStatus.Text = "";
             if (string.IsNullOrWhiteSpace(oldPwd) ||
                 string.IsNullOrWhiteSpace(newPwd))
@@ -85,26 +73,22 @@ namespace PersonalInfoManager
                 lblStatus.Text = "Vui lòng nhập đầy đủ thông tin.";
                 return;
             }
-
             if (newPwd != confirm)
             {
                 lblStatus.Text = "Mật khẩu xác nhận không khớp.";
                 return;
             }
-
             if (newPwd == oldPwd)
             {
                 lblStatus.Text = "Mật khẩu mới phải khác mật khẩu cũ.";
                 return;
             }
-
             var currentUser = SessionService.CurrentUser;
             if (currentUser == null)
             {
                 lblStatus.Text = "Phiên đăng nhập không còn hợp lệ.";
                 return;
             }
-
             string username = currentUser.Username;
             int minimumLength = _userService.GetMinimumPasswordLength(username);
             if (newPwd.Length < minimumLength)
@@ -113,18 +97,15 @@ namespace PersonalInfoManager
                 return;
             }
             var result = _userService.ChangePassword(username, oldPwd, newPwd);
-
             if (result.ok)
             {
                 Changed = true;
-
                 try
                 {
                     ActivityLogger.Log(username, "CHANGE_PASSWORD",
                         _forced ? "Đổi mật khẩu bắt buộc thành công" : "Đổi mật khẩu thành công");
                 }
                 catch { }
-
                 MessageBox.Show(this, result.message, "Thành công",
                     MessageBoxButton.OK, MessageBoxImage.Information);
                 Close();
@@ -132,7 +113,6 @@ namespace PersonalInfoManager
             else
             {
                 lblStatus.Text = result.message;
-
                 if (result.message.Contains("cũ không đúng"))
                 {
                     txtOldPwd.Clear();
@@ -140,7 +120,6 @@ namespace PersonalInfoManager
                 }
             }
         }
-
         private void BtnCancel_Click(object sender, RoutedEventArgs e)
         {
             Close();

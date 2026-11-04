@@ -8,19 +8,15 @@
         ResizeMode="NoResize"
         ShowInTaskbar="False"
         Background="{DynamicResource BackgroundBrush}">
-
     <StackPanel Margin="20">
-
         <TextBlock Text="🔑 8 mã khôi phục mới"
                    FontSize="18"
                    FontWeight="SemiBold"
                    Foreground="{DynamicResource TextPrimaryBrush}" />
-
         <TextBlock TextWrapping="Wrap"
                    Margin="0,8,0,12"
                    Foreground="{DynamicResource TextSecondaryBrush}"
                    Text="Hãy lưu các mã này ở nơi an toàn NGOÀI máy tính (giấy, két, trình quản lý khác). Mỗi mã chỉ dùng được một lần và sẽ không hiển thị lại. Các mã cũ vẫn dùng được cho đến khi bạn bấm &quot;Tôi đã lưu, hoàn tất&quot;." />
-
         <Border Background="{DynamicResource SurfaceBrush}"
                 BorderBrush="{DynamicResource BorderBrush}"
                 BorderThickness="1"
@@ -34,13 +30,11 @@
                            Foreground="{DynamicResource TextPrimaryBrush}" />
             </ScrollViewer>
         </Border>
-
         <TextBlock x:Name="lblError"
                    Visibility="Collapsed"
                    TextWrapping="Wrap"
                    Margin="0,10,0,0"
                    Foreground="#EF4444" />
-
         <StackPanel Orientation="Horizontal"
                     HorizontalAlignment="Right"
                     Margin="0,16,0,0">
@@ -53,6 +47,5 @@
                     Padding="15,8"
                     Click="BtnFinish_Click" />
         </StackPanel>
-
     </StackPanel>
 </Window>

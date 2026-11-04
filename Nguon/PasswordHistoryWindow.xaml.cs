@@ -5,37 +5,29 @@ using System.Windows;
 using System.Windows.Controls;
 using PersonalInfoManager.Models;
 using PersonalInfoManager.Services;
-
 namespace PersonalInfoManager
 {
     public partial class PasswordHistoryWindow : Window
     {
         public PasswordHistoryEntry? SelectedEntry { get; private set; }
-
         private sealed class HistoryRow : INotifyPropertyChanged
         {
             private bool _showPassword;
-
             public HistoryRow(PasswordHistoryEntry entry) => Entry = entry;
-
             public PasswordHistoryEntry Entry { get; }
             public DateTime ChangedAt => Entry.ChangedAt;
             public string DisplayPassword => string.IsNullOrEmpty(Entry.Password)
                 ? "—"
                 : _showPassword ? Entry.Password : "••••••••••••";
-
             public void SetPasswordVisible(bool visible)
             {
                 if (_showPassword == visible) return;
                 _showPassword = visible;
                 PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(DisplayPassword)));
             }
-
             public event PropertyChangedEventHandler? PropertyChanged;
         }
-
         private readonly List<HistoryRow> _rows;
-
         public PasswordHistoryWindow(SavedAccount account)
         {
             InitializeComponent();
@@ -59,7 +51,6 @@ namespace PersonalInfoManager
                 txtNote.Text = "Chưa có lịch sử. Mật khẩu trước được thêm khi bạn đổi mật khẩu của mục này.";
             }
         }
-
         private void BtnCopy_Click(object sender, RoutedEventArgs e)
         {
             if (dgHistory.SelectedItem is not HistoryRow row) return;
@@ -72,14 +63,12 @@ namespace PersonalInfoManager
             MessageBox.Show($"Đã sao chép. Bộ nhớ tạm sẽ tự xóa sau {ClipboardGuard.ClearAfterSeconds} giây.",
                 "Đã sao chép", MessageBoxButton.OK, MessageBoxImage.Information);
         }
-
         private void BtnRestore_Click(object sender, RoutedEventArgs e)
         {
             if (dgHistory.SelectedItem is not HistoryRow row) return;
             SelectedEntry = row.Entry.Clone();
             DialogResult = true;
         }
-
         private void BtnReveal_Click(object sender, RoutedEventArgs e)
         {
             bool reveal = btnReveal.Content?.ToString() != "Ẩn mật khẩu";

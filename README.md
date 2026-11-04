@@ -81,6 +81,14 @@ See the [Releases page](https://github.com/Namtudifreefire/TQLTK/releases) for d
 - Expand the security overview with account-level findings for weak, reused, old, unknown-age and breached passwords, with an action to open the affected account. Breach results are marked stale after the vault changes.
 - Show recovery-code count, backup-passphrase status and the Windows-account dependency of personal-file encryption. Clarify that changing the TQLTK sign-in password does not rotate the vault encryption key, and guide users to make a passphrase-protected backup before moving Windows accounts or reinstalling Windows.
 - Add a repeatable release script that creates a root-level EXE + LICENSE ZIP and SHA-256 file, and signs/verifies the EXE when a trusted code-signing certificate is configured.
+- Store account attachments inside the encrypted vault and include them in vault backups. Each file is limited to 10 MB and each account to 25 MB total.
+- Add a bounded metadata edit history with preview and undo for service name, username, website URL, folder, tags, favorites, notes and custom fields. Passwords remain in the separate password history.
+- Add CSV duplicate handling to skip, overwrite or create a copy, plus undo for the latest import batch. Undo is refused if any affected account changed afterward.
+- Add bulk account actions for folders, tags, Trash and exporting selected rows.
+- Warn when a saved website URL uses HTTP, a direct IP, Punycode, mixed scripts or resembles a short list of popular domains. This is a heuristic and does not inspect browser tabs or cover every domain.
+- Add Google Drive backup conflict checks. Concurrent changes stop automatic upload; users can review the remote backup or explicitly upload a separate version. This is versioned backup with conflict alerts, not live sync or automatic record merging.
+- Add expiring, encrypted account-share packages for a named Google account. Drive grants read access for 1, 7 or 30 days; the decryption key must be sent separately. Drive access can be revoked, but downloaded packages and data already decrypted cannot be recalled. The local expiry check uses the recipient device's clock and is not tamper-proof.
+- Keep the already available reused-password finding and its action to open the affected account in the security overview.
 
 ### v3.6.6 (BETA)
 
@@ -178,6 +186,14 @@ Xem [trang Releases](https://github.com/Namtudifreefire/TQLTK/releases) để t�
 - Mở rộng tổng quan bảo mật với cảnh báo theo từng tài khoản về mật khẩu yếu, dùng lại, lâu chưa đổi, chưa rõ ngày đổi hoặc bị lộ; có nút mở nhanh mục cần xử lý. Kết quả kiểm tra rò rỉ được đánh dấu cũ khi vault thay đổi.
 - Hiển thị số mã khôi phục còn lại, trạng thái cụm mật khẩu sao lưu và lưu ý khóa mã hóa file cá nhân gắn với tài khoản Windows. Nêu rõ đổi mật khẩu đăng nhập TQLTK không đổi khóa mã hóa vault; khuyến nghị tạo backup có cụm mật khẩu trước khi đổi tài khoản Windows hoặc cài lại Windows.
 - Thêm script phát hành có thể lặp lại: tạo ZIP có EXE và LICENSE ở gốc, tạo SHA-256, đồng thời ký và xác minh EXE khi đã cấu hình chứng thư code-signing đáng tin cậy.
+- Lưu tệp đính kèm của tài khoản bên trong vault đã mã hóa và kèm chúng trong bản sao lưu vault. Mỗi tệp tối đa 10 MB, tổng mỗi tài khoản tối đa 25 MB.
+- Thêm lịch sử chỉnh sửa có giới hạn, cho xem trước và hoàn tác tên dịch vụ, tên đăng nhập, URL website, thư mục, nhãn, mục yêu thích, ghi chú và trường tùy chỉnh. Mật khẩu vẫn dùng lịch sử riêng.
+- Khi nhập CSV, cho chọn bỏ qua, ghi đè hoặc tạo bản sao đối với mục trùng; hỗ trợ hoàn tác lô nhập gần nhất. Ứng dụng từ chối hoàn tác nếu tài khoản liên quan đã thay đổi sau lần nhập.
+- Thêm thao tác hàng loạt để đổi thư mục, thay nhãn, chuyển vào thùng rác và xuất các mục đã chọn.
+- Cảnh báo URL đã lưu nếu dùng HTTP, địa chỉ IP trực tiếp, Punycode, trộn bảng chữ cái hoặc gần giống một số domain phổ biến. Đây là kiểm tra heuristic; ứng dụng không theo dõi tab trình duyệt và không bao phủ mọi domain.
+- Thêm kiểm tra xung đột cho bản sao lưu Google Drive. Khi phát hiện thay đổi đồng thời, ứng dụng dừng tải tự động; người dùng có thể xem bản từ xa hoặc chủ động tải lên thành một phiên bản riêng. Đây là sao lưu có cảnh báo xung đột, chưa phải đồng bộ trực tiếp hay tự gộp bản ghi.
+- Thêm gói chia sẻ tài khoản được mã hóa và tự hết hạn, gửi cho một tài khoản Google cụ thể. Drive cấp quyền đọc trong 1, 7 hoặc 30 ngày; khóa giải mã phải gửi qua kênh riêng. Có thể thu hồi quyền Drive, nhưng không thể lấy lại gói đã tải xuống hoặc dữ liệu người nhận đã giải mã. Kiểm tra hết hạn trên máy người nhận dựa vào đồng hồ hệ thống và không chống chỉnh sửa.
+- Giữ tính năng đã có trong tổng quan bảo mật: phát hiện mật khẩu dùng lại và mở nhanh tài khoản cần xử lý.
 
 ### v3.6.6 (BETA)
 

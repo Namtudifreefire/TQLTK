@@ -8,40 +8,33 @@
         ResizeMode="NoResize"
         ShowInTaskbar="False"
         Background="{DynamicResource BackgroundBrush}">
-
     <StackPanel Margin="24">
-
         <TextBlock x:Name="lblTitle"
                    Text="🔑 Xác thực 2 bước"
                    FontSize="20" FontWeight="Bold"
                    Foreground="{DynamicResource TextPrimaryBrush}"
                    Margin="0,0,0,8" />
-
         <TextBlock x:Name="lblDescription"
                    TextWrapping="Wrap"
                    Foreground="{DynamicResource TextSecondaryBrush}"
                    Margin="0,0,0,16" />
-
         <TextBox x:Name="txtCode"
                  Height="44"
                  FontSize="20"
                  MaxLength="12"
                  HorizontalContentAlignment="Center"
                  VerticalContentAlignment="Center" />
-
         <TextBlock x:Name="lblError"
                    Foreground="#EF4444"
                    TextWrapping="Wrap"
                    Margin="0,8,0,0"
                    Visibility="Collapsed" />
-
         <TextBlock Text="Mất điện thoại? Nhập mã khôi phục (dạng XXXXX-XXXXX) vào ô trên."
                    FontSize="11"
                    FontStyle="Italic"
                    TextWrapping="Wrap"
                    Foreground="{DynamicResource TextSecondaryBrush}"
                    Margin="0,8,0,0" />
-
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,18,0,0">
             <Button Content="Hủy"
                     Height="38" Padding="20,8" Margin="0,0,8,0"

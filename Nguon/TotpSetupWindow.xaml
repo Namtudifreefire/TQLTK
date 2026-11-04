@@ -13,18 +13,15 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
-
         <StackPanel Grid.Row="0" Margin="0,0,0,12">
             <TextBlock Text="Thêm mã xác thực của website" FontSize="20" FontWeight="Bold"
                        Foreground="{DynamicResource TextPrimaryBrush}" />
             <TextBlock Text="Dán URI otpauth:// hoặc khóa bí mật Base32; quét mã QR chuyển tài khoản Google Authenticator; nhập tệp JSON chưa mã hóa từ Aegis/2FAS hoặc tệp URI otpauth."
                        TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,5,0,0" />
         </StackPanel>
-
         <TextBox Grid.Row="1" x:Name="txtSource" MinHeight="74" MaxHeight="120" Padding="9"
                  AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"
                  ToolTip="URI otpauth://totp/... hoặc khóa bí mật Base32" />
-
         <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,9,0,12">
             <Button Content="Đọc QR từ ảnh…" Click="BtnReadImage_Click" Padding="14,7" />
             <Button Content="Nhập tệp Authenticator…" Click="BtnImportFile_Click" Padding="14,7" Margin="8,0,0,0"
@@ -32,7 +29,6 @@
             <Button Content="Đọc URI / khóa bí mật" Click="BtnParse_Click" Padding="14,7" Margin="8,0,0,0"
                     Style="{StaticResource OutlineButton}" />
         </StackPanel>
-
         <StackPanel Grid.Row="3" Margin="0,0,0,12">
             <TextBlock Text="Mục được nhập" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,5" />
             <ComboBox x:Name="cmbEntries" DisplayMemberPath="Name" SelectionChanged="Entries_SelectionChanged" />
@@ -40,10 +36,8 @@
                        Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,7,0,0" />
             <TextBlock x:Name="lblError" Foreground="#EF4444" TextWrapping="Wrap" Margin="0,6,0,0" />
         </StackPanel>
-
         <TextBlock Grid.Row="4" Text="Mã xác thực được lưu cùng kho mật khẩu đã mã hóa. Mã QR và khóa bí mật chứa thông tin nhạy cảm; chỉ nhập từ nguồn bạn tin cậy."
                    TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,14" />
-
         <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Right">
             <Button Content="Hủy" IsCancel="True" Padding="18,8" Margin="0,0,8,0" Style="{StaticResource OutlineButton}" />
             <Button Content="Lưu TOTP" Click="BtnSave_Click" Padding="18,8" />

@@ -1,45 +1,37 @@
-<Application x:Class="PersonalInfoManager.App"
+﻿<Application x:Class="PersonalInfoManager.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:PersonalInfoManager"
              xmlns:services="clr-namespace:PersonalInfoManager.Services">
-
     <Application.Resources>
         <ResourceDictionary>
-
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="Themes/LightTheme.xaml" />
                 <ResourceDictionary Source="Themes/Controls.xaml" />
             </ResourceDictionary.MergedDictionaries>
-
             <services:LocalizedTextConverter x:Key="LocalizedTextConverter" />
-
             <Style TargetType="Button" BasedOn="{StaticResource RoundedButton}" />
             <Style TargetType="TextBox" BasedOn="{StaticResource RoundedTextBox}" />
             <Style TargetType="PasswordBox" BasedOn="{StaticResource RoundedPasswordBox}" />
             <Style TargetType="ComboBox" BasedOn="{StaticResource ModernComboBox}" />
             <Style TargetType="TabControl" BasedOn="{StaticResource ModernTabControl}" />
-
             <Style TargetType="TextBlock">
                 <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
                 <Setter Property="Margin" Value="3" />
                 <Setter Property="FontFamily" Value="Segoe UI" />
                 <Setter Property="FontSize" Value="13" />
             </Style>
-
             <Style TargetType="Label">
                 <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
                 <Setter Property="FontFamily" Value="Segoe UI" />
                 <Setter Property="FontSize" Value="13" />
             </Style>
-
             <Style TargetType="Menu">
                 <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
                 <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
                 <Setter Property="FontFamily" Value="Segoe UI" />
                 <Setter Property="FontSize" Value="13" />
             </Style>
-
             <Style TargetType="MenuItem">
                 <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
                 <Setter Property="Background" Value="Transparent" />
@@ -62,17 +54,14 @@
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
-
                                         <ContentPresenter Grid.Column="0"
                                                           ContentSource="Icon"
                                                           VerticalAlignment="Center"
                                                           Margin="0,0,10,0" />
-
                                         <ContentPresenter Grid.Column="1"
                                                           ContentSource="Header"
                                                           RecognizesAccessKey="True"
                                                           VerticalAlignment="Center" />
-
                                         <Path Grid.Column="2"
                                               x:Name="SubArrow"
                                               Data="M 0 0 L 4 4 L 0 8 Z"
@@ -82,7 +71,6 @@
                                               Visibility="Collapsed" />
                                     </Grid>
                                 </Border>
-
                                 <Popup x:Name="PART_Popup"
                                        Placement="Right"
                                        HorizontalOffset="-2"
@@ -109,22 +97,18 @@
                                     </Border>
                                 </Popup>
                             </Grid>
-
                             <ControlTemplate.Triggers>
                                 <Trigger Property="Role" Value="SubmenuHeader">
                                     <Setter TargetName="SubArrow" Property="Visibility" Value="Visible" />
                                 </Trigger>
-
                                 <Trigger Property="IsHighlighted" Value="True">
                                     <Setter TargetName="Bd" Property="Background"
                                             Value="{DynamicResource TabHoverBackgroundBrush}" />
                                 </Trigger>
-
                                 <Trigger Property="IsSubmenuOpen" Value="True">
                                     <Setter TargetName="Bd" Property="Background"
                                             Value="{DynamicResource TabHoverBackgroundBrush}" />
                                 </Trigger>
-
                                 <Trigger Property="IsEnabled" Value="False">
                                     <Setter Property="Foreground"
                                             Value="{DynamicResource TextSecondaryBrush}" />
@@ -135,14 +119,12 @@
                     </Setter.Value>
                 </Setter>
             </Style>
-
             <Style TargetType="StatusBar">
                 <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
                 <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
                 <Setter Property="FontFamily" Value="Segoe UI" />
                 <Setter Property="FontSize" Value="12" />
             </Style>
-
             <Style TargetType="ToolTip">
                 <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
                 <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
@@ -150,25 +132,21 @@
                 <Setter Property="Padding" Value="8,4" />
                 <Setter Property="FontSize" Value="12" />
             </Style>
-
             <Style TargetType="CheckBox">
                 <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
                 <Setter Property="FontFamily" Value="Segoe UI" />
                 <Setter Property="FontSize" Value="13" />
             </Style>
-
             <Style TargetType="RadioButton">
                 <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
                 <Setter Property="FontFamily" Value="Segoe UI" />
                 <Setter Property="FontSize" Value="13" />
             </Style>
-
             <Style TargetType="Separator">
                 <Setter Property="Background" Value="{DynamicResource BorderBrush}" />
                 <Setter Property="Height" Value="1" />
                 <Setter Property="Margin" Value="6,4" />
             </Style>
-
         </ResourceDictionary>
     </Application.Resources>
 </Application>

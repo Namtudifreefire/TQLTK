@@ -9,37 +9,29 @@
         Background="{DynamicResource BackgroundBrush}"
         Foreground="{DynamicResource TextPrimaryBrush}"
         Style="{StaticResource SlideInWindow}">
-
     <StackPanel Margin="25">
-
         <TextBlock x:Name="txtTitle"
                    FontSize="16" FontWeight="Bold"
                    HorizontalAlignment="Center" />
-
         <TextBlock x:Name="txtDesc"
                    Foreground="{DynamicResource TextSecondaryBrush}"
                    FontSize="13" TextWrapping="Wrap"
                    Margin="0,10,0,16" />
-
         <TextBlock Text="Cụm mật khẩu:" FontWeight="SemiBold" Margin="0,0,0,5" />
         <PasswordBox x:Name="pwdMain" Height="38"
                      Style="{StaticResource RoundedPasswordBox}" />
-
         <StackPanel x:Name="panelConfirm" Visibility="Collapsed" Margin="0,12,0,0">
             <TextBlock Text="Nhập lại cụm mật khẩu:" FontWeight="SemiBold" Margin="0,0,0,5" />
             <PasswordBox x:Name="pwdConfirm" Height="38"
                          Style="{StaticResource RoundedPasswordBox}" />
         </StackPanel>
-
         <TextBlock x:Name="txtHint" Visibility="Collapsed"
                    Foreground="{DynamicResource TextSecondaryBrush}"
                    FontSize="12" TextWrapping="Wrap" Margin="0,12,0,0"
                    Text="Dùng ít nhất 10 ký tự, nên là một câu gồm 4 từ trở lên mà bạn nhớ được. Hãy ghi lại cụm này ở nơi an toàn: nếu mất cả máy lẫn cụm này thì không thể mở các bản sao lưu." />
-
         <TextBlock x:Name="txtError" Visibility="Collapsed"
                    Foreground="#EF4444"
                    FontSize="12" TextWrapping="Wrap" Margin="0,12,0,0" />
-
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
             <Button Content="Hủy" MinWidth="90"
                     Style="{StaticResource OutlineButton}"

@@ -6,7 +6,6 @@ using System.Windows;
 using System.Windows.Media;
 using PersonalInfoManager.Models;
 using PersonalInfoManager.Services;
-
 namespace PersonalInfoManager
 {
     public partial class EditAccountWindow : Window
@@ -17,14 +16,11 @@ namespace PersonalInfoManager
         private readonly List<DeletedNoteEntry> _deletedNotes = new();
         private readonly List<AccountCustomField> _customFields = new();
         private bool _noteMovedToTrash;
-
-        public SavedAccount Result { get; private set; } = new();
-
+                 public SavedAccount Result { get; private set; } = new();
         public EditAccountWindow(SavedAccount? existing)
         {
             InitializeComponent();
             _existing = existing;
-
             if (existing != null)
             {
                 lblTitle.Text = "✏️ Sửa tài khoản";
@@ -46,7 +42,6 @@ namespace PersonalInfoManager
             }
             UpdateCustomFieldsStatus();
             UpdateTotpStatus();
-
             UpdatePasswordStrength();
             Loaded += (_, _) => txtService.Focus();
         }
@@ -73,30 +68,23 @@ namespace PersonalInfoManager
             var dialog = new PasswordGeneratorWindow { Owner = this };
             if (dialog.ShowDialog() != true || string.IsNullOrEmpty(dialog.GeneratedPassword)) return;
             string pwd = dialog.GeneratedPassword;
-
             if (_showPwd)
                 txtPasswordVisible.Text = pwd;
             else
                 txtPassword.Password = pwd;
-
             UpdatePasswordStrength();
         }
-
         private void TxtPassword_PasswordChanged(object sender, RoutedEventArgs e) => UpdatePasswordStrength();
-
         private void TxtPasswordVisible_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e) => UpdatePasswordStrength();
-
         private void UpdatePasswordStrength()
         {
             if (lblPwdStrength == null || txtPassword == null || txtPasswordVisible == null) return;
-
             string password = _showPwd ? txtPasswordVisible.Text : txtPassword.Password;
             if (string.IsNullOrEmpty(password))
             {
                 LanguageService.SetLocalizedText(lblPwdStrength, "");
                 return;
             }
-
             int score = PasswordStrengthService.CalculateScore(password);
             LanguageService.SetLocalizedText(lblPwdStrength, $"Độ mạnh: {PasswordStrengthService.GetLabel(score)}");
             lblPwdStrength.Foreground = score switch
@@ -107,7 +95,6 @@ namespace PersonalInfoManager
                 _ => Brushes.DarkGreen
             };
         }
-
         private void BtnManageTotp_Click(object sender, RoutedEventArgs e)
         {
             var dialog = new TotpSetupWindow(txtService.Text.Trim()) { Owner = this };
@@ -115,7 +102,6 @@ namespace PersonalInfoManager
             _totp = dialog.Result;
             UpdateTotpStatus();
         }
-
         private void BtnRemoveTotp_Click(object sender, RoutedEventArgs e)
         {
             if (_totp == null) return;
@@ -124,7 +110,6 @@ namespace PersonalInfoManager
             _totp = null;
             UpdateTotpStatus();
         }
-
         private void UpdateTotpStatus()
         {
             if (lblTotpStatus == null) return;
@@ -134,7 +119,6 @@ namespace PersonalInfoManager
                 ? $"Đã thiết lập • {_totp!.Algorithm} • {_totp.Digits} chữ số • mỗi {_totp.PeriodSeconds} giây"
                 : "Chưa có mã xác thực cho website này.";
         }
-
         private void BtnManageCustomFields_Click(object sender, RoutedEventArgs e)
         {
             var dialog = new CustomFieldsWindow(_customFields) { Owner = this };
@@ -143,7 +127,6 @@ namespace PersonalInfoManager
             _customFields.AddRange(dialog.Result.Select(field => field.Clone()));
             UpdateCustomFieldsStatus();
         }
-
         private void UpdateCustomFieldsStatus()
         {
             if (lblCustomFieldsStatus == null) return;
@@ -152,7 +135,6 @@ namespace PersonalInfoManager
                 ? "Chưa có trường tùy chỉnh"
                 : $"{_customFields.Count} trường • {sensitive} trường nhạy cảm";
         }
-
         private void BtnDeleteNote_Click(object sender, RoutedEventArgs e)
         {
             string content = txtNote.Text.Trim();
@@ -164,7 +146,6 @@ namespace PersonalInfoManager
             txtNote.Clear();
             btnDeleteNote.Visibility = Visibility.Collapsed;
         }
-
         private void TxtNote_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
         {
             if (btnDeleteNote == null || _existing == null) return;
@@ -187,7 +168,6 @@ namespace PersonalInfoManager
                 .Where(tag => tag.Length > 0)
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToList();
-
             Uri? normalizedWebsiteUri = null;
             if (!string.IsNullOrWhiteSpace(websiteUrl) &&
                 !WebsiteDomainService.TryNormalizeUrl(websiteUrl, out normalizedWebsiteUri, out _))
@@ -198,7 +178,13 @@ namespace PersonalInfoManager
                 return;
             }
             if (normalizedWebsiteUri != null) websiteUrl = normalizedWebsiteUri.AbsoluteUri;
-
+            var urlWarnings = WebsiteDomainService.GetRiskWarnings(websiteUrl);
+            if (urlWarnings.Count > 0 && MessageBox.Show(this,
+                    LanguageService.Translate("Website URL có dấu hiệu cần kiểm tra:") + "\n\n" +
+                    string.Join("\n", urlWarnings.Select(LanguageService.Translate)) + "\n\n" +
+                    LanguageService.Translate("Chỉ tiếp tục nếu bạn đã xác minh domain chính thức."),
+                    LanguageService.Translate("Cảnh báo domain"), MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+                return;
             if (_existing != null && WebsiteDomainService.TryGetHost(_existing.WebsiteUrl, out string oldHost) &&
                 WebsiteDomainService.TryGetHost(websiteUrl, out string newHost) &&
                 !string.Equals(oldHost, newHost, StringComparison.OrdinalIgnoreCase) &&
@@ -206,7 +192,6 @@ namespace PersonalInfoManager
                     $"Hostname thay đổi từ '{oldHost}' sang '{newHost}'. Hãy xác minh đây là domain chính thức trước khi lưu. Tiếp tục?",
                     "Xác nhận thay đổi domain", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
                 return;
-
             if (_existing != null && !_noteMovedToTrash && string.IsNullOrWhiteSpace(note) &&
                 !string.IsNullOrWhiteSpace(_existing.Note))
             {
@@ -216,34 +201,29 @@ namespace PersonalInfoManager
                     DeletedAt = DateTime.UtcNow
                 });
             }
-
             if (string.IsNullOrWhiteSpace(service))
             {
                 MessageBox.Show("Vui lòng nhập tên dịch vụ.");
                 txtService.Focus();
                 return;
             }
-
             if (string.IsNullOrWhiteSpace(username))
             {
                 MessageBox.Show("Vui lòng nhập tên đăng nhập.");
                 txtUsername.Focus();
                 return;
             }
-
             if (string.IsNullOrWhiteSpace(password))
             {
                 MessageBox.Show("Vui lòng nhập mật khẩu.");
                 return;
             }
-
             if (_existing != null)
             {
                 bool passwordChanged = !string.Equals(_existing.Password, password, StringComparison.Ordinal);
                 var history = (_existing.PasswordHistory ?? new List<PasswordHistoryEntry>())
                     .Where(entry => entry != null)
                     .Select(entry => entry.Clone()).ToList();
-
                 if (!string.Equals(_existing.Password, password, StringComparison.Ordinal))
                 {
                     history.RemoveAll(entry =>
@@ -256,7 +236,6 @@ namespace PersonalInfoManager
                     });
                     history = history.Take(5).ToList();
                 }
-
                 Result = new SavedAccount
                 {
                     Id = _existing.Id,
@@ -305,11 +284,9 @@ namespace PersonalInfoManager
                     PasswordChangedAt = DateTime.Now
                 };
             }
-
             DialogResult = true;
             Close();
         }
-
         private void BtnCancel_Click(object sender, RoutedEventArgs e)
         {
             DialogResult = false;

@@ -1,7 +1,5 @@
 using System.Windows;
-
 namespace PersonalInfoManager.Services;
-
 internal static class LocalizedMessageBox
 {
     public static MessageBoxResult Show(
@@ -14,7 +12,6 @@ internal static class LocalizedMessageBox
         System.Windows.MessageBox.Show(
             LanguageService.Translate(messageBoxText),
             LanguageService.Translate(caption), button, icon, defaultResult, options);
-
     public static MessageBoxResult Show(
         Window? owner,
         string messageBoxText,

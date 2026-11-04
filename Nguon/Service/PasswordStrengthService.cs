@@ -5,7 +5,6 @@ namespace PersonalInfoManager.Services
         public static int CalculateScore(string? password)
         {
             if (string.IsNullOrEmpty(password)) return 0;
-
             int score = 0;
             if (password.Length >= 8) score++;
             if (password.Length >= 12) score++;
@@ -14,7 +13,6 @@ namespace PersonalInfoManager.Services
             if (password.Any(c => !char.IsLetterOrDigit(c))) score++;
             return score;
         }
-
         public static string GetLabel(int score) => score switch
         {
             <= 2 => "Yếu",
