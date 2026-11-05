@@ -1,0 +1,45 @@
+name: TQLTK Windows CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Build
+        run: dotnet build Nguon/PersonalInfoManager.csproj --configuration Release
+
+      - name: Run security regression checks
+        run: dotnet run --project Nguon/tests/PersonalInfoManager.SecurityRegression.csproj --configuration Release
+
+      - name: Publish Windows x64
+        run: dotnet publish Nguon/PersonalInfoManager.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=None -p:DebugSymbols=false -o artifacts/publish
+
+      - name: Package app
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path artifacts/package -Force | Out-Null
+          Copy-Item artifacts/publish/PersonalInfoManager.exe artifacts/package/
+          Copy-Item Nguon/LICENSE artifacts/package/LICENSE
+          Compress-Archive -Path artifacts/package/* -DestinationPath artifacts/TQLTK-win-x64.zip -CompressionLevel Optimal
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TQLTK-win-x64
+          path: artifacts/TQLTK-win-x64.zip
+          if-no-files-found: error
