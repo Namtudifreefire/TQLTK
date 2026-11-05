@@ -12,6 +12,8 @@ TQLTK is a local account and password manager for Windows. It stores logins in a
 
 TQLTK is a personal project maintained by one developer. It has not been independently security-audited. Read the [Security notes](#security-notes) before storing important credentials.
 
+For vulnerability reporting and the current code-signing status, see the [Security Policy](SECURITY.md).
+
 ## Features
 
 - **Encrypted vault:** save and search service names, usernames, passwords, website URLs and notes; organize entries with folders, tags and favorites.
@@ -145,6 +147,8 @@ TQLTK is distributed under the [MIT License](LICENSE). Copyright © 2026 Namtudi
 > Giao diện tiếng Anh được giới thiệu từ v3.6.6 (BETA); các phiên bản trước chỉ có tiếng Việt.
 
 TQLTK là dự án cá nhân do một nhà phát triển duy trì và chưa được kiểm toán bảo mật độc lập. Hãy đọc [các lưu ý bảo mật](#security-notes) trước khi lưu thông tin đăng nhập quan trọng.
+
+Xem [Chính sách bảo mật](SECURITY.md) để biết cách báo cáo lỗ hổng và trạng thái ký số hiện tại.
 
 ## Tính năng
 
