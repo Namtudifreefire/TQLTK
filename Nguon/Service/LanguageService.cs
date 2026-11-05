@@ -139,6 +139,27 @@ public static class LanguageService
     private static readonly Regex AutoLockLogDetail = new(
         @"^Không hoạt động (?<minutes>\d+) phút$",
         RegexOptions.CultureInvariant);
+    private static readonly Regex VaultExportLogDetail = new(
+        @"^Đã xuất (?<count>\d+) tài khoản ra (?<file>.+)$",
+        RegexOptions.CultureInvariant);
+    private static readonly Regex VaultImportLogDetail = new(
+        @"^Đã nhập (?<imported>\d+) tài khoản \(bỏ qua (?<skipped>\d+) trùng\)(?<owner> \(bản sao lưu của người dùng '.*'\))?$",
+        RegexOptions.CultureInvariant);
+    private static readonly Regex PersonalFileRestoreLogDetail = new(
+        @"^Khôi phục File cá nhân từ Drive: (?<file>.+) \((?<restored>\d+) file, bỏ qua (?<skipped>\d+)\)$",
+        RegexOptions.CultureInvariant);
+    private static readonly Regex PersonalFileSyncLogDetail = new(
+        @"^Tải lên (?<count>\d+) tệp cá nhân \((?<size>.*)\)$",
+        RegexOptions.CultureInvariant);
+    private static readonly Regex BreachedPasswordCheckLogDetail = new(
+        @"^Đã kiểm tra (?<checked>\d+) giá trị; ảnh hưởng (?<affected>\d+) mục$",
+        RegexOptions.CultureInvariant);
+    private static readonly Regex AdminDeleteUserDataLogDetail = new(
+        @"^(?<username>.+): xóa (?<deleted>\d+) mục, lỗi (?<errors>\d+)$",
+        RegexOptions.CultureInvariant);
+    private static readonly Regex AutoThemeSwitchLogDetail = new(
+        @"^Tự động đổi giao diện sang (?<theme>Sáng|Tối) lúc (?<time>\d{2}:\d{2})$",
+        RegexOptions.CultureInvariant);
     private static string _currentCode = RegistryService.GetLanguage();
 
     public static string CurrentCode => _currentCode;
@@ -212,12 +233,27 @@ public static class LanguageService
             case "BULK_ACCOUNT_ACTION":
                 match = BulkAccountActionLogDetail.Match(detail);
                 if (match.Success && TryParseLogCount(match, "count", out int changed))
-                    return $"Changed {changed} accounts";
+                    return $"Changed {changed} {Plural(changed, "account", "accounts")}";
                 break;
             case "EXPORT_CSV":
                 match = CsvExportLogDetail.Match(detail);
                 if (match.Success && TryParseLogCount(match, "count", out int exported))
-                    return $"Exported {exported} accounts to CSV";
+                    return $"Exported {exported} {Plural(exported, "account", "accounts")} to CSV";
+                break;
+            case "EXPORT_VAULT":
+                match = VaultExportLogDetail.Match(detail);
+                if (match.Success && TryParseLogCount(match, "count", out int exportedVault))
+                    return $"Exported {exportedVault} {Plural(exportedVault, "account", "accounts")} to {match.Groups["file"].Value}";
+                break;
+            case "IMPORT_VAULT":
+                match = VaultImportLogDetail.Match(detail);
+                if (match.Success && TryParseLogCount(match, "imported", out int imported) &&
+                    TryParseLogCount(match, "skipped", out int skippedVault))
+                {
+                    string owner = match.Groups["owner"].Value;
+                    return $"Imported {imported} {Plural(imported, "account", "accounts")} (skipped {skippedVault} {Plural(skippedVault, "duplicate", "duplicates")})" +
+                        (owner.Length == 0 ? "" : Translate(owner, languageCode));
+                }
                 break;
             case "IMPORT_CREDENTIALS":
                 match = CredentialImportLogDetail.Match(detail);
@@ -232,7 +268,41 @@ public static class LanguageService
             case "AUTO_LOCK":
                 match = AutoLockLogDetail.Match(detail);
                 if (match.Success && TryParseLogCount(match, "minutes", out int minutes))
-                    return $"Inactive for {minutes} minutes";
+                    return $"After {minutes} {Plural(minutes, "minute", "minutes")} of inactivity";
+                break;
+            case "AUTO_THEME_SWITCH":
+                match = AutoThemeSwitchLogDetail.Match(detail);
+                if (match.Success)
+                {
+                    string theme = match.Groups["theme"].Value == "Sáng" ? "Light" : "Dark";
+                    return $"Automatically switched theme to {theme} at {match.Groups["time"].Value}";
+                }
+                break;
+            case "SYNC_FILES_GOOGLE_DRIVE":
+                match = PersonalFileSyncLogDetail.Match(detail);
+                if (match.Success && TryParseLogCount(match, "count", out int uploaded))
+                {
+                    string size = Translate(match.Groups["size"].Value, languageCode);
+                    return $"Uploaded {uploaded} personal {Plural(uploaded, "file", "files")} ({size})";
+                }
+                break;
+            case "RESTORE_FILES_GOOGLE_DRIVE":
+                match = PersonalFileRestoreLogDetail.Match(detail);
+                if (match.Success && TryParseLogCount(match, "restored", out int restored) &&
+                    TryParseLogCount(match, "skipped", out int skippedFiles))
+                    return $"Backup {match.Groups["file"].Value}: restored {restored} personal {Plural(restored, "file", "files")}; skipped {skippedFiles} {Plural(skippedFiles, "file", "files")}.";
+                break;
+            case "PWNED_PASSWORD_CHECK":
+                match = BreachedPasswordCheckLogDetail.Match(detail);
+                if (match.Success && TryParseLogCount(match, "checked", out int checkedPasswords) &&
+                    TryParseLogCount(match, "affected", out int affectedAccounts))
+                    return $"Checked {checkedPasswords} unique {Plural(checkedPasswords, "password", "passwords")}; {affectedAccounts} {Plural(affectedAccounts, "account", "accounts")} affected.";
+                break;
+            case "ADMIN_DELETE_USER_DATA":
+                match = AdminDeleteUserDataLogDetail.Match(detail);
+                if (match.Success && TryParseLogCount(match, "deleted", out int deleted) &&
+                    TryParseLogCount(match, "errors", out int errors))
+                    return $"{match.Groups["username"].Value}: deleted {deleted} {Plural(deleted, "entry", "entries")}, {errors} {Plural(errors, "error", "errors")}";
                 break;
             case "AUTO_BACKUP":
                 if (detail.StartsWith("Khi thoát: ", StringComparison.Ordinal))
