@@ -513,26 +513,32 @@
                                     </StackPanel>
 
                                     <WrapPanel Grid.Row="1" Grid.ColumnSpan="2" Margin="0,9,0,0" VerticalAlignment="Center">
-                                        <TextBlock Text="Tên miền" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="{DynamicResource TextSecondaryBrush}" />
-                                        <ComboBox x:Name="cmbDomainFilter" Width="150" Height="32" Margin="0,0,10,0"
-                                                  SelectionChanged="AccountFilters_Changed">
-                                            <ComboBoxItem Content="Tất cả tên miền" Tag="" IsSelected="True" />
-                                        </ComboBox>
-                                        <TextBlock Text="Thư mục" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="{DynamicResource TextSecondaryBrush}" />
-                                        <ComboBox x:Name="cmbFolderFilter" Width="140" Height="32" Margin="0,0,10,0"
-                                                  SelectionChanged="AccountFilters_Changed">
-                                            <ComboBoxItem Content="Tất cả thư mục" Tag="" IsSelected="True" />
-                                        </ComboBox>
-                                        <TextBlock Text="Nhãn" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="{DynamicResource TextSecondaryBrush}" />
-                                        <ComboBox x:Name="cmbTagFilter" Width="130" Height="32" Margin="0,0,10,0"
-                                                  SelectionChanged="AccountFilters_Changed">
-                                            <ComboBoxItem Content="Tất cả nhãn" Tag="" IsSelected="True" />
-                                        </ComboBox>
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,6">
+                                            <TextBlock Text="Tên miền" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="{DynamicResource TextSecondaryBrush}" />
+                                            <ComboBox x:Name="cmbDomainFilter" Width="168" Height="40" Padding="10,4"
+                                                      VerticalContentAlignment="Center" SelectionChanged="AccountFilters_Changed">
+                                                <ComboBoxItem Content="Tất cả tên miền" Tag="" IsSelected="True" />
+                                            </ComboBox>
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,6">
+                                            <TextBlock Text="Thư mục" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="{DynamicResource TextSecondaryBrush}" />
+                                            <ComboBox x:Name="cmbFolderFilter" Width="158" Height="40" Padding="10,4"
+                                                      VerticalContentAlignment="Center" SelectionChanged="AccountFilters_Changed">
+                                                <ComboBoxItem Content="Tất cả thư mục" Tag="" IsSelected="True" />
+                                            </ComboBox>
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,6">
+                                            <TextBlock Text="Nhãn" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="{DynamicResource TextSecondaryBrush}" />
+                                            <ComboBox x:Name="cmbTagFilter" Width="145" Height="40" Padding="10,4"
+                                                      VerticalContentAlignment="Center" SelectionChanged="AccountFilters_Changed">
+                                                <ComboBoxItem Content="Tất cả nhãn" Tag="" IsSelected="True" />
+                                            </ComboBox>
+                                        </StackPanel>
                                         <CheckBox x:Name="chkMissingTotpOnly" Content="Thiếu TOTP" VerticalAlignment="Center"
-                                                  Margin="0,0,10,0" Checked="AccountFilters_Changed" Unchecked="AccountFilters_Changed"
+                                                  Margin="0,0,12,6" Checked="AccountFilters_Changed" Unchecked="AccountFilters_Changed"
                                                   Foreground="{DynamicResource TextPrimaryBrush}" />
                                         <CheckBox x:Name="chkSecurityWarningOnly" Content="Cảnh báo bảo mật" VerticalAlignment="Center"
-                                                  Margin="0,0,10,0" Checked="AccountFilters_Changed" Unchecked="AccountFilters_Changed"
+                                                  Margin="0,0,12,6" Checked="AccountFilters_Changed" Unchecked="AccountFilters_Changed"
                                                   Foreground="{DynamicResource TextPrimaryBrush}" />
                                     </WrapPanel>
                                 </Grid>
