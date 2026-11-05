@@ -6,17 +6,22 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using PersonalInfoManager.Models;
+
 namespace PersonalInfoManager.Services
 {
+
     public static class CsvService
     {
+
         public static (bool ok, string message) ExportToFile(
             List<SavedAccount> accounts, string filePath)
         {
             try
             {
                 var sb = new StringBuilder();
+
                 sb.AppendLine("ServiceName,Username,Password,Note,CreatedAt,UpdatedAt,PasswordChangedAt,TotpSecret,TotpIssuer,TotpAlgorithm,TotpDigits,TotpPeriodSeconds,WebsiteUrl,Folder,Tags,IsFavorite,CustomFieldsJson");
+
                 foreach (var acc in accounts)
                 {
                     sb.AppendLine(string.Join(",",
@@ -39,7 +44,9 @@ namespace PersonalInfoManager.Services
                         EscapeCsv(JsonSerializer.Serialize(acc.CustomFields ?? new List<AccountCustomField>()))
                     ));
                 }
+
                 AtomicFileService.WriteAllText(filePath, sb.ToString(), new UTF8Encoding(true));
+
                 return (true, $"Đã xuất {accounts.Count} tài khoản ra:\n{filePath}");
             }
             catch (Exception ex)
@@ -47,26 +54,33 @@ namespace PersonalInfoManager.Services
                 return (false, $"Lỗi xuất CSV: {ex.Message}");
             }
         }
+
         private static string EscapeCsv(string? value)
         {
             if (string.IsNullOrEmpty(value)) return "\"\"";
+
             if (StartsWithSpreadsheetFormula(value))
                 value = "'" + value;
+
             if (value.Contains(',') || value.Contains('"') ||
                 value.Contains('\n') || value.Contains('\r'))
             {
                 return "\"" + value.Replace("\"", "\"\"") + "\"";
             }
+
             return value;
         }
+
         private static bool StartsWithSpreadsheetFormula(string value)
         {
             int index = 0;
             while (index < value.Length &&
                    (char.IsWhiteSpace(value[index]) || char.IsControl(value[index]) || value[index] == '\uFEFF'))
                 index++;
+
             return index < value.Length && value[index] is '=' or '+' or '-' or '@';
         }
+
         public static (bool ok, string message, List<SavedAccount> accounts)
             ImportFromFile(string filePath)
         {
@@ -74,17 +88,23 @@ namespace PersonalInfoManager.Services
             {
                 if (!File.Exists(filePath))
                     return (false, "File không tồn tại.", new List<SavedAccount>());
+
                 string content = File.ReadAllText(filePath, Encoding.UTF8);
                 var lines = ParseCsvLines(content);
+
                 if (lines.Count < 2)
                     return (false, "File CSV rỗng hoặc không có dữ liệu.", new List<SavedAccount>());
+
                 var header = lines[0].Select(h => h.Trim().ToLowerInvariant()).ToList();
                 var accounts = new List<SavedAccount>();
+
                 string format = DetectFormat(header);
+
                 for (int i = 1; i < lines.Count; i++)
                 {
                     var row = lines[i];
                     if (row.Count == 0 || row.All(string.IsNullOrWhiteSpace)) continue;
+
                     try
                     {
                         var acc = ParseRow(row, header, format);
@@ -92,10 +112,13 @@ namespace PersonalInfoManager.Services
                     }
                     catch
                     {
+
                     }
                 }
+
                 if (accounts.Count == 0)
                     return (false, "Không tìm thấy tài khoản hợp lệ trong file.", new List<SavedAccount>());
+
                 return (true, $"Đã đọc {accounts.Count} tài khoản (format: {format}).", accounts);
             }
             catch (Exception ex)
@@ -103,30 +126,40 @@ namespace PersonalInfoManager.Services
                 return (false, $"Lỗi đọc CSV: {ex.Message}", new List<SavedAccount>());
             }
         }
+
         private static string DetectFormat(List<string> header)
         {
             var h = header.Select(x => x.Trim().ToLowerInvariant()).ToList();
+
             if (h.Contains("login_username") || h.Contains("login_password"))
                 return "Bitwarden";
+
             if (h.Contains("url") && h.Contains("grouping"))
                 return "LastPass";
+
             if (h.Contains("url") && h.Contains("username") && h.Contains("password") &&
                 (h.Contains("httprealm") || h.Contains("formactionorigin")))
                 return "Firefox";
+
             if (h.Contains("group") && h.Contains("title") && h.Contains("username") &&
                 h.Contains("password") && h.Contains("url"))
                 return "KeePass";
+
             if (h.Contains("title") && (h.Contains("website") || h.Contains("url")) &&
                 h.Contains("username") && h.Contains("password") &&
                 (h.Contains("otp") || h.Contains("otpauth") || h.Contains("category") ||
                  h.Contains("type") || h.Contains("favorite")))
                 return "1Password";
+
             if (h.Contains("url") && h.Contains("name") && h.Contains("username") && h.Contains("password"))
                 return "Chrome";
+
             if (h.Contains("servicename"))
                 return "TQLTK";
+
             return "Generic";
         }
+
         private static SavedAccount? ParseRow(
             List<string> row, List<string> header, string format)
         {
@@ -136,6 +169,7 @@ namespace PersonalInfoManager.Services
                 if (idx < 0 || idx >= row.Count) return "";
                 return row[idx].Trim();
             }
+
             string serviceName = "";
             string username = "";
             string password = "";
@@ -146,6 +180,7 @@ namespace PersonalInfoManager.Services
             string tagsValue = "";
             string customFieldsJson = "";
             bool isFavorite = false;
+
             string GetFirst(params string[] names)
             {
                 foreach (string name in names)
@@ -155,6 +190,7 @@ namespace PersonalInfoManager.Services
                 }
                 return "";
             }
+
             switch (format)
             {
                 case "TQLTK":
@@ -169,6 +205,7 @@ namespace PersonalInfoManager.Services
                     isFavorite = ParseBoolean(Get("isfavorite"));
                     customFieldsJson = Get("customfieldsjson");
                     break;
+
                 case "Bitwarden":
                     serviceName = Get("name");
                     username = Get("login_username");
@@ -180,6 +217,7 @@ namespace PersonalInfoManager.Services
                     isFavorite = ParseBoolean(Get("favorite"));
                     customFieldsJson = Get("fields");
                     break;
+
                 case "LastPass":
                     serviceName = Get("name");
                     if (string.IsNullOrEmpty(serviceName)) serviceName = Get("url");
@@ -191,6 +229,7 @@ namespace PersonalInfoManager.Services
                     folder = Get("grouping");
                     isFavorite = ParseBoolean(Get("fav"));
                     break;
+
                 case "Firefox":
                     websiteUrl = Get("url");
                     serviceName = GetFirst("name", "httprealm", "url");
@@ -198,6 +237,7 @@ namespace PersonalInfoManager.Services
                     password = Get("password");
                     note = Get("note");
                     break;
+
                 case "KeePass":
                     serviceName = GetFirst("title", "name");
                     username = Get("username");
@@ -207,6 +247,7 @@ namespace PersonalInfoManager.Services
                     folder = Get("group");
                     tagsValue = Get("tags");
                     break;
+
                 case "1Password":
                     serviceName = Get("title");
                     username = Get("username");
@@ -218,6 +259,7 @@ namespace PersonalInfoManager.Services
                     tagsValue = Get("tags");
                     isFavorite = ParseBoolean(Get("favorite"));
                     break;
+
                 case "Chrome":
                     serviceName = Get("name");
                     if (string.IsNullOrEmpty(serviceName)) serviceName = Get("url");
@@ -227,17 +269,21 @@ namespace PersonalInfoManager.Services
                     totp = Get("totp");
                     websiteUrl = Get("url");
                     break;
+
                 default:
+
                     serviceName = row.Count > 0 ? row[0].Trim() : "";
                     username = row.Count > 1 ? row[1].Trim() : "";
                     password = row.Count > 2 ? row[2].Trim() : "";
                     note = row.Count > 3 ? row[3].Trim() : "";
                     break;
             }
+
             if (string.IsNullOrWhiteSpace(serviceName) &&
                 string.IsNullOrWhiteSpace(username) &&
                 string.IsNullOrWhiteSpace(password))
                 return null;
+
             var account = new SavedAccount
             {
                 Id = Guid.NewGuid(),
@@ -252,6 +298,7 @@ namespace PersonalInfoManager.Services
                 CreatedAt = DateTime.Now,
                 UpdatedAt = DateTime.Now
             };
+
             if (!string.IsNullOrWhiteSpace(account.WebsiteUrl))
             {
                 if (WebsiteDomainService.TryNormalizeUrl(account.WebsiteUrl, out var parsedUrl, out _) && parsedUrl != null)
@@ -264,6 +311,7 @@ namespace PersonalInfoManager.Services
                         : account.Note + Environment.NewLine + "[URL không hợp lệ đã được bỏ qua khi nhập.]";
                 }
             }
+
             if (!string.IsNullOrWhiteSpace(customFieldsJson))
             {
                 try
@@ -290,11 +338,13 @@ namespace PersonalInfoManager.Services
                     account.CustomFields = format == "Bitwarden" ? ParseBitwardenFields(customFieldsJson) : new();
                 }
             }
+
             string issuer = Get("totpissuer");
             string algorithm = Get("totpalgorithm");
             if (DateTime.TryParse(Get("passwordchangedat"), CultureInfo.InvariantCulture,
                     DateTimeStyles.AssumeLocal, out DateTime changedAt))
                 account.PasswordChangedAt = changedAt;
+
             if (!string.IsNullOrWhiteSpace(totp))
             {
                 try
@@ -327,15 +377,18 @@ namespace PersonalInfoManager.Services
             }
             return account;
         }
+
         private static List<string> ParseTags(string input) => input
             .Split(new[] { ',', ';', '|', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
             .Select(tag => tag.Trim())
             .Where(tag => tag.Length > 0)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
+
         private static bool ParseBoolean(string value) =>
             value.Equals("true", StringComparison.OrdinalIgnoreCase) ||
             value.Equals("yes", StringComparison.OrdinalIgnoreCase) || value == "1";
+
         private static List<AccountCustomField> ParseBitwardenFields(string input)
         {
             var fields = new List<AccountCustomField>();
@@ -350,19 +403,23 @@ namespace PersonalInfoManager.Services
             }
             return fields;
         }
+
         private static List<List<string>> ParseCsvLines(string content)
         {
             var result = new List<List<string>>();
             var currentRow = new List<string>();
             var currentField = new StringBuilder();
             bool inQuotes = false;
+
             for (int i = 0; i < content.Length; i++)
             {
                 char c = content[i];
+
                 if (inQuotes)
                 {
                     if (c == '"')
                     {
+
                         if (i + 1 < content.Length && content[i + 1] == '"')
                         {
                             currentField.Append('"');
@@ -391,10 +448,13 @@ namespace PersonalInfoManager.Services
                     }
                     else if (c == '\n' || c == '\r')
                     {
+
                         if (c == '\r' && i + 1 < content.Length && content[i + 1] == '\n')
                             i++;
+
                         currentRow.Add(currentField.ToString());
                         currentField.Clear();
+
                         if (currentRow.Count > 0)
                             result.Add(new List<string>(currentRow));
                         currentRow.Clear();
@@ -405,19 +465,23 @@ namespace PersonalInfoManager.Services
                     }
                 }
             }
+
             if (currentField.Length > 0 || currentRow.Count > 0)
             {
                 currentRow.Add(currentField.ToString());
                 if (currentRow.Count > 0)
                     result.Add(currentRow);
             }
+
             return result;
         }
+
         public static List<SavedAccount> RemoveDuplicates(
             List<SavedAccount> imported, List<SavedAccount> existing)
         {
             var existingKeys = new HashSet<string>(
                 existing.Select(a => $"{a.ServiceName.ToLower()}|{a.Username.ToLower()}"));
+
             return imported
                 .Where(a => !existingKeys.Contains($"{a.ServiceName.ToLower()}|{a.Username.ToLower()}"))
                 .ToList();

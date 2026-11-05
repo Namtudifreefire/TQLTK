@@ -3,14 +3,18 @@ using System.Net.Mail;
 using System.Windows;
 using System.Windows.Controls;
 using PersonalInfoManager.Services;
+
 namespace PersonalInfoManager;
+
 public partial class AccountShareSetupWindow : Window
 {
     public string RecipientEmail { get; private set; } = "";
     public int ExpirationDays { get; private set; }
+
     public AccountShareSetupWindow() => InitializeComponent();
     private void Window_Loaded(object sender, RoutedEventArgs e) => LanguageService.ApplyToWindow(this);
     private void BtnCancel_Click(object sender, RoutedEventArgs e) { DialogResult = false; Close(); }
+
     private void BtnCreate_Click(object sender, RoutedEventArgs e)
     {
         string email = txtEmail.Text.Trim();

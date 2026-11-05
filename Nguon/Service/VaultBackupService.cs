@@ -7,6 +7,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using PersonalInfoManager.Models;
+
 namespace PersonalInfoManager.Services
 {
     public sealed class VaultImportPreview
@@ -24,6 +25,7 @@ namespace PersonalInfoManager.Services
             SkippedCount = skippedCount;
             TargetVaultFingerprint = targetVaultFingerprint;
         }
+
         public string Owner { get; }
         public DateTime ExportedAt { get; }
         public int IncomingCount => Accounts.Count;
@@ -33,10 +35,13 @@ namespace PersonalInfoManager.Services
         internal List<SavedAccount> Accounts { get; }
         internal string TargetVaultFingerprint { get; }
     }
+
     public static class VaultBackupService
     {
+
         public static (bool ok, string message) ExportToFile(string username, string destPath)
             => ExportToFile(username, destPath, out _);
+
         public static (bool ok, string message) ExportToFile(
             string username, string destPath, out string snapshotFingerprint)
         {
@@ -45,8 +50,10 @@ namespace PersonalInfoManager.Services
             {
                 var vaultService = new AccountVaultService();
                 var accounts = vaultService.Load(username);
+
                 if (accounts.Count == 0)
                     return (false, "Vault trống, không có gì để xuất.");
+
                 var package = new VaultPackage
                 {
                     ExportedAt = DateTime.Now,
@@ -55,12 +62,15 @@ namespace PersonalInfoManager.Services
                     AccountCount = accounts.Count,
                     Accounts = accounts
                 };
+
                 string json = JsonSerializer.Serialize(package,
                     new JsonSerializerOptions { WriteIndented = true });
+
                 string? passphrase = BackupCrypto.GetStoredPassphrase(username);
                 string encrypted = passphrase != null
                     ? BackupCrypto.Encrypt(json, passphrase)
                     : AesCrypto.Encrypt(json);
+
                 string stagedPath = AtomicFileService.WriteTemporary(
                     destPath, System.Text.Encoding.UTF8.GetBytes(encrypted));
                 try
@@ -68,6 +78,7 @@ namespace PersonalInfoManager.Services
                     var verification = InspectBackup(username, stagedPath, passphrase);
                     if (!verification.ok)
                         throw new InvalidDataException("Bản sao lưu tạo mới không qua kiểm tra: " + verification.message);
+
                     AtomicFileService.PromoteTemporary(stagedPath, destPath);
                     snapshotFingerprint = VaultSyncCheckpointStore.ComputeFingerprint(accounts);
                 }
@@ -75,16 +86,19 @@ namespace PersonalInfoManager.Services
                 {
                     AtomicFileService.TryDelete(stagedPath);
                 }
+
                 try
                 {
                     ActivityLogger.Log(username, "EXPORT_VAULT",
                         $"Đã xuất {accounts.Count} tài khoản ra {Path.GetFileName(destPath)}");
                 }
                 catch { }
+
                 string msg = $"Đã xuất {accounts.Count} tài khoản.";
                 if (passphrase == null)
                     msg += "\n\nLưu ý: bạn chưa đặt cụm mật khẩu sao lưu nên file này chỉ mở được trên máy này " +
                            "(Tiện ích → Cụm mật khẩu sao lưu).";
+
                 return (true, msg);
             }
             catch (Exception ex)
@@ -92,19 +106,23 @@ namespace PersonalInfoManager.Services
                 return (false, $"Lỗi: {ex.Message}");
             }
         }
+
         public static bool IsPassphraseProtected(string sourcePath)
         {
             try { return BackupCrypto.IsPassphraseFormat(File.ReadAllText(sourcePath)); }
             catch { return false; }
         }
+
         public static bool PassphraseWorks(string username, string sourcePath, string? passphrase = null)
         {
             try
             {
                 string text = File.ReadAllText(sourcePath);
                 if (!BackupCrypto.IsPassphraseFormat(text)) return true;
+
                 passphrase ??= BackupCrypto.GetStoredPassphrase(username);
                 if (passphrase == null) return false;
+
                 BackupCrypto.Decrypt(text, passphrase);
                 return true;
             }
@@ -113,14 +131,17 @@ namespace PersonalInfoManager.Services
                 return false;
             }
         }
+
         public static (bool ok, string message, int accountCount) InspectBackup(
             string username, string sourcePath, string? passphrase = null)
         {
             try
             {
                 if (!File.Exists(sourcePath)) return (false, "File không tồn tại.", 0);
+
                 string encrypted = File.ReadAllText(sourcePath);
                 if (string.IsNullOrWhiteSpace(encrypted)) return (false, "File trống.", 0);
+
                 string json;
                 if (BackupCrypto.IsPassphraseFormat(encrypted))
                 {
@@ -137,6 +158,7 @@ namespace PersonalInfoManager.Services
                 {
                     return (false, "Định dạng backup không được hỗ trợ hoặc không có kiểm tra toàn vẹn.", 0);
                 }
+
                 var package = JsonSerializer.Deserialize<VaultPackage>(json);
                 if (package?.Accounts == null || package.Accounts.Count == 0)
                     return (false, "Backup không chứa danh sách tài khoản hợp lệ.", 0);
@@ -145,6 +167,7 @@ namespace PersonalInfoManager.Services
                 if (package.AccountCount > 0 && package.AccountCount != package.Accounts.Count)
                     return (false, "Số lượng tài khoản trong manifest không khớp dữ liệu.", 0);
                 AccountVaultService.ValidateAttachments(package.Accounts);
+
                 string owner = string.IsNullOrWhiteSpace(package.ExportedBy)
                     ? "không rõ người tạo"
                     : $"người tạo: {package.ExportedBy.Trim()}";
@@ -161,6 +184,7 @@ namespace PersonalInfoManager.Services
                 return (false, $"Không thể xác minh bản sao lưu: {ex.Message}", 0);
             }
         }
+
         public static (bool ok, string message, int accountCount) DrillRestore(
             string username, string sourcePath, string? passphrase = null)
         {
@@ -174,6 +198,7 @@ namespace PersonalInfoManager.Services
                 var prepared = PrepareImport(username, sourcePath, passphrase);
                 if (!prepared.ok || prepared.preview == null)
                     return (false, prepared.message, 0);
+
                 var preview = prepared.preview;
                 string tempRoot = Path.GetFullPath(Path.GetTempPath());
                 drillDirectory = Path.GetFullPath(Path.Combine(tempRoot, "TQLTK-Vault-Drill-" + Guid.NewGuid().ToString("N")));
@@ -183,12 +208,14 @@ namespace PersonalInfoManager.Services
                 Directory.CreateDirectory(drillDirectory);
                 if ((File.GetAttributes(drillDirectory) & FileAttributes.ReparsePoint) != 0)
                     throw new IOException("Thư mục diễn tập không được là liên kết hệ thống.");
+
                 serialized = JsonSerializer.SerializeToUtf8Bytes(preview.Accounts);
                 string json = Encoding.UTF8.GetString(serialized);
                 drillKey = RandomNumberGenerator.GetBytes(32);
                 encrypted = AesCrypto.EncryptWithKey(drillKey, json);
                 string probePath = Path.Combine(drillDirectory, "vault-drill.v2");
                 AtomicFileService.WriteAllBytes(probePath, encrypted);
+
                 byte[] onDisk = File.ReadAllBytes(probePath);
                 string probeCipher = Encoding.UTF8.GetString(onDisk);
                 CryptographicOperations.ZeroMemory(onDisk);
@@ -200,6 +227,7 @@ namespace PersonalInfoManager.Services
                         VaultSyncCheckpointStore.ComputeFingerprint(preview.Accounts),
                         StringComparison.Ordinal))
                     throw new InvalidDataException("Nội dung tài khoản, TOTP hoặc tệp đính kèm sau khôi phục thử không khớp bản sao lưu.");
+
                 return (true,
                     $"Diễn tập khôi phục thành công: đã đọc, giải mã, ghi thử an toàn vào kho tạm, đọc lại và đối chiếu {restored.Count} tài khoản trong {stopwatch.Elapsed.TotalSeconds:0.0} giây. Vault thật không thay đổi.",
                     restored.Count);
@@ -227,6 +255,7 @@ namespace PersonalInfoManager.Services
                 }
             }
         }
+
         public static (bool ok, string message, VaultImportPreview? preview) PrepareImport(
             string username, string sourcePath, string? passphrase = null)
         {
@@ -234,9 +263,11 @@ namespace PersonalInfoManager.Services
             {
                 if (!File.Exists(sourcePath))
                     return (false, "File không tồn tại.", null);
+
                 string encrypted = File.ReadAllText(sourcePath);
                 if (string.IsNullOrWhiteSpace(encrypted))
                     return (false, "File trống.", null);
+
                 string json;
                 if (BackupCrypto.IsPassphraseFormat(encrypted))
                 {
@@ -259,6 +290,7 @@ namespace PersonalInfoManager.Services
                             "Không thể giải mã file. File có thể bị hỏng hoặc không đúng định dạng.", null);
                     }
                 }
+
                 var package = JsonSerializer.Deserialize<VaultPackage>(json);
                 if (package?.Accounts == null || package.Accounts.Count == 0)
                     return (false, "File không chứa tài khoản nào.", null);
@@ -267,18 +299,21 @@ namespace PersonalInfoManager.Services
                 if (package.AccountCount > 0 && package.AccountCount != package.Accounts.Count)
                     return (false, "Số lượng tài khoản trong manifest không khớp dữ liệu.", null);
                 AccountVaultService.ValidateAttachments(package.Accounts);
+
                 string owner = (package.ExportedBy ?? "").Trim();
                 var existing = new AccountVaultService().Load(username);
                 string targetVaultFingerprint = ComputeVaultFingerprint(existing);
                 var previewItems = new List<BackupPreviewItem>(package.Accounts.Count);
                 int imported = 0;
                 int skipped = 0;
+
                 foreach (var account in package.Accounts)
                 {
                     bool duplicate = existing.Exists(current =>
                         current.Id == account.Id ||
                         (string.Equals(current.ServiceName, account.ServiceName, StringComparison.OrdinalIgnoreCase) &&
                          string.Equals(current.Username, account.Username, StringComparison.OrdinalIgnoreCase)));
+
                     if (duplicate)
                     {
                         skipped++;
@@ -295,6 +330,7 @@ namespace PersonalInfoManager.Services
                         existing.Add(simulated);
                     }
                 }
+
                 return (true, "Đã giải mã bản sao lưu và tính các mục sẽ nhập.",
                     new VaultImportPreview(owner, package.ExportedAt, package.Accounts, previewItems,
                         imported, skipped, targetVaultFingerprint));
@@ -304,6 +340,7 @@ namespace PersonalInfoManager.Services
                 return (false, $"Không thể xem trước bản sao lưu: {ex.Message}", null);
             }
         }
+
         public static (bool ok, string message, int importedCount) CommitImport(
             string username, VaultImportPreview preview, Func<string, bool>? confirmForeignOwner = null)
         {
@@ -311,11 +348,13 @@ namespace PersonalInfoManager.Services
             {
                 if (preview.Accounts.Count == 0)
                     return (false, "Bản xem trước đã được sử dụng hoặc không còn dữ liệu.", 0);
+
                 bool foreignOwner = preview.Owner.Length > 0 &&
                                     !string.Equals(preview.Owner, username, StringComparison.OrdinalIgnoreCase);
                 if (foreignOwner && (confirmForeignOwner == null || !confirmForeignOwner(preview.Owner)))
                     return (false,
                         $"Đã hủy nhập: bản sao lưu này thuộc về người dùng '{preview.Owner}', không phải '{username}'.", 0);
+
                 var vaultService = new AccountVaultService();
                 var existing = vaultService.Load(username);
                 if (!string.Equals(
@@ -323,6 +362,7 @@ namespace PersonalInfoManager.Services
                         ComputeVaultFingerprint(existing),
                         StringComparison.Ordinal))
                     return (false, "Vault đã thay đổi sau khi xem trước. Hãy tạo bản xem trước mới.", 0);
+
                 int imported = 0;
                 int skipped = 0;
                 foreach (var account in preview.Accounts)
@@ -340,8 +380,10 @@ namespace PersonalInfoManager.Services
                         imported++;
                     }
                 }
+
                 if (imported != preview.ImportedCount || skipped != preview.SkippedCount)
                     return (false, "Vault đã thay đổi sau khi xem trước. Hãy tạo bản xem trước mới.", 0);
+
                 vaultService.Save(username, existing);
                 try
                 {
@@ -350,6 +392,7 @@ namespace PersonalInfoManager.Services
                         (foreignOwner ? $" (bản sao lưu của người dùng '{preview.Owner}')" : ""));
                 }
                 catch { }
+
                 return (true,
                     skipped > 0 ? $"Đã nhập {imported} tài khoản.\nBỏ qua {skipped} tài khoản trùng." : $"Đã nhập {imported} tài khoản.",
                     imported);
@@ -359,6 +402,7 @@ namespace PersonalInfoManager.Services
                 return (false, $"Lỗi: {ex.Message}", 0);
             }
         }
+
         public static (bool ok, string message, int importedCount) ImportFromFile(
             string username, string sourcePath, string? passphrase = null,
             Func<string, bool>? confirmForeignOwner = null)
@@ -368,6 +412,7 @@ namespace PersonalInfoManager.Services
                 return (false, prepared.message, 0);
             return CommitImport(username, prepared.preview, confirmForeignOwner);
         }
+
         private class VaultPackage
         {
             public DateTime ExportedAt { get; set; }
@@ -376,6 +421,7 @@ namespace PersonalInfoManager.Services
             public int AccountCount { get; set; }
             public List<SavedAccount> Accounts { get; set; } = new();
         }
+
         private static string ComputeVaultFingerprint(List<SavedAccount> accounts)
         {
             byte[] serialized = JsonSerializer.SerializeToUtf8Bytes(accounts.OrderBy(account => account.Id));

@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using Konscious.Security.Cryptography;
+
 namespace PersonalInfoManager.Services
 {
     public static class PasswordHasher
@@ -15,13 +16,16 @@ namespace PersonalInfoManager.Services
         private const int ArgonMemoryKiB = 19_456;
         private const int ArgonIterations = 2;
         private const int ArgonParallelism = 1;
+
         public static string Hash(string password) => HashForCurrentPolicy(password);
+
         public static string HashForCurrentPolicy(string password)
         {
             if (RegistryService.GetFipsCompatiblePasswordHash())
                 return HashPbkdf2Fips(password);
             return HashArgon2id(password);
         }
+
         public static string HashPbkdf2Fips(string password)
         {
             ArgumentNullException.ThrowIfNull(password);
@@ -38,6 +42,7 @@ namespace PersonalInfoManager.Services
                 CryptographicOperations.ZeroMemory(hash);
             }
         }
+
         private static string HashArgon2id(string password)
         {
             ArgumentNullException.ThrowIfNull(password);
@@ -63,9 +68,11 @@ namespace PersonalInfoManager.Services
                 if (hash != null) CryptographicOperations.ZeroMemory(hash);
             }
         }
+
 #if SECURITY_TEST
         internal static string HashArgon2idForTesting(string password) => HashArgon2id(password);
 #endif
+
         public static bool Verify(string password, string stored)
         {
             try
@@ -82,6 +89,7 @@ namespace PersonalInfoManager.Services
                 return false;
             }
         }
+
         public static bool NeedsRehash(string stored)
         {
             if (string.IsNullOrWhiteSpace(stored)) return false;
@@ -105,6 +113,7 @@ namespace PersonalInfoManager.Services
                 return false;
             return true;
         }
+
         private static bool VerifyArgon2id(string password, string stored)
         {
             string[] parts = stored.Split('$');
@@ -136,6 +145,7 @@ namespace PersonalInfoManager.Services
                 if (actual != null) CryptographicOperations.ZeroMemory(actual);
             }
         }
+
         private static bool VerifyVersionedPbkdf2(string password, string stored)
         {
             string[] parts = stored.Split('$');
@@ -146,6 +156,7 @@ namespace PersonalInfoManager.Services
                 return false;
             return VerifyPbkdf2(password, parts[2], parts[3], iterations);
         }
+
         private static bool VerifyLegacyPbkdf2(string password, string stored)
         {
             string[] parts = stored.Split('.');
@@ -155,6 +166,7 @@ namespace PersonalInfoManager.Services
                 return false;
             return VerifyPbkdf2(password, parts[1], parts[2], iterations);
         }
+
         private static bool VerifyPbkdf2(string password, string saltText, string hashText, int iterations)
         {
             byte[] salt = Convert.FromBase64String(saltText);

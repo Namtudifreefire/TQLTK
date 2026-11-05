@@ -1,6 +1,8 @@
 using System.Windows;
 using PersonalInfoManager.Services;
+
 namespace PersonalInfoManager;
+
 public sealed class TrashItemRow
 {
     public Guid AccountId { get; init; }
@@ -13,12 +15,14 @@ public sealed class TrashItemRow
     public int DaysRemaining => Math.Max(0, AccountVaultService.TrashRetentionDays -
         (int)Math.Floor((DateTime.UtcNow - DeletedAt.ToUniversalTime()).TotalDays));
 }
+
 public partial class TrashWindow : Window
 {
     private readonly Func<TrashItemRow, Task<bool>> _restore;
     private readonly Func<TrashItemRow, Task<bool>> _deleteForever;
     private readonly Func<IEnumerable<TrashItemRow>> _refreshItems;
     private List<TrashItemRow> _items = new();
+
     public TrashWindow(IEnumerable<TrashItemRow> items,
         Func<TrashItemRow, Task<bool>> restore,
         Func<TrashItemRow, Task<bool>> deleteForever,
@@ -31,6 +35,7 @@ public partial class TrashWindow : Window
         _refreshItems = refreshItems;
         ReloadItems(items);
     }
+
     private void ReloadItems(IEnumerable<TrashItemRow>? items = null)
     {
         _items = (items ?? _refreshItems()).ToList();
@@ -39,6 +44,7 @@ public partial class TrashWindow : Window
         lblEmpty.Visibility = _items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         dgTrash.Visibility = _items.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
     }
+
     private async void BtnRestore_Click(object sender, RoutedEventArgs e)
     {
         if (dgTrash.SelectedItem is not TrashItemRow item)
@@ -51,6 +57,7 @@ public partial class TrashWindow : Window
             ReloadItems();
         }
     }
+
     private async void BtnDeleteForever_Click(object sender, RoutedEventArgs e)
     {
         if (dgTrash.SelectedItem is not TrashItemRow item)

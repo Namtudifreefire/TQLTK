@@ -5,19 +5,23 @@ using System.Text;
 using System.Text.Json;
 using System.Linq;
 using PersonalInfoManager.Models;
+
 namespace PersonalInfoManager.Services;
+
 public sealed class VaultSyncCheckpoint
 {
     public string RemoteBackupId { get; set; } = "";
     public string LocalFingerprint { get; set; } = "";
     public DateTime LastSyncAtUtc { get; set; }
 }
+
 public static class VaultSyncCheckpointStore
 {
     private static readonly byte[] Entropy = Encoding.UTF8.GetBytes("TQLTK.VaultDriveSync.v1");
     private static string GetPath(string username) => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         "PersonalInfoManager", "VaultDriveSync", BackupCrypto.UserTag(username) + ".dat");
+
     public static VaultSyncCheckpoint? Load(string username)
     {
         string path = GetPath(username);
@@ -41,6 +45,7 @@ public static class VaultSyncCheckpointStore
             if (plain != null) CryptographicOperations.ZeroMemory(plain);
         }
     }
+
     public static void Save(string username, VaultSyncCheckpoint state)
     {
         if (state == null || string.IsNullOrWhiteSpace(state.RemoteBackupId) ||
@@ -56,6 +61,7 @@ public static class VaultSyncCheckpointStore
             CryptographicOperations.ZeroMemory(cipher);
         }
     }
+
     public static string ComputeFingerprint(System.Collections.Generic.IEnumerable<SavedAccount> accounts)
     {
         var ordered = accounts.OrderBy(account => account.Id).ToList();

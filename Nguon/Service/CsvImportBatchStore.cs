@@ -4,19 +4,24 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+
 namespace PersonalInfoManager.Services;
+
 public sealed class CsvImportBatchRecord
 {
     public Guid Id { get; set; }
     public DateTime CreatedAtUtc { get; set; }
     public List<Guid> AccountIds { get; set; } = new();
 }
+
 public static class CsvImportBatchStore
 {
     private static readonly byte[] Entropy = Encoding.UTF8.GetBytes("TQLTK.CsvImportUndo.v1");
+
     private static string GetPath(string username) => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         "PersonalInfoManager", "CsvImportUndo", BackupCrypto.UserTag(username) + ".dat");
+
     public static CsvImportBatchRecord? Load(string username)
     {
         string path = GetPath(username);
@@ -42,6 +47,7 @@ public static class CsvImportBatchStore
             if (plain != null) CryptographicOperations.ZeroMemory(plain);
         }
     }
+
     public static void Save(string username, CsvImportBatchRecord record)
     {
         if (record == null || record.Id == Guid.Empty || record.AccountIds == null ||
@@ -58,6 +64,7 @@ public static class CsvImportBatchStore
             CryptographicOperations.ZeroMemory(cipher);
         }
     }
+
     public static void Clear(string username)
     {
         string path = Path.GetFullPath(GetPath(username));

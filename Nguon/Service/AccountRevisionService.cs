@@ -2,10 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using PersonalInfoManager.Models;
+
 namespace PersonalInfoManager.Services;
+
 public static class AccountRevisionService
 {
     public const int MaximumEntries = 20;
+
     public static AccountRevisionSnapshot Capture(SavedAccount account) => new()
     {
         ServiceName = account.ServiceName ?? "",
@@ -17,6 +20,7 @@ public static class AccountRevisionService
         Note = account.Note ?? "",
         CustomFields = (account.CustomFields ?? new()).Where(field => field != null).Select(field => field.Clone()).ToList()
     };
+
     public static IReadOnlyList<string> GetChangedFields(SavedAccount account, AccountRevisionSnapshot snapshot)
     {
         var fields = new List<string>();
@@ -30,6 +34,7 @@ public static class AccountRevisionService
         if (!CustomFieldsEqual(account.CustomFields, snapshot.CustomFields)) fields.Add("CustomFields");
         return fields;
     }
+
     public static AccountRevisionEntry? RecordPreviousIfChanged(
         SavedAccount account, AccountRevisionSnapshot previous, DateTime changedAtUtc, Guid? importBatchId = null)
     {
@@ -48,6 +53,7 @@ public static class AccountRevisionService
             account.EditHistory = account.EditHistory.Take(MaximumEntries).ToList();
         return entry;
     }
+
     public static void Apply(SavedAccount account, AccountRevisionSnapshot snapshot)
     {
         account.ServiceName = snapshot.ServiceName ?? "";
@@ -59,6 +65,7 @@ public static class AccountRevisionService
         account.Note = snapshot.Note ?? "";
         account.CustomFields = (snapshot.CustomFields ?? new()).Where(field => field != null).Select(field => field.Clone()).ToList();
     }
+
     public static AccountImportUndoSnapshot CaptureForImportUndo(SavedAccount account) => new()
     {
         ServiceName = account.ServiceName,
@@ -80,6 +87,7 @@ public static class AccountRevisionService
         PasswordChangedAt = account.PasswordChangedAt,
         UpdatedAt = account.UpdatedAt
     };
+
     public static void RestoreImportUndo(SavedAccount account, AccountImportUndoSnapshot snapshot)
     {
         account.ServiceName = snapshot.ServiceName;
@@ -101,6 +109,7 @@ public static class AccountRevisionService
         account.PasswordChangedAt = snapshot.PasswordChangedAt;
         account.UpdatedAt = snapshot.UpdatedAt;
     }
+
     private static bool CustomFieldsEqual(
         IReadOnlyList<AccountCustomField>? left, IReadOnlyList<AccountCustomField>? right)
     {

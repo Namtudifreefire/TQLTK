@@ -1,13 +1,17 @@
 using System.Windows;
 using Microsoft.Win32;
 using PersonalInfoManager.Services;
+
 namespace PersonalInfoManager;
+
 public partial class OpenSharedAccountWindow : Window
 {
     public string PackagePath => txtPath.Text.Trim();
     public string Passphrase => txtPassphrase.Password;
+
     public OpenSharedAccountWindow() => InitializeComponent();
     private void Window_Loaded(object sender, RoutedEventArgs e) => LanguageService.ApplyToWindow(this);
+
     private void BtnBrowse_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new OpenFileDialog
@@ -18,7 +22,9 @@ public partial class OpenSharedAccountWindow : Window
         LocalizedFileDialog.Apply(dialog);
         if (dialog.ShowDialog(this) == true) txtPath.Text = dialog.FileName;
     }
+
     private void BtnCancel_Click(object sender, RoutedEventArgs e) { DialogResult = false; Close(); }
+
     private void BtnOpen_Click(object sender, RoutedEventArgs e)
     {
         if (string.IsNullOrWhiteSpace(PackagePath) || string.IsNullOrWhiteSpace(Passphrase))

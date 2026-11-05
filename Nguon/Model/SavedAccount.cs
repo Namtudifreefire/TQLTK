@@ -1,25 +1,33 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+
 namespace PersonalInfoManager.Models
 {
+
     public class SavedAccount
     {
         public Guid Id { get; set; } = Guid.NewGuid();
+
         public string ServiceName { get; set; } = "";
+
         public string Username { get; set; } = "";
+
         public string Password { get; set; } = "";
+
         public string Note { get; set; } = "";
         public string WebsiteUrl { get; set; } = "";
         public string Folder { get; set; } = "";
         public List<string> Tags { get; set; } = new();
         public bool IsFavorite { get; set; }
         public List<AccountCustomField> CustomFields { get; set; } = new();
+
         public string TotpSecret { get; set; } = "";
         public string TotpIssuer { get; set; } = "";
         public string TotpAlgorithm { get; set; } = "SHA1";
         public int TotpDigits { get; set; } = 6;
         public int TotpPeriodSeconds { get; set; } = 30;
+
         public List<PasswordHistoryEntry> PasswordHistory { get; set; } = new();
         public List<DeletedNoteEntry> DeletedNotes { get; set; } = new();
         public List<AccountAttachment> Attachments { get; set; } = new();
@@ -29,11 +37,13 @@ namespace PersonalInfoManager.Models
         public bool ImportUndoable { get; set; }
         public bool CreatedInImportBatch { get; set; }
         public AccountImportUndoSnapshot? ImportUndoSnapshot { get; set; }
+
         public DateTime CreatedAt { get; set; } = DateTime.Now;
         public DateTime UpdatedAt { get; set; } = DateTime.Now;
         public DateTime? PasswordChangedAt { get; set; }
         public bool IsDeleted { get; set; }
         public DateTime? DeletedAt { get; set; }
+
         public SavedAccount Clone()
         {
             var clone = (SavedAccount)MemberwiseClone();
@@ -57,12 +67,14 @@ namespace PersonalInfoManager.Models
             return clone;
         }
     }
+
     public class AccountCustomField
     {
         public Guid Id { get; set; } = Guid.NewGuid();
         public string Name { get; set; } = "";
         public string Value { get; set; } = "";
         public bool IsSensitive { get; set; }
+
         public AccountCustomField Clone()
         {
             var clone = (AccountCustomField)MemberwiseClone();
@@ -71,19 +83,24 @@ namespace PersonalInfoManager.Models
             return clone;
         }
     }
+
     public class DeletedNoteEntry
     {
         public Guid Id { get; set; } = Guid.NewGuid();
         public string Content { get; set; } = "";
         public DateTime DeletedAt { get; set; } = DateTime.UtcNow;
+
         public DeletedNoteEntry Clone() => (DeletedNoteEntry)MemberwiseClone();
     }
+
     public class PasswordHistoryEntry
     {
         public string Password { get; set; } = "";
         public DateTime ChangedAt { get; set; } = DateTime.Now;
+
         public PasswordHistoryEntry Clone() => (PasswordHistoryEntry)MemberwiseClone();
     }
+
     public sealed class AccountAttachment
     {
         public Guid Id { get; set; } = Guid.NewGuid();
@@ -100,6 +117,7 @@ namespace PersonalInfoManager.Models
             AddedAtUtc = AddedAtUtc
         };
     }
+
     public sealed class AccountRevisionEntry
     {
         public Guid Id { get; set; } = Guid.NewGuid();
@@ -116,6 +134,7 @@ namespace PersonalInfoManager.Models
             ImportBatchId = ImportBatchId
         };
     }
+
     public sealed class AccountRevisionSnapshot
     {
         public string ServiceName { get; set; } = "";
@@ -138,6 +157,7 @@ namespace PersonalInfoManager.Models
             CustomFields = (CustomFields ?? new()).Where(field => field != null).Select(field => field.Clone()).ToList()
         };
     }
+
     public sealed class AccountImportUndoSnapshot
     {
         public string ServiceName { get; set; } = "";

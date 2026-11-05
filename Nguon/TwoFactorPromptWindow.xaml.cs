@@ -1,22 +1,28 @@
 using System;
 using System.Windows;
 using PersonalInfoManager.Services;
+
 namespace PersonalInfoManager
 {
     public partial class TwoFactorPromptWindow : Window
     {
         private const int MaxAttempts = 5;
+
         private readonly Func<string, (bool ok, string message)> _verify;
         private int _attempts;
+
         public TwoFactorPromptWindow(string title, string description, Func<string, (bool ok, string message)> verify)
         {
             InitializeComponent();
+
             Title = title;
             lblTitle.Text = "🔑 " + title;
             lblDescription.Text = description;
             _verify = verify;
+
             Loaded += (_, _) => txtCode.Focus();
         }
+
         public static bool AskIfEnabled(Window? owner, string username)
         {
             try
@@ -37,32 +43,42 @@ namespace PersonalInfoManager
                     "Không thể xác thực 2 bước", MessageBoxButton.OK, MessageBoxImage.Error);
                 return false;
             }
+
             var dlg = new TwoFactorPromptWindow(
                 "Xác thực 2 bước",
                 "Nhập mã 6 số từ ứng dụng Authenticator trên điện thoại.",
                 code => TwoFactorService.Validate(username, code));
+
             if (owner != null && owner.IsVisible) dlg.Owner = owner;
+
             bool ok = dlg.ShowDialog() == true;
+
             try { ActivityLogger.Log(username, ok ? "LOGIN_2FA_OK" : "LOGIN_2FA_FAILED", ""); } catch { }
             return ok;
         }
+
         private void BtnOk_Click(object sender, RoutedEventArgs e)
         {
             var result = _verify(txtCode.Text);
+
             if (result.ok)
             {
                 if (!string.IsNullOrWhiteSpace(result.message))
                     MessageBox.Show(this, result.message, "Thông báo", MessageBoxButton.OK, MessageBoxImage.Information);
+
                 DialogResult = true;
                 return;
             }
+
             _attempts++;
+
             if (_attempts >= MaxAttempts)
             {
                 MessageBox.Show(this, "Bạn đã nhập sai quá nhiều lần.", "Bị từ chối", MessageBoxButton.OK, MessageBoxImage.Warning);
                 DialogResult = false;
                 return;
             }
+
             lblError.Text = string.IsNullOrWhiteSpace(result.message)
                 ? "Mã không đúng."
                 : result.message;

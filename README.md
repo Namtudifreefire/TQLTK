@@ -78,7 +78,7 @@ See the [Releases page](https://github.com/Namtudifreefire/TQLTK/releases) for d
 - Use durable temporary-file writes for vaults, notes, recovery settings, CSV exports and backups so an interrupted write keeps the prior file intact.
 - Increase temporary sign-in lockouts from 5 to 10, 20, 40 and then 60 minutes after repeated failed-attempt groups; a successful sign-in or password reset clears the escalation. Use Argon2id by default and PBKDF2-HMAC-SHA256 with 600,000 iterations for FIPS-compatible mode; older hashes are upgraded after a successful sign-in.
 - Show the linked Google Drive account and allow removing this device's locally stored token without deleting Drive backups. Removing the local token does not revoke Google account access.
-- Expand the security overview with account-level findings for weak, reused, old, unknown-age and breached passwords, with an action to open the affected account. Breach results are marked stale after the vault changes.
+- Expand the security overview with actionable account-level findings for weak, reused and breached passwords, with an action to open the affected account. Password-change dates remain informational; the app does not recommend fixed calendar-based rotation. Breach results are marked stale after the vault changes.
 - Show recovery-code count, backup-passphrase status and the Windows-account dependency of personal-file encryption. Clarify that changing the TQLTK sign-in password does not rotate the vault encryption key, and guide users to make a passphrase-protected backup before moving Windows accounts or reinstalling Windows.
 - Rotate the vault encryption key after making and verifying a passphrase-protected recovery backup. Re-encrypt vaults, notes and recognized local vault backups through a recoverable staged transaction; keep historical key material protected by DPAPI. Only an active administrator can start rotation.
 - Add restore drills that validate a backup, write it to an encrypted temporary store, read it back and compare its contents without changing the active vault or personal-file store. Record the last drill and warn when it fails or becomes old.
@@ -94,6 +94,13 @@ See the [Releases page](https://github.com/Namtudifreefire/TQLTK/releases) for d
 - Add Google Drive backup conflict checks. Concurrent changes stop automatic upload; users can review the remote backup or explicitly upload a separate version. This is versioned backup with conflict alerts, not live sync or automatic record merging.
 - Add expiring, encrypted account-share packages for a named Google account. Drive grants read access for 1, 7 or 30 days; the decryption key must be sent separately. Drive access can be revoked, but downloaded packages and data already decrypted cannot be recalled. The local expiry check uses the recipient device's clock and is not tamper-proof.
 - Keep the already available reused-password finding and its action to open the affected account in the security overview.
+- Search the whole vault by service, username, website, folder, tags, notes and non-sensitive custom-field values. Filter by website host, folder, tag, favorite, missing TOTP or security warning; sensitive custom-field values are never searched.
+- Save password-generation rules for an exact website host, including allowed length, required character groups and excluded characters. Generated random passwords follow the selected site's rules; passphrases are not offered when those rules cannot be guaranteed.
+- Keep password-change guidance event-driven: show actionable findings for weak, reused or breached passwords and sign-in warnings for failed attempts. Dismissing a finding does not force a password change or create a fixed rotation schedule.
+- Import supported JSON exports and KeePass XML through the account-import preview with duplicate choices and undo. TQLTK `.vault` backups use the separate Import vault flow. Direct `.kdbx` import is not supported; export from KeePass as XML first. `.tqf` is a personal-file backup, not an account import.
+- Open the affected account from a security finding; after saving a password change, update its change date and refresh the security overview.
+- Configure or disable shortcuts for locking the vault, searching accounts, copying the selected username and showing TOTP.
+- Show the last optional Have I Been Pwned check date, whether its results are current, and an optional 30-, 90- or 180-day reminder. The app never runs this network check automatically.
 
 ### v3.6.6 (BETA)
 
@@ -188,7 +195,7 @@ Xem [trang Releases](https://github.com/Namtudifreefire/TQLTK/releases) để t�
 - Ghi vault, ghi chú, thiết lập khôi phục, CSV và backup qua file tạm bền vững để lần ghi bị gián đoạn vẫn giữ file cũ.
 - Tăng thời gian khóa đăng nhập tạm thời theo từng nhóm nhập sai: 5, 10, 20, 40 rồi 60 phút; đăng nhập thành công hoặc đặt lại mật khẩu sẽ xóa mức tăng. Mặc định dùng Argon2id; có thể chọn PBKDF2-HMAC-SHA256 600.000 vòng cho môi trường cần tương thích FIPS. Hash cũ được nâng cấp sau lần đăng nhập thành công.
 - Hiển thị tài khoản Google Drive đã liên kết và cho phép xóa token lưu cục bộ trên thiết bị này mà không xóa backup trên Drive. Xóa token cục bộ không thu hồi quyền ứng dụng trong tài khoản Google.
-- Mở rộng tổng quan bảo mật với cảnh báo theo từng tài khoản về mật khẩu yếu, dùng lại, lâu chưa đổi, chưa rõ ngày đổi hoặc bị lộ; có nút mở nhanh mục cần xử lý. Kết quả kiểm tra rò rỉ được đánh dấu cũ khi vault thay đổi.
+- Mở rộng tổng quan bảo mật với cảnh báo cần xử lý theo từng tài khoản về mật khẩu yếu, dùng lại hoặc bị lộ; có nút mở nhanh mục cần xử lý. Ngày đổi mật khẩu chỉ để tham khảo, ứng dụng không ép lịch thay mật khẩu cố định. Kết quả kiểm tra rò rỉ được đánh dấu cũ khi vault thay đổi.
 - Hiển thị số mã khôi phục còn lại, trạng thái cụm mật khẩu sao lưu và lưu ý khóa mã hóa file cá nhân gắn với tài khoản Windows. Nêu rõ đổi mật khẩu đăng nhập TQLTK không đổi khóa mã hóa vault; khuyến nghị tạo backup có cụm mật khẩu trước khi đổi tài khoản Windows hoặc cài lại Windows.
 - Thêm xoay khóa mã hóa vault sau khi tạo và xác minh bản phục hồi có cụm mật khẩu. Vault, ghi chú và backup vault cục bộ đã nhận diện được mã hóa lại theo giao dịch có khả năng phục hồi; khóa cũ được giữ dưới DPAPI. Chỉ quản trị viên đang hoạt động mới được xoay khóa.
 - Thêm diễn tập khôi phục: xác minh backup, ghi vào kho tạm đã mã hóa, đọc lại và so sánh nội dung mà không đổi vault hoặc kho file cá nhân đang dùng. Lưu lần diễn tập gần nhất và cảnh báo khi thất bại hoặc đã quá hạn.
@@ -204,6 +211,13 @@ Xem [trang Releases](https://github.com/Namtudifreefire/TQLTK/releases) để t�
 - Thêm kiểm tra xung đột cho bản sao lưu Google Drive. Khi phát hiện thay đổi đồng thời, ứng dụng dừng tải tự động; người dùng có thể xem bản từ xa hoặc chủ động tải lên thành một phiên bản riêng. Đây là sao lưu có cảnh báo xung đột, chưa phải đồng bộ trực tiếp hay tự gộp bản ghi.
 - Thêm gói chia sẻ tài khoản được mã hóa và tự hết hạn, gửi cho một tài khoản Google cụ thể. Drive cấp quyền đọc trong 1, 7 hoặc 30 ngày; khóa giải mã phải gửi qua kênh riêng. Có thể thu hồi quyền Drive, nhưng không thể lấy lại gói đã tải xuống hoặc dữ liệu người nhận đã giải mã. Kiểm tra hết hạn trên máy người nhận dựa vào đồng hồ hệ thống và không chống chỉnh sửa.
 - Giữ tính năng đã có trong tổng quan bảo mật: phát hiện mật khẩu dùng lại và mở nhanh tài khoản cần xử lý.
+- Tìm trong toàn vault theo dịch vụ, tên đăng nhập, website, thư mục, nhãn, ghi chú và giá trị trường tùy chỉnh không nhạy cảm. Lọc theo host website, thư mục, nhãn, yêu thích, thiếu TOTP hoặc cảnh báo bảo mật; không tìm trong giá trị trường nhạy cảm.
+- Lưu quy tắc tạo mật khẩu riêng cho host website, gồm độ dài, nhóm ký tự bắt buộc và ký tự bị loại trừ. Mật khẩu ngẫu nhiên tuân theo quy tắc đã chọn; không cho tạo cụm từ dễ nhớ nếu không thể bảo đảm quy tắc.
+- Nhắc đổi mật khẩu theo sự kiện: hiển thị cảnh báo cần xử lý cho mật khẩu yếu, dùng lại hoặc bị lộ và cảnh báo đăng nhập thất bại. Bỏ qua cảnh báo không ép đổi mật khẩu và không tạo lịch thay cố định.
+- Nhập JSON được hỗ trợ và KeePass XML qua màn hình xem trước, xử lý mục trùng và hoàn tác lô nhập. Bản sao lưu `.vault` của TQLTK có luồng Nhập kho mật khẩu riêng. Chưa hỗ trợ mở trực tiếp `.kdbx`; hãy xuất XML từ KeePass trước. `.tqf` là backup File cá nhân, không phải tệp nhập tài khoản.
+- Mở nhanh tài khoản từ cảnh báo bảo mật; sau khi lưu mật khẩu mới, cập nhật ngày đổi mật khẩu và làm mới tổng quan cảnh báo.
+- Cấu hình hoặc tắt riêng phím tắt khóa vault, tìm tài khoản, sao chép tên đăng nhập đã chọn và mở TOTP.
+- Hiển thị ngày kiểm tra Have I Been Pwned gần nhất, trạng thái kết quả còn mới hay đã cũ và lựa chọn nhắc sau 30, 90 hoặc 180 ngày. Ứng dụng không tự chạy kiểm tra mạng.
 
 ### v3.6.6 (BETA)
 

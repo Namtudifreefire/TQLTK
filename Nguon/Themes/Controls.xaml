@@ -62,7 +62,6 @@
 
     <Style TargetType="ScrollBar" BasedOn="{StaticResource ModernScrollBar}" />
 
-
     <Style x:Key="ModernComboBoxItem" TargetType="ComboBoxItem">
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
@@ -179,7 +178,6 @@
 
     <Style TargetType="ComboBox" BasedOn="{StaticResource ModernComboBox}" />
 
-
     <Style x:Key="ModernTabItem" TargetType="TabItem">
         <Setter Property="Template">
             <Setter.Value>
@@ -213,7 +211,6 @@
         <Setter Property="BorderThickness" Value="0" />
         <Setter Property="ItemContainerStyle" Value="{StaticResource ModernTabItem}" />
     </Style>
-
 
     <Style x:Key="RoundedButton" TargetType="Button">
         <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
@@ -282,7 +279,6 @@
             </Setter.Value>
         </Setter>
     </Style>
-
 
     <Style x:Key="RoundedTextBox" TargetType="TextBox">
         <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
@@ -353,7 +349,6 @@
             </Setter.Value>
         </Setter>
     </Style>
-
 
     <Style x:Key="ModernDataGridColumnHeader" TargetType="DataGridColumnHeader">
         <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
@@ -454,7 +449,6 @@
 
     <Style TargetType="DataGrid" BasedOn="{StaticResource ModernDataGrid}" />
 
-
     <Style x:Key="FadeInDataGrid" TargetType="DataGrid"
            BasedOn="{StaticResource ModernDataGrid}">
         <Setter Property="Opacity" Value="0" />
@@ -470,7 +464,6 @@
         </Style.Triggers>
     </Style>
 
-
     <Style x:Key="Card" TargetType="Border">
         <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
         <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
@@ -479,7 +472,6 @@
         <Setter Property="Padding" Value="20" />
         <Setter Property="Margin" Value="0,0,0,12" />
     </Style>
-
 
     <Style x:Key="SlideInWindow" TargetType="Window">
         <Setter Property="Opacity" Value="0" />

@@ -6,6 +6,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using PersonalInfoManager.Models;
+
 namespace PersonalInfoManager.Services
 {
     public enum SecurityFindingReviewStatus
@@ -15,15 +16,18 @@ namespace PersonalInfoManager.Services
         Snoozed,
         Ignored
     }
+
     public sealed record SecurityFindingReviewState(
         SecurityFindingReviewStatus Status,
         DateTime LastCheckedUtc,
         DateTime? RemindAtUtc,
         string Reason);
+
     public static class SecurityFindingReviewService
     {
         private static readonly object Sync = new();
         private static readonly byte[] Entropy = Encoding.UTF8.GetBytes("TQLTK.SecurityFindingReview.v1");
+
         private sealed class ReviewRecord
         {
             public Guid AccountId { get; set; }
@@ -34,6 +38,7 @@ namespace PersonalInfoManager.Services
             public DateTime? RemindAtUtc { get; set; }
             public string Reason { get; set; } = "";
         }
+
         public static IReadOnlyDictionary<string, SecurityFindingReviewState> SyncFindings(
             string username,
             IReadOnlyList<PasswordSecurityFinding> findings,
@@ -69,15 +74,18 @@ namespace PersonalInfoManager.Services
                         record.RemindAtUtc = null;
                         record.Reason = "";
                     }
+
                     if (record.Status == SecurityFindingReviewStatus.Snoozed &&
                         record.RemindAtUtc <= now)
                     {
                         record.Status = SecurityFindingReviewStatus.Open;
                         record.RemindAtUtc = null;
                     }
+
                     record.LastCheckedUtc = now;
                     active[key] = ToState(record);
                 }
+
                 records = records
                     .OrderByDescending(record => record.LastCheckedUtc)
                     .Take(1000)
@@ -86,6 +94,7 @@ namespace PersonalInfoManager.Services
                 return active;
             }
         }
+
         public static void Set(
             string username,
             SavedAccount account,
@@ -98,6 +107,7 @@ namespace PersonalInfoManager.Services
                 throw new ArgumentException("Thời điểm nhắc lại phải nằm trong tương lai.", nameof(remindAtUtc));
             if (status == SecurityFindingReviewStatus.Ignored && string.IsNullOrWhiteSpace(reason))
                 throw new ArgumentException("Cần ghi lý do khi bỏ qua cảnh báo.", nameof(reason));
+
             lock (Sync)
             {
                 List<ReviewRecord> records = Load(username);
@@ -118,10 +128,13 @@ namespace PersonalInfoManager.Services
                 Save(username, records.OrderByDescending(item => item.LastCheckedUtc).Take(1000).ToList());
             }
         }
+
         public static string Key(Guid accountId, PasswordSecurityFindingKind kind) =>
             accountId.ToString("N") + ":" + ((int)kind).ToString(System.Globalization.CultureInfo.InvariantCulture);
+
         private static SecurityFindingReviewState ToState(ReviewRecord record) =>
             new(record.Status, record.LastCheckedUtc, record.RemindAtUtc, record.Reason);
+
         private static string ComputeAccountVersion(SavedAccount account)
         {
             using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
@@ -145,12 +158,14 @@ namespace PersonalInfoManager.Services
                 if (digest != null) CryptographicOperations.ZeroMemory(digest);
             }
         }
+
         private static string GetPath(string username)
         {
             string root = Path.Combine(ApplicationDataPath.Root,
                 "PersonalInfoManager");
             return Path.Combine(root, "security_reviews_" + BackupCrypto.UserTag(username) + ".dat");
         }
+
         private static List<ReviewRecord> Load(string username)
         {
             string path = GetPath(username);
@@ -158,6 +173,7 @@ namespace PersonalInfoManager.Services
             var info = new FileInfo(path);
             if (info.Length is < 1 or > 1024 * 1024)
                 throw new InvalidDataException("Tệp trạng thái xem xét bảo mật vượt giới hạn kích thước.");
+
             byte[] protectedData = File.ReadAllBytes(path);
             byte[]? json = null;
             try
@@ -172,6 +188,7 @@ namespace PersonalInfoManager.Services
                 if (json != null) CryptographicOperations.ZeroMemory(json);
             }
         }
+
         private static void Save(string username, List<ReviewRecord> records)
         {
             string path = GetPath(username);

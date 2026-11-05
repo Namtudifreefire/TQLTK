@@ -5,14 +5,17 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using PersonalInfoManager.Services;
+
 namespace PersonalInfoManager
 {
     public sealed class SecurityFindingReviewWindow : Window
     {
         private sealed record Choice(string Label, SecurityFindingReviewStatus Status, int SnoozeDays);
+
         private readonly ComboBox _status = new();
         private readonly TextBox _reason = new();
         private readonly List<Choice> _choices;
+
         public SecurityFindingReviewWindow(string description, SecurityFindingReviewState current)
         {
             Title = LanguageService.Translate("Trạng thái cảnh báo bảo mật");
@@ -23,6 +26,7 @@ namespace PersonalInfoManager
             ResizeMode = ResizeMode.NoResize;
             SetResourceReference(BackgroundProperty, "BackgroundBrush");
             SetResourceReference(ForegroundProperty, "TextPrimaryBrush");
+
             _choices = new List<Choice>
             {
                 new(LanguageService.Translate("Đang mở"), SecurityFindingReviewStatus.Open, 0),
@@ -32,6 +36,7 @@ namespace PersonalInfoManager
                 new(LanguageService.Translate("Nhắc lại sau 30 ngày"), SecurityFindingReviewStatus.Snoozed, 30),
                 new(LanguageService.Translate("Bỏ qua có lý do"), SecurityFindingReviewStatus.Ignored, 0)
             };
+
             var content = new StackPanel { Margin = new Thickness(22) };
             content.Children.Add(new TextBlock
             {
@@ -73,6 +78,7 @@ namespace PersonalInfoManager
             _reason.Height = 75;
             _reason.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
             content.Children.Add(_reason);
+
             var buttons = new StackPanel
             {
                 Orientation = Orientation.Horizontal,
@@ -111,6 +117,7 @@ namespace PersonalInfoManager
             content.Children.Add(buttons);
             Content = content;
         }
+
         public SecurityFindingReviewStatus SelectedStatus => ((Choice)_status.SelectedItem).Status;
         public DateTime? RemindAtUtc
         {

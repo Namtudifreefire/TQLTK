@@ -5,23 +5,29 @@ using System.Windows;
 using System.Windows.Controls;
 using PersonalInfoManager.Models;
 using PersonalInfoManager.Services;
+
 namespace PersonalInfoManager;
+
 public partial class AccountHistoryWindow : Window
 {
     private readonly List<AccountRevisionEntry> _entries;
     public AccountRevisionEntry? SelectedEntry { get; private set; }
+
     public AccountHistoryWindow(IEnumerable<AccountRevisionEntry> entries)
     {
         InitializeComponent();
         _entries = entries.Select(entry => entry.Clone()).OrderByDescending(entry => entry.ChangedAtUtc).ToList();
         dgHistory.ItemsSource = _entries.Select(entry => new HistoryView(entry)).ToList();
     }
+
     private void Window_Loaded(object sender, RoutedEventArgs e) => LanguageService.ApplyToWindow(this);
+
     private void BtnPreview_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not Button { Tag: Guid id }) return;
         var entry = _entries.FirstOrDefault(item => item.Id == id);
         if (entry == null) return;
+
         string fields = string.Join(", ", entry.ChangedFields.Split('|', StringSplitOptions.RemoveEmptyEntries)
             .Select(FieldLabel).Select(LanguageService.Translate));
         var result = MessageBox.Show(this,
@@ -33,11 +39,13 @@ public partial class AccountHistoryWindow : Window
         DialogResult = true;
         Close();
     }
+
     private void BtnClose_Click(object sender, RoutedEventArgs e)
     {
         DialogResult = false;
         Close();
     }
+
     private static string FieldLabel(string field) => field switch
     {
         "ServiceName" => "Dịch vụ",
@@ -50,6 +58,7 @@ public partial class AccountHistoryWindow : Window
         "CustomFields" => "Trường tùy chỉnh",
         _ => field
     };
+
     private sealed record HistoryView(Guid Id, string ChangedAtText, string ChangedFieldsText)
     {
         public HistoryView(AccountRevisionEntry entry) : this(entry.Id,

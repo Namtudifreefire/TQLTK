@@ -1,6 +1,7 @@
-using System;
+﻿using System;
 using System.Windows;
 using PersonalInfoManager.Services;
+
 namespace PersonalInfoManager
 {
     public partial class App : Application
@@ -8,10 +9,13 @@ namespace PersonalInfoManager
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
+
             ShutdownMode = ShutdownMode.OnMainWindowClose;
             EventManager.RegisterClassHandler(typeof(Window), FrameworkElement.LoadedEvent,
                 new RoutedEventHandler(LanguageService.HandleWindowLoaded), handledEventsToo: true);
+
             try { ThemeService.Initialize(); } catch { }
+
             try
             {
                 if (RegistryService.GetAutoThemeEnabled())
@@ -20,7 +24,9 @@ namespace PersonalInfoManager
                 }
             }
             catch { }
+
             try { ActivityLogger.CleanupOldLogs(30); } catch { }
+
             DispatcherUnhandledException += (_, args) =>
             {
                 try
@@ -32,6 +38,7 @@ namespace PersonalInfoManager
                         MessageBoxImage.Error);
                 }
                 catch { }
+
                 try
                 {
                     ActivityLogger.Log(
@@ -40,8 +47,10 @@ namespace PersonalInfoManager
                         args.Exception.Message);
                 }
                 catch { }
+
                 args.Handled = true;
             };
+
             System.Threading.Tasks.TaskScheduler.UnobservedTaskException += (_, args) =>
             {
                 try
@@ -54,6 +63,7 @@ namespace PersonalInfoManager
                 catch { }
                 args.SetObserved();
             };
+
             try
             {
                 var login = new LoginWindow();
@@ -70,9 +80,11 @@ namespace PersonalInfoManager
                 Shutdown(1);
             }
         }
+
         protected override void OnExit(ExitEventArgs e)
         {
             try { AutoThemeService.Stop(); } catch { }
+
             try
             {
                 ActivityLogger.Log(
@@ -81,6 +93,7 @@ namespace PersonalInfoManager
                     $"OnExit đã chạy, mã thoát {e.ApplicationExitCode}");
             }
             catch { }
+
             base.OnExit(e);
         }
     }

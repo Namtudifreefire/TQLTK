@@ -1,4 +1,5 @@
 using System;
+
 namespace PersonalInfoManager.Models
 {
     public class Note

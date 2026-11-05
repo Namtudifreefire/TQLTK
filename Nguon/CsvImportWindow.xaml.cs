@@ -7,7 +7,9 @@ using System.Runtime.CompilerServices;
 using System.Windows;
 using PersonalInfoManager.Models;
 using PersonalInfoManager.Services;
+
 namespace PersonalInfoManager;
+
 public enum CsvImportAction
 {
     Skip,
@@ -15,8 +17,10 @@ public enum CsvImportAction
     Overwrite,
     ImportCopy
 }
+
 public sealed record CsvImportDecision(SavedAccount Account, CsvImportAction Action, Guid? TargetAccountId, bool IncludeAttachments);
 public sealed record CsvImportActionOption(CsvImportAction Action, string Label);
+
 public partial class CsvImportWindow : Window
 {
     public ObservableCollection<CsvPreviewItem> Items { get; } = new();
@@ -25,13 +29,16 @@ public partial class CsvImportWindow : Window
     public List<CsvImportDecision> Decisions => Items
         .Select(item => new CsvImportDecision(item.Account.Clone(), item.Action, item.TargetAccountId, _includeAttachments))
         .ToList();
-    public CsvImportWindow(List<SavedAccount> imported, List<SavedAccount> existing, bool includeAttachments = false)
+
+    public CsvImportWindow(List<SavedAccount> imported, List<SavedAccount> existing, bool includeAttachments = false, string sourceFormat = "CSV")
     {
         InitializeComponent();
         _includeAttachments = includeAttachments;
+        Title = string.Format(LanguageService.Translate("Xem trước nhập {0}"), LanguageService.Translate(sourceFormat));
         var targets = new Dictionary<string, (Guid Id, string Description)>(StringComparer.OrdinalIgnoreCase);
         foreach (var account in existing.Where(account => !account.IsDeleted))
             targets.TryAdd(BuildKey(account), (account.Id, $"{account.ServiceName} — {account.Username}"));
+
         foreach (var incoming in imported)
         {
             string key = BuildKey(incoming);
@@ -42,12 +49,15 @@ public partial class CsvImportWindow : Window
             Items.Add(item);
             if (!duplicate) targets.TryAdd(key, (incoming.Id, $"{incoming.ServiceName} — {incoming.Username}"));
         }
+
         dgPreview.ItemsSource = Items;
-        lblInfo.Text = "Xem lại từng dòng. Bản trùng mặc định được bỏ qua; có thể chọn ghi đè hoặc tạo bản sao.";
+        lblInfo.Text = LanguageService.Translate("Xem lại từng mục trước khi nhập. Mục trùng mặc định được bỏ qua; có thể chọn ghi đè hoặc tạo bản sao cho từng mục.");
         lblTotal.Text = string.Format(LanguageService.Translate("Tổng: {0}"), imported.Count);
         UpdateCounts();
     }
+
     private void Window_Loaded(object sender, RoutedEventArgs e) => LanguageService.ApplyToWindow(this);
+
     private void UpdateCounts()
     {
         int newCount = Items.Count(item => item.Action is CsvImportAction.ImportNew or CsvImportAction.ImportCopy);
@@ -57,23 +67,27 @@ public partial class CsvImportWindow : Window
         lblWillImport.Text = string.Format(LanguageService.Translate("Sẽ thêm: {0}"), newCount);
         lblWillOverwrite.Text = string.Format(LanguageService.Translate("Sẽ ghi đè: {0}"), overwriteCount);
     }
+
     private void BtnSelectNew_Click(object sender, RoutedEventArgs e)
     {
         foreach (var item in Items.Where(item => !item.IsDuplicate)) item.Action = CsvImportAction.ImportNew;
         dgPreview.Items.Refresh();
         UpdateCounts();
     }
+
     private void BtnSkipDuplicates_Click(object sender, RoutedEventArgs e)
     {
         foreach (var item in Items.Where(item => item.IsDuplicate)) item.Action = CsvImportAction.Skip;
         dgPreview.Items.Refresh();
         UpdateCounts();
     }
+
     private void BtnCancel_Click(object sender, RoutedEventArgs e)
     {
         DialogResult = false;
         Close();
     }
+
     private void BtnImport_Click(object sender, RoutedEventArgs e)
     {
         if (!Decisions.Any(decision => decision.Action != CsvImportAction.Skip))
@@ -85,9 +99,11 @@ public partial class CsvImportWindow : Window
         DialogResult = true;
         Close();
     }
+
     private static string BuildKey(SavedAccount account) =>
         (account.ServiceName ?? "").Trim() + "\u001f" + (account.Username ?? "").Trim();
 }
+
 public sealed class CsvPreviewItem : INotifyPropertyChanged
 {
     private CsvImportAction _action;
@@ -100,6 +116,7 @@ public sealed class CsvPreviewItem : INotifyPropertyChanged
     public string MaskedPassword => new string('•', Math.Min(8, Account.Password?.Length ?? 0));
     public string Note => Account.Note;
     public List<CsvImportActionOption> ActionOptions { get; }
+
     public CsvImportAction Action
     {
         get => _action;
@@ -110,7 +127,9 @@ public sealed class CsvPreviewItem : INotifyPropertyChanged
             OnPropertyChanged();
         }
     }
+
     public event PropertyChangedEventHandler? PropertyChanged;
+
     public CsvPreviewItem(SavedAccount account, bool isDuplicate, Guid? targetAccountId, string targetDescription)
     {
         Account = account;
@@ -122,6 +141,7 @@ public sealed class CsvPreviewItem : INotifyPropertyChanged
             : new() { Option(CsvImportAction.ImportNew), Option(CsvImportAction.Skip) };
         _action = isDuplicate ? CsvImportAction.Skip : CsvImportAction.ImportNew;
     }
+
     private static CsvImportActionOption Option(CsvImportAction action) => new(action, LanguageService.Translate(action switch
     {
         CsvImportAction.Skip => "Bỏ qua",
@@ -130,6 +150,7 @@ public sealed class CsvPreviewItem : INotifyPropertyChanged
         CsvImportAction.ImportCopy => "Tạo bản sao",
         _ => "Bỏ qua"
     }));
+
     private void OnPropertyChanged([CallerMemberName] string? name = null) =>
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 }

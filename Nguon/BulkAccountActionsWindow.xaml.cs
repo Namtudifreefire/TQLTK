@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using PersonalInfoManager.Services;
+
 namespace PersonalInfoManager;
+
 public partial class BulkAccountActionsWindow : Window
 {
     public bool ApplyFolder { get; private set; }
@@ -11,6 +13,7 @@ public partial class BulkAccountActionsWindow : Window
     public bool ApplyTags { get; private set; }
     public List<string> Tags { get; private set; } = new();
     public bool MoveToTrash { get; private set; }
+
     public BulkAccountActionsWindow(int selectedCount)
     {
         InitializeComponent();
@@ -20,12 +23,15 @@ public partial class BulkAccountActionsWindow : Window
         chkApplyTags.Checked += (_, _) => txtTags.IsEnabled = true;
         chkApplyTags.Unchecked += (_, _) => txtTags.IsEnabled = false;
     }
+
     private void Window_Loaded(object sender, RoutedEventArgs e) => LanguageService.ApplyToWindow(this);
+
     private void BtnCancel_Click(object sender, RoutedEventArgs e)
     {
         DialogResult = false;
         Close();
     }
+
     private void BtnApply_Click(object sender, RoutedEventArgs e)
     {
         ApplyFolder = chkApplyFolder.IsChecked == true;

@@ -5,7 +5,9 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using PersonalInfoManager.Models;
+
 namespace PersonalInfoManager.Services;
+
 public sealed class AccountSharePackage
 {
     public int Version { get; set; } = 1;
@@ -13,6 +15,7 @@ public sealed class AccountSharePackage
     public DateTimeOffset ExpiresAtUtc { get; set; }
     public SavedAccount Account { get; set; } = new();
 }
+
 public static class AccountShareService
 {
     public const int MaximumPackageBytes = 40 * 1024 * 1024;
@@ -20,6 +23,7 @@ public static class AccountShareService
     private const int MaximumAttachmentsTotalBytes = 25 * 1024 * 1024;
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = false };
     private const string PassphraseAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%";
+
     public static string GeneratePassphrase(int length = 28)
     {
         if (length is < 20 or > 64) throw new ArgumentOutOfRangeException(nameof(length));
@@ -29,6 +33,7 @@ public static class AccountShareService
                 span[index] = alphabet[RandomNumberGenerator.GetInt32(alphabet.Length)];
         });
     }
+
     public static void CreateEncryptedPackage(
         SavedAccount source, DateTimeOffset expiresAtUtc, string passphrase, string destinationPath)
     {
@@ -40,6 +45,7 @@ public static class AccountShareService
         expiresAtUtc = expiresAtUtc.ToUniversalTime();
         if (expiresAtUtc <= now || expiresAtUtc > now.AddDays(30))
             throw new ArgumentOutOfRangeException(nameof(expiresAtUtc), "Thời hạn gói chia sẻ phải trong vòng 30 ngày.");
+
         SavedAccount account = source.Clone();
         account.Id = Guid.NewGuid();
         account.PasswordHistory = new();
@@ -53,6 +59,7 @@ public static class AccountShareService
         account.IsDeleted = false;
         account.DeletedAt = null;
         ValidateAccount(account);
+
         var package = new AccountSharePackage
         {
             Version = 1,
@@ -74,6 +81,7 @@ public static class AccountShareService
         }
         finally { CryptographicOperations.ZeroMemory(verify); }
     }
+
     public static AccountSharePackage OpenEncryptedPackage(string sourcePath, string passphrase)
     {
         ArgumentNullException.ThrowIfNull(sourcePath);
@@ -82,6 +90,7 @@ public static class AccountShareService
         if (!info.Exists) throw new FileNotFoundException("Không tìm thấy gói chia sẻ.", sourcePath);
         if (info.Length is <= 0 or > MaximumPackageBytes)
             throw new InvalidDataException("Kích thước gói chia sẻ không hợp lệ hoặc vượt quá 40 MB.");
+
         byte[] bytes;
         using (var input = new FileStream(sourcePath, FileMode.Open, FileAccess.Read, FileShare.Read))
         using (var output = new MemoryStream())
@@ -99,6 +108,7 @@ public static class AccountShareService
             bytes = output.ToArray();
             CryptographicOperations.ZeroMemory(buffer);
         }
+
         try
         {
             string encrypted = new UTF8Encoding(false, true).GetString(bytes);
@@ -127,6 +137,7 @@ public static class AccountShareService
         }
         finally { CryptographicOperations.ZeroMemory(bytes); }
     }
+
     private static void ValidateAccount(SavedAccount account)
     {
         account.ServiceName ??= "";

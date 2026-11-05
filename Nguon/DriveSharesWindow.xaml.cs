@@ -3,11 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using PersonalInfoManager.Services;
+
 namespace PersonalInfoManager;
+
 public partial class DriveSharesWindow : Window
 {
     private readonly List<DriveShareInfo> _shares;
     public DriveShareInfo? SelectedShare { get; private set; }
+
     public DriveSharesWindow(IEnumerable<DriveShareInfo> shares)
     {
         InitializeComponent();
@@ -16,8 +19,10 @@ public partial class DriveSharesWindow : Window
             share.Expires?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "Không đặt",
             share.Created?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "Không rõ")).ToList();
     }
+
     private void Window_Loaded(object sender, RoutedEventArgs e) => LanguageService.ApplyToWindow(this);
     private void BtnClose_Click(object sender, RoutedEventArgs e) { DialogResult = false; Close(); }
+
     private void BtnRevoke_Click(object sender, RoutedEventArgs e)
     {
         if (dgShares.SelectedItem is not ShareView selected) return;
@@ -27,6 +32,7 @@ public partial class DriveSharesWindow : Window
         DialogResult = true;
         Close();
     }
+
     private sealed record ShareView(string Id, string RecipientEmail, string ExpiresText, string CreatedText)
     {
         public ShareView(DriveShareInfo share, string expires, string created)

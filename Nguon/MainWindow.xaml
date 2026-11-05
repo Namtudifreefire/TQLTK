@@ -456,12 +456,16 @@
                                     Padding="10"
                                     Margin="0,8,0,10">
                                 <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
 
-                                    <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                    <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal">
                                         <TextBlock Text="🔍 Tìm:"
                                                    VerticalAlignment="Center"
                                                    Margin="0,0,5,0"
@@ -475,14 +479,14 @@
                                                   VerticalAlignment="Center" Margin="10,0,0,0"
                                                   Checked="AccountFilters_Changed" Unchecked="AccountFilters_Changed"
                                                   Foreground="{DynamicResource TextPrimaryBrush}" />
-                                        <TextBlock Text="(tìm theo tên, URL, nhãn, thư mục)"
+                                        <TextBlock Text="(tìm cả ghi chú và trường tùy chỉnh không nhạy cảm)"
                                                    FontSize="10"
                                                    Foreground="{DynamicResource TextSecondaryBrush}"
                                                    VerticalAlignment="Center"
                                                    Margin="8,0,0,0" />
                                     </StackPanel>
 
-                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                    <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal">
                                         <Button Height="34" Padding="15,6" Click="BtnAddAccount_Click">
                                             <StackPanel Orientation="Horizontal">
                                                 <TextBlock Text="➕" FontSize="14" Margin="0,0,6,0" VerticalAlignment="Center" />
@@ -507,6 +511,30 @@
                                             </StackPanel>
                                         </Button>
                                     </StackPanel>
+
+                                    <WrapPanel Grid.Row="1" Grid.ColumnSpan="2" Margin="0,9,0,0" VerticalAlignment="Center">
+                                        <TextBlock Text="Tên miền" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="{DynamicResource TextSecondaryBrush}" />
+                                        <ComboBox x:Name="cmbDomainFilter" Width="150" Height="32" Margin="0,0,10,0"
+                                                  SelectionChanged="AccountFilters_Changed">
+                                            <ComboBoxItem Content="Tất cả tên miền" Tag="" IsSelected="True" />
+                                        </ComboBox>
+                                        <TextBlock Text="Thư mục" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="{DynamicResource TextSecondaryBrush}" />
+                                        <ComboBox x:Name="cmbFolderFilter" Width="140" Height="32" Margin="0,0,10,0"
+                                                  SelectionChanged="AccountFilters_Changed">
+                                            <ComboBoxItem Content="Tất cả thư mục" Tag="" IsSelected="True" />
+                                        </ComboBox>
+                                        <TextBlock Text="Nhãn" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="{DynamicResource TextSecondaryBrush}" />
+                                        <ComboBox x:Name="cmbTagFilter" Width="130" Height="32" Margin="0,0,10,0"
+                                                  SelectionChanged="AccountFilters_Changed">
+                                            <ComboBoxItem Content="Tất cả nhãn" Tag="" IsSelected="True" />
+                                        </ComboBox>
+                                        <CheckBox x:Name="chkMissingTotpOnly" Content="Thiếu TOTP" VerticalAlignment="Center"
+                                                  Margin="0,0,10,0" Checked="AccountFilters_Changed" Unchecked="AccountFilters_Changed"
+                                                  Foreground="{DynamicResource TextPrimaryBrush}" />
+                                        <CheckBox x:Name="chkSecurityWarningOnly" Content="Cảnh báo bảo mật" VerticalAlignment="Center"
+                                                  Margin="0,0,10,0" Checked="AccountFilters_Changed" Unchecked="AccountFilters_Changed"
+                                                  Foreground="{DynamicResource TextPrimaryBrush}" />
+                                    </WrapPanel>
                                 </Grid>
                             </Border>
 
@@ -624,7 +652,7 @@
                                                     <Button Tag="Share" Content="Chia sẻ tạm thời" Style="{StaticResource AccountActionPopupButton}" Click="AccountActionPopupItem_Click" />
                                                     <Button Tag="Bulk" Content="Thao tác hàng loạt" Style="{StaticResource AccountActionPopupButton}" Click="AccountActionPopupItem_Click" />
                                                     <Button Tag="Export" Content="Xuất mục đã chọn" Style="{StaticResource AccountActionPopupButton}" Click="AccountActionPopupItem_Click" />
-                                                    <Button Tag="UndoImport" Content="Hoàn tác nhập CSV" Style="{StaticResource AccountActionPopupButton}" Click="AccountActionPopupItem_Click" />
+                                                    <Button Tag="UndoImport" Content="Hoàn tác nhập" Style="{StaticResource AccountActionPopupButton}" Click="AccountActionPopupItem_Click" />
                                                     <Border Height="1" Margin="8,5" Background="{DynamicResource BorderBrush}" />
                                                     <Button Tag="Delete" Content="Xóa" Style="{StaticResource AccountActionPopupDangerButton}" Click="AccountActionPopupItem_Click" />
                                                 </StackPanel>
@@ -886,6 +914,16 @@
                                             <TextBlock x:Name="lblSecurityRecoveryAudit" Style="{StaticResource RowDesc}" Margin="0,3" TextWrapping="Wrap" />
                                             <TextBlock x:Name="lblPwnedPasswordAudit" Style="{StaticResource RowDesc}" Margin="0,7,0,0" TextWrapping="Wrap" />
                                             <TextBlock Text="Các chỉ số khác được tính cục bộ. Kiểm tra rò rỉ là tùy chọn và chỉ gửi tiền tố hash một phần qua HTTPS." Style="{StaticResource RowDesc}" Margin="0,4,0,0" TextWrapping="Wrap" />
+                                            <WrapPanel Margin="0,8,0,0" VerticalAlignment="Center">
+                                                <TextBlock Text="Nhắc kiểm tra lại (không tự gửi yêu cầu):" VerticalAlignment="Center" Margin="0,0,8,0" />
+                                                <ComboBox x:Name="cmbPwnedReminder" Width="190" Height="34" SelectedValuePath="Tag"
+                                                          SelectionChanged="PwnedReminder_SelectionChanged">
+                                                    <ComboBoxItem Content="Không nhắc định kỳ" Tag="0" />
+                                                    <ComboBoxItem Content="Sau 30 ngày" Tag="30" />
+                                                    <ComboBoxItem Content="Sau 90 ngày" Tag="90" />
+                                                    <ComboBoxItem Content="Sau 180 ngày" Tag="180" />
+                                                </ComboBox>
+                                            </WrapPanel>
                                             <TextBlock Text="Tài khoản cần xem xét" Style="{StaticResource RowTitle}" Margin="0,12,0,4" />
                                             <TextBlock x:Name="lblSecurityFindingsSummary" Style="{StaticResource RowDesc}" Margin="0,0,0,5" TextWrapping="Wrap" />
                                             <ListBox x:Name="listSecurityFindings"
@@ -1132,8 +1170,8 @@
                                         <DockPanel>
                                             <Button DockPanel.Dock="Right" Content="Nhập" Style="{StaticResource RowButton}" Click="MnuImportCsv_Click" />
                                             <StackPanel VerticalAlignment="Center">
-                                                <TextBlock Text="Nhập CSV" Style="{StaticResource RowTitle}" />
-                                                <TextBlock Text="Hỗ trợ Chrome, Bitwarden, LastPass, TQLTK. Có xem trước trước khi nhập." Style="{StaticResource RowDesc}" />
+                                                <TextBlock Text="Nhập dữ liệu tài khoản" Style="{StaticResource RowTitle}" />
+                                                <TextBlock Text="Hỗ trợ CSV, JSON Bitwarden, KeePass XML; có xem trước và hoàn tác. Dùng Khôi phục sao lưu cho file TQLTK." Style="{StaticResource RowDesc}" />
                                             </StackPanel>
                                         </DockPanel>
                                     </Border>
@@ -1244,6 +1282,16 @@
                                             <StackPanel VerticalAlignment="Center">
                                                 <TextBlock Text="Thông tin hệ thống" Style="{StaticResource RowTitle}" />
                                                 <TextBlock Text="Hệ điều hành, .NET, tiến trình và quyền hiện tại." Style="{StaticResource RowDesc}" />
+                                            </StackPanel>
+                                        </DockPanel>
+                                    </Border>
+
+                                    <Border Style="{StaticResource SettingRow}">
+                                        <DockPanel>
+                                            <Button DockPanel.Dock="Right" Content="Cấu hình" Style="{StaticResource RowButton}" Click="BtnKeyboardShortcuts_Click" />
+                                            <StackPanel VerticalAlignment="Center">
+                                                <TextBlock Text="Phím tắt" Style="{StaticResource RowTitle}" />
+                                                <TextBlock Text="Tùy chỉnh hoặc tắt phím khóa vault, tìm kiếm, sao chép tên đăng nhập và mở TOTP." Style="{StaticResource RowDesc}" />
                                             </StackPanel>
                                         </DockPanel>
                                     </Border>

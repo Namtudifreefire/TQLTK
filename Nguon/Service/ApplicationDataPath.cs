@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+
 namespace PersonalInfoManager.Services
 {
     internal static class ApplicationDataPath

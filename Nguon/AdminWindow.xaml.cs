@@ -5,14 +5,17 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using PersonalInfoManager.Models;
 using PersonalInfoManager.Services;
+
 namespace PersonalInfoManager
 {
     public partial class AdminWindow : Window
     {
         private readonly UserService _userService = new();
+
         public AdminWindow()
         {
             InitializeComponent();
+
             if (!SessionService.IsAdmin)
             {
                 Loaded += (_, _) =>
@@ -26,6 +29,7 @@ namespace PersonalInfoManager
                 };
                 return;
             }
+
             Loaded += (_, _) =>
             {
                 if (!SessionService.IsAdmin)
@@ -33,17 +37,21 @@ namespace PersonalInfoManager
                     Close();
                     return;
                 }
+
                 Refresh();
             };
         }
+
         private void Refresh()
         {
             dgUsers.ItemsSource = null;
             dgUsers.ItemsSource = _userService.GetAll();
         }
+
         private void BtnCreate_Click(object sender, RoutedEventArgs e)
         {
             var role = cbRole.SelectedIndex == 1 ? UserRole.Admin : UserRole.User;
+
             var result = _userService.CreateUserFull(
                 txtNewUser.Text,
                 txtNewPwd.Password,
@@ -51,10 +59,12 @@ namespace PersonalInfoManager
                 txtNewFullName.Text,
                 txtNewEmail.Text,
                 txtNewPhone.Text);
+
             MessageBox.Show(result.message,
                 result.ok ? "Thành công" : "Lỗi",
                 MessageBoxButton.OK,
                 result.ok ? MessageBoxImage.Information : MessageBoxImage.Warning);
+
             if (result.ok)
             {
                 try
@@ -64,6 +74,7 @@ namespace PersonalInfoManager
                         $"Tạo '{txtNewUser.Text.Trim()}' - {txtNewFullName.Text}");
                 }
                 catch { }
+
                 txtNewUser.Clear();
                 txtNewPwd.Clear();
                 txtNewFullName.Clear();
@@ -73,6 +84,7 @@ namespace PersonalInfoManager
                 Refresh();
             }
         }
+
         private void BtnEdit_Click(object sender, RoutedEventArgs e)
         {
             if (dgUsers.SelectedItem is not User u)
@@ -80,6 +92,7 @@ namespace PersonalInfoManager
                 MessageBox.Show("Chọn một tài khoản để sửa.");
                 return;
             }
+
             var dlg = new EditUserWindow(u, _userService) { Owner = this };
             if (dlg.ShowDialog() == true)
             {
@@ -92,6 +105,7 @@ namespace PersonalInfoManager
                 Refresh();
             }
         }
+
         private void BtnResetPwd_Click(object sender, RoutedEventArgs e)
         {
             if (dgUsers.SelectedItem is not User u)
@@ -99,16 +113,20 @@ namespace PersonalInfoManager
                 MessageBox.Show("Chọn một tài khoản.");
                 return;
             }
+
             var input = Microsoft.VisualBasic.Interaction.InputBox(
                 $"Nhập mật khẩu mới cho '{u.Username}' (>= 6 ký tự):\n" +
                 "(Người dùng sẽ phải đổi lại mật khẩu này khi đăng nhập lần tới.)",
                 "Đặt lại mật khẩu", "");
+
             if (string.IsNullOrWhiteSpace(input)) return;
+
             var result = _userService.ResetPassword(u.Id, input);
             MessageBox.Show(result.message,
                 result.ok ? "OK" : "Lỗi",
                 MessageBoxButton.OK,
                 result.ok ? MessageBoxImage.Information : MessageBoxImage.Warning);
+
             if (result.ok)
             {
                 try
@@ -119,6 +137,7 @@ namespace PersonalInfoManager
                 catch { }
             }
         }
+
         private void BtnToggleActive_Click(object sender, RoutedEventArgs e)
         {
             if (dgUsers.SelectedItem is not User u)
@@ -126,13 +145,16 @@ namespace PersonalInfoManager
                 MessageBox.Show("Chọn một tài khoản.");
                 return;
             }
+
             if (u.Id == SessionService.CurrentUser!.Id)
             {
                 MessageBox.Show("Không thể khóa chính mình.");
                 return;
             }
+
             bool newActive = !u.IsActive;
             _userService.SetActive(u.Id, newActive);
+
             try
             {
                 ActivityLogger.Log(SessionService.CurrentUser!.Username,
@@ -142,6 +164,7 @@ namespace PersonalInfoManager
             catch { }
             Refresh();
         }
+
         private void BtnToggleRole_Click(object sender, RoutedEventArgs e)
         {
             if (dgUsers.SelectedItem is not User u)
@@ -149,14 +172,17 @@ namespace PersonalInfoManager
                 MessageBox.Show("Chọn một tài khoản.");
                 return;
             }
+
             var oldRole = u.Role;
             var newRole = oldRole == UserRole.Admin ? UserRole.User : UserRole.Admin;
+
             var result = _userService.SetRole(u.Id, newRole);
             if (!result.ok)
             {
                 MessageBox.Show(result.message, "Lỗi", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
+
             try
             {
                 ActivityLogger.Log(SessionService.CurrentUser!.Username,
@@ -165,6 +191,7 @@ namespace PersonalInfoManager
             catch { }
             Refresh();
         }
+
         private void BtnDelete_Click(object sender, RoutedEventArgs e)
         {
             if (dgUsers.SelectedItem is not User u)
@@ -172,13 +199,16 @@ namespace PersonalInfoManager
                 MessageBox.Show("Chọn một tài khoản.");
                 return;
             }
+
             if (MessageBox.Show(
                     $"Xóa tài khoản '{u.Username}'?\nKhông thể hoàn tác!",
                     "Xác nhận", MessageBoxButton.YesNo,
                     MessageBoxImage.Warning) != MessageBoxResult.Yes)
                 return;
+
             var leftovers = UserDataCleaner.Describe(u.Id, u.Username);
             bool wipeData = false;
+
             if (leftovers.Count > 0)
             {
                 var ask = MessageBox.Show(
@@ -193,23 +223,31 @@ namespace PersonalInfoManager
                     "Xóa dữ liệu của người dùng",
                     MessageBoxButton.YesNoCancel, MessageBoxImage.Warning,
                     MessageBoxResult.No);
+
                 if (ask == MessageBoxResult.Cancel) return;
                 wipeData = ask == MessageBoxResult.Yes;
             }
+
             var result = _userService.DeleteUser(u.Id, SessionService.CurrentUser!.Id);
+
             if (!result.ok)
             {
                 MessageBox.Show(result.message, "Lỗi");
                 return;
             }
+
             string message = result.message;
+
             if (wipeData)
             {
                 var (removed, errors) = UserDataCleaner.Delete(u.Id, u.Username);
+
                 if (removed.Count > 0)
                     message += "\n\nĐã xóa dữ liệu:\n" + string.Join("\n", removed.Select(r => "• " + r));
+
                 if (errors.Count > 0)
                     message += "\n\nKhông xóa được:\n" + string.Join("\n", errors.Select(r => "• " + r));
+
                 try
                 {
                     ActivityLogger.Log(SessionService.CurrentUser!.Username,
@@ -218,6 +256,7 @@ namespace PersonalInfoManager
                 }
                 catch { }
             }
+
             try
             {
                 ActivityLogger.Log(SessionService.CurrentUser!.Username,
@@ -225,13 +264,17 @@ namespace PersonalInfoManager
                     wipeData ? $"{u.Username} (kèm dữ liệu)" : $"{u.Username} (giữ dữ liệu)");
             }
             catch { }
+
             MessageBox.Show(message, "OK");
             Refresh();
         }
+
         private void BtnRefresh_Click(object sender, RoutedEventArgs e) => Refresh();
+
         private void BtnViewLog_Click(object sender, RoutedEventArgs e)
         {
             string log = LanguageService.TranslateLogContent(ActivityLogger.ReadTodayLog());
+
             var dlg = new Window
             {
                 Title = "Nhật ký hôm nay",
@@ -241,6 +284,7 @@ namespace PersonalInfoManager
                 Owner = this,
                 Background = new SolidColorBrush(Color.FromRgb(30, 30, 30))
             };
+
             var txt = new TextBox
             {
                 Text = log,
@@ -254,6 +298,7 @@ namespace PersonalInfoManager
                 Foreground = Brushes.LightGreen,
                 Padding = new Thickness(10)
             };
+
             dlg.Content = txt;
             dlg.ShowDialog();
         }

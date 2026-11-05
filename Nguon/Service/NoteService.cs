@@ -4,27 +4,34 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Text.Json;
 using PersonalInfoManager.Models;
+
 namespace PersonalInfoManager.Services
 {
+
     public class NoteService
     {
         private readonly string _dataFile = Path.Combine(
             ApplicationDataPath.Root,
             "PersonalInfoManager", "notes.json");
+
         public List<Note> Load()
         {
             if (!File.Exists(_dataFile)) return new List<Note>();
+
             return DecryptNotes(File.ReadAllText(_dataFile));
         }
+
         private static List<Note> DecryptNotes(string encrypted)
         {
             if (string.IsNullOrWhiteSpace(encrypted)) return new List<Note>();
+
             if (!AesCrypto.IsAuthenticatedV2Format(encrypted))
             {
                 throw new CryptographicException(
                     "Ghi chú không dùng định dạng AES-GCM v2. CBC cũ không có kiểm tra toàn vẹn, " +
                     "nên ứng dụng từ chối mở và giữ nguyên file để phục hồi riêng.");
             }
+
             string json;
             try { json = AesCrypto.Decrypt(encrypted); }
             catch (FormatException ex)
@@ -32,6 +39,7 @@ namespace PersonalInfoManager.Services
                 throw new CryptographicException(
                     "Dữ liệu ghi chú AES-GCM không hợp lệ; file được giữ nguyên.", ex);
             }
+
             try
             {
                 return JsonSerializer.Deserialize<List<Note>>(json)
@@ -43,6 +51,7 @@ namespace PersonalInfoManager.Services
                     "Nội dung ghi chú không hợp lệ; file được giữ nguyên.", ex);
             }
         }
+
         public void Save(List<Note> notes)
         {
             using var storageLock = AesCrypto.AcquireStorageLock();
@@ -51,9 +60,12 @@ namespace PersonalInfoManager.Services
                 string existing = File.ReadAllText(_dataFile);
                 _ = DecryptNotes(existing);
             }
+
             Directory.CreateDirectory(Path.GetDirectoryName(_dataFile)!);
+
             string json = JsonSerializer.Serialize(notes,
                 new JsonSerializerOptions { WriteIndented = true });
+
             string encrypted = AesCrypto.Encrypt(json);
             AtomicFileService.WriteAllText(_dataFile, encrypted);
         }

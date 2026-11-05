@@ -1,12 +1,15 @@
 namespace PersonalInfoManager.Services;
+
 internal static class EnglishCatalog
 {
     internal static readonly IReadOnlyDictionary<string, string> Entries = BuildEntries();
     internal static readonly IReadOnlyList<KeyValuePair<string, string>> Fragments = BuildFragments();
+
     private static Dictionary<string, string> BuildEntries()
     {
         var values = new Dictionary<string, string>(StringComparer.Ordinal);
         void Add(string source, string translation) => values[source] = translation;
+
         Add("Mật khẩu mới và hash được nâng cấp sau đăng nhập sẽ dùng PBKDF2-HMAC-SHA256 600.000 vòng. Hash Argon2id hiện tại vẫn được xác minh bình thường.", "New passwords and hashes upgraded after sign-in will use PBKDF2-HMAC-SHA256 with 600,000 iterations. Existing Argon2id hashes will still be verified normally.");
         Add("Mật khẩu mới và hash được nâng cấp sau đăng nhập sẽ dùng Argon2id. Hash PBKDF2 hiện tại vẫn được xác minh bình thường.", "New passwords and hashes upgraded after sign-in will use Argon2id. Existing PBKDF2 hashes will still be verified normally.");
         Add("Đã lưu lựa chọn thuật toán băm cho mật khẩu mới và lần nâng cấp hash tiếp theo.", "The hashing choice for new passwords and the next hash upgrade has been saved.");
@@ -977,6 +980,7 @@ internal static class EnglishCatalog
         Add("xem mã TOTP", "view TOTP code");
         Add("xuất vault", "export vault");
         Add("xóa hẳn mục khỏi thùng rác", "permanently delete an item from Trash");
+
         Add(" mục từ QR chuyển tài khoản. Chọn mục dành cho website đang sửa.", " entries from the account transfer QR code. Select the entry for the website being edited.");
         Add("Bạn vừa dùng 1 mã khôi phục. Còn lại ", "You just used a recovery code. Remaining codes: ");
         Add("Chu kỳ TOTP phải từ 5 đến 120 giây.", "The TOTP period must be between 5 and 120 seconds.");
@@ -1123,6 +1127,7 @@ internal static class EnglishCatalog
         Add("Tài khoản này chưa bật đăng nhập bằng Windows Hello.\n\n👉 Vui lòng đăng nhập bằng mật khẩu, sau đó vào:\n   Tab '👤 Thông tin cá nhân' → Bật 'Đăng nhập bằng Windows Hello'.", "Windows Hello sign-in is not enabled for this account.\n\n👉 Sign in with your password, then go to:\n   '👤 Personal Information' → Enable 'Sign in with Windows Hello'.");
         Add("Tab '👤 Thông tin cá nhân' → Bật 'Đăng nhập bằng Windows Hello'.", "On the '👤 Personal Information' tab, enable 'Sign in with Windows Hello'.");
         Add("Ứng dụng sẽ kiểm tra các mật khẩu hiện tại trong vault qua Have I Been Pwned. Ứng dụng chỉ gửi 5 ký tự đầu của SHA-1 hash qua HTTPS; mật khẩu đầy đủ, hash đầy đủ, tên dịch vụ và username không được gửi. Dịch vụ vẫn có thể thấy địa chỉ IP và tiền tố hash. Bạn chỉ tiếp tục nếu đồng ý gửi yêu cầu này.", "The app will check current passwords in the vault using Have I Been Pwned. It sends only the first 5 characters of the SHA-1 hash over HTTPS; the full password, full hash, service name, and username are not sent. The service may still see your IP address and hash prefix. Continue only if you agree to send this request.");
+
         Add("Mở website", "Open website");
         Add("Tệp đính kèm", "Attachments");
         Add("Lịch sử sửa", "Edit history");
@@ -1205,6 +1210,7 @@ internal static class EnglishCatalog
         Add("Tên miền gần giống ", "The domain is similar to ");
         Add("Đã thêm {0}, ghi đè {1}, bỏ qua {2} tài khoản.", "Added {0}, overwrote {1}, and skipped {2} accounts.");
         Add("Tài khoản này chưa có URL HTTP hoặc HTTPS hợp lệ.", "This account does not have a valid HTTP or HTTPS URL.");
+
         Add("Mở chia sẻ", "Open shared item");
         Add("Mở mục được chia sẻ", "Open shared item");
         Add("Mở gói mã hóa có thời hạn bằng khóa người gửi đã chia sẻ riêng.", "Open an encrypted, expiring package with the key provided separately by the sender.");
@@ -1327,8 +1333,101 @@ internal static class EnglishCatalog
         Add("Bản sao lưu Google Drive: {0} ({1})\nNgười tạo: {2}\nSẽ nhập {3} tài khoản; bỏ qua {4} mục trùng. Mật khẩu không hiển thị.", "Google Drive backup: {0} ({1})\nCreated by: {2}\n{3} accounts will be imported; {4} duplicates will be skipped. Passwords are hidden.");
         Add("Xem trước khôi phục kho mật khẩu", "Preview vault restore");
         Add("Mục này chưa có URL HTTP hoặc HTTPS hợp lệ.", "This item does not have a valid HTTP or HTTPS URL.");
+
+        Add("Tên miền", "Domain");
+        Add("Tất cả tên miền", "All domains");
+        Add("Thư mục", "Folder");
+        Add("Tất cả thư mục", "All folders");
+        Add("Nhãn", "Tag");
+        Add("Tất cả nhãn", "All tags");
+        Add("Thiếu TOTP", "Missing TOTP");
+        Add("Cảnh báo bảo mật", "Security warnings");
+        Add("Hỗ trợ CSV, JSON Bitwarden, KeePass XML; có xem trước và hoàn tác. Dùng Khôi phục sao lưu cho file TQLTK.", "Supports CSV, Bitwarden JSON, and KeePass XML with preview and undo. Use Restore backup for TQLTK backup files.");
+        Add("Phím tắt", "Keyboard shortcuts");
+        Add("Cấu hình", "Configure");
+        Add("Tùy chỉnh hoặc tắt phím khóa vault, tìm kiếm, sao chép tên đăng nhập và mở TOTP.", "Customize or disable shortcuts for locking the vault, searching, copying a username, and opening TOTP.");
+        Add("Chọn phím cho từng thao tác. Thao tác bị tắt sẽ không phản hồi với phím tắt.", "Choose a shortcut for each action. Disabled actions will not respond to keyboard shortcuts.");
+        Add("Khóa vault", "Lock the vault");
+        Add("Tìm kiếm tài khoản", "Search accounts");
+        Add("Sao chép tên đăng nhập đã chọn", "Copy selected username");
+        Add("Hiện mã TOTP của tài khoản đã chọn", "Show TOTP for the selected account");
+        Add("Không thể mở khóa cài đặt phím tắt.", "Could not open the keyboard shortcut settings key.");
+        Add("Cấu hình phím tắt không đầy đủ hoặc có mục lặp.", "The keyboard shortcut configuration is incomplete or contains duplicates.");
+        Add("Phím tắt không nằm trong danh sách tổ hợp được hỗ trợ.", "The shortcut is not one of the supported key combinations.");
+        Add("Không thể gán cùng một phím tắt cho nhiều thao tác đang bật.", "The same shortcut cannot be assigned to multiple enabled actions.");
+        Add("Xem trước nhập tài khoản", "Review account import");
+        Add("Xem trước nhập {0}", "Review {0} import");
+        Add("📥 Xem trước tài khoản nhập", "📥 Review imported accounts");
+        Add("Xem lại từng mục trước khi nhập. Mục trùng mặc định được bỏ qua; có thể chọn ghi đè hoặc tạo bản sao cho từng mục.", "Review each item before importing. Duplicates are skipped by default; choose overwrite or copy for each item.");
+        Add("Xem lại từng dòng. Bản trùng mặc định được bỏ qua; có thể chọn ghi đè hoặc tạo bản sao.", "Review each row. Duplicates are skipped by default; you can overwrite or import a copy.");
+        Add("Tên đăng nhập", "Username");
+        Add("Độ dài tối thiểu", "Minimum length");
+        Add("Độ dài tối đa", "Maximum length");
+        Add("Bắt buộc chữ hoa", "Require uppercase letters");
+        Add("Bắt buộc chữ thường", "Require lowercase letters");
+        Add("Bắt buộc chữ số", "Require digits");
+        Add("Bắt buộc ký hiệu", "Require symbols");
+        Add("Ký tự bị cấm", "Forbidden characters");
+        Add("Áp dụng quy tắc đã lưu cho website này", "Apply saved rules for this website");
+        Add("Lưu quy tắc website", "Save website rules");
+        Add("Xóa quy tắc đã lưu", "Remove saved rules");
+        Add("Quy tắc được lưu riêng cho {0}.", "Rules are saved separately for {0}.");
+        Add("Giới hạn độ dài mật khẩu của website không hợp lệ.", "Website password length limits are invalid.");
+        Add("Hãy chọn độ dài từ {0} đến {1} ký tự cho website này.", "Choose a password length from {0} to {1} for this website.");
+        Add("Độ dài đã chọn không đủ để đáp ứng các nhóm ký tự bắt buộc của website.", "The selected length is too short to satisfy this website's required character groups.");
+        Add("Hãy nhập URL website HTTP hoặc HTTPS hợp lệ trước.", "Enter a valid HTTP or HTTPS website URL first.");
+        Add("Độ dài tối đa không đủ cho tất cả nhóm ký tự bắt buộc.", "The maximum password length cannot satisfy all required character groups.");
+        Add("Đã đạt số lượng tối đa các quy tắc mật khẩu website được lưu.", "The maximum number of saved website password policies was reached.");
+        Add("Dữ liệu quy tắc mật khẩu website vượt giới hạn kích thước.", "Saved website password policies exceed the size limit.");
+        Add("Không thể mở khóa cài đặt của ứng dụng.", "Could not open the app settings registry key.");
+        Add("Không thể bảo đảm quy tắc ký tự của website bằng cụm mật khẩu. Hãy chọn chế độ mật khẩu ngẫu nhiên.", "Website character rules cannot be guaranteed by a passphrase. Choose random-password mode.");
+        Add("Độ dài website phải trong khoảng 8–64 và độ dài tối thiểu không được lớn hơn tối đa.", "Website password length limits must be 8–64, with the minimum no greater than the maximum.");
+        Add("Độ dài tối đa không đủ cho các nhóm ký tự bắt buộc.", "The maximum length is too short for the required character groups.");
+        Add("{0} phải là số nguyên.", "{0} must be an integer.");
+        Add("Tệp đã chọn trống hoặc vượt giới hạn nhập 64 MB.", "The selected file is empty or exceeds the 64 MB import limit.");
+        Add("Không tìm thấy tệp đã chọn.", "The selected file does not exist.");
+        Add("Chưa hỗ trợ mở trực tiếp file .kdbx đã mã hóa. Hãy xuất dữ liệu thành KeePass XML trong KeePass rồi nhập file XML.", "Encrypted .kdbx files are not supported directly. Export the database as KeePass XML from KeePass, then import the XML file.");
+        Add("Đây là bản sao lưu kho mật khẩu TQLTK. Hãy dùng Tiện ích → Nhập kho mật khẩu để xem trước và nhập dữ liệu.", "This is a TQLTK vault backup. Use Utilities → Import vault to preview and import its data.");
+        Add("Đây là bản sao lưu File cá nhân TQLTK, không phải tệp tài khoản. Hãy dùng Tiện ích → Kiểm tra bản sao lưu hoặc Diễn tập khôi phục.", "This is a TQLTK personal-file backup, not an account export. Use Utilities → Verify backup or Restore drill.");
+        Add("Định dạng tài khoản được hỗ trợ là CSV, JSON và KeePass XML. File .vault có luồng nhập riêng; file .tqf là bản sao lưu File cá nhân.", "Supported account formats are CSV, JSON, and KeePass XML. .vault files have a separate import flow; .tqf files are personal-file backups.");
+        Add("Không thể đọc tệp nhập. Hãy kiểm tra định dạng, quyền truy cập và giới hạn 64 MB.", "Could not read the import file. Check its format, access permissions, and the 64 MB limit.");
+        Add("Tệp JSON trống hoặc vượt giới hạn nhập 64 MB.", "The JSON file is empty or exceeds the 64 MB import limit.");
+        Add("Tệp nhập có hơn {0} mục được hỗ trợ.", "The import contains more than {0} supported entries.");
+        Add("Tài khoản đã nhập", "Imported account");
+        Add("TOTP chưa phân tích được", "Unparsed TOTP");
+        Add("Không tìm thấy mục đăng nhập được hỗ trợ trong tệp JSON.", "No supported login entries were found in this JSON file.");
+        Add("Đã đọc {0} mục đăng nhập từ JSON.", "Read {0} login entries from JSON.");
+        Add("Tệp không phải JSON hợp lệ hoặc dữ liệu lồng quá sâu so với giới hạn an toàn.", "The file is not valid JSON or its nesting exceeds the safe import limit.");
+        Add("Không thể phân tích dữ liệu đăng nhập JSON.", "Could not parse the JSON login export.");
+        Add("Tệp XML trống hoặc vượt giới hạn nhập 64 MB.", "The XML file is empty or exceeds the 64 MB import limit.");
+        Add("Đây không phải file xuất KeePass XML.", "This is not a KeePass XML export.");
+        Add("File xuất KeePass XML không có nhóm gốc.", "The KeePass XML export has no root group.");
+        Add("Không tìm thấy mục đăng nhập trong file KeePass XML.", "No login entries were found in the KeePass XML export.");
+        Add("Đã đọc {0} mục đăng nhập từ KeePass XML.", "Read {0} login entries from KeePass XML.");
+        Add("Tệp không phải KeePass XML hợp lệ. DTD và thực thể bên ngoài bị từ chối.", "The file is not valid KeePass XML. DTDs and external entities are not allowed.");
+        Add("Nhóm KeePass lồng nhau vượt giới hạn 64 cấp.", "KeePass groups exceed the maximum nesting depth of 64.");
+        Add("KeePass XML có trường Protected không thể giải mã an toàn. Hãy xuất bản XML dạng chữ thường bằng KeePass.", "KeePass XML contains protected values that cannot be safely decoded. Export a plaintext XML copy using KeePass.");
+        Add("Tệp trống hoặc vượt giới hạn nhập 64 MB.", "The file is empty or exceeds the 64 MB import limit.");
+        Add("Tệp vượt giới hạn nhập 64 MB.", "The file exceeds the 64 MB import limit.");
+        Add("Chưa chạy kiểm tra rò rỉ. Kiểm tra là tùy chọn và không bao giờ tự gửi yêu cầu.", "No breach check has been run. Checking is optional and is never sent automatically.");
+        Add("Không thể đọc kết quả kiểm tra rò rỉ đã lưu trong tài khoản Windows này. Hãy chạy lại kiểm tra nếu muốn.", "A saved breach-check result could not be read in this Windows account. Run a new optional check.");
+        Add("Vault đã thay đổi sau lần kiểm tra này; kết quả đã cũ.", "The vault changed after this check; results are outdated.");
+        Add("Đã đến hạn nhắc kiểm tra lại theo lựa chọn của bạn.", "Your chosen recheck reminder is due.");
+        Add("Kết quả khớp với vault hiện tại.", "Results match the current vault.");
+        Add(" Không thể lưu kết quả; dữ liệu này chỉ dùng được đến khi đóng ứng dụng.", " The result is only available until this app session ends because it could not be saved.");
+        Add("Lần kiểm tra HIBP gần nhất: {0} • đã kiểm tra {1} mật khẩu duy nhất • {2} giá trị bị lộ • {3}", "Last HIBP check: {0} • {1} unique passwords checked • {2} breached values • {3}");
+        Add("Không nhắc định kỳ", "No scheduled reminder");
+        Add("Sau 30 ngày", "After 30 days");
+        Add("Sau 90 ngày", "After 90 days");
+        Add("Sau 180 ngày", "After 180 days");
+        Add("Nhắc kiểm tra lại (không tự gửi yêu cầu):", "Remind me to check again (no automatic requests):");
+        Add("Lần kiểm tra HIBP gần nhất", "Last HIBP check");
+        Add("Tệp tài khoản (*.csv;*.json;*.xml;*.kdbx)|*.csv;*.json;*.xml;*.kdbx|CSV (*.csv)|*.csv|JSON (*.json)|*.json|KeePass XML (*.xml)|*.xml|Tất cả tệp (*.*)|*.*", "Account files (*.csv;*.json;*.xml;*.kdbx)|*.csv;*.json;*.xml;*.kdbx|CSV (*.csv)|*.csv|JSON (*.json)|*.json|KeePass XML (*.xml)|*.xml|All files (*.*)|*.*");
+        Add("Không thể đọc tệp nhập. Hãy kiểm tra định dạng, quyền truy cập và giới hạn 64 MB.", "Could not read the import file. Check its format, access permissions, and the 64 MB limit.");
+
         return values;
     }
+
     private static IReadOnlyList<KeyValuePair<string, string>> BuildFragments() => new[]
     {
         new KeyValuePair<string, string>("Diễn tập khôi phục thất bại; kho thật không thay đổi. ", "Restore drill failed; the actual store was unchanged. "),

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Windows;
 using PersonalInfoManager.Services;
+
 namespace PersonalInfoManager
 {
     public partial class RecoveryCodesWindow : Window
@@ -10,13 +11,16 @@ namespace PersonalInfoManager
         private readonly string _username;
         private readonly List<string> _codes;
         private bool _finished;
+
         public RecoveryCodesWindow(string username, List<string> codes)
         {
             InitializeComponent();
+
             _username = username;
             _codes = codes;
             txtCodes.Text = string.Join(Environment.NewLine, codes);
         }
+
         private void BtnCopy_Click(object sender, RoutedEventArgs e)
         {
             if (!ClipboardGuard.CopySensitive(txtCodes.Text))
@@ -24,6 +28,7 @@ namespace PersonalInfoManager
                     "Không thể sao chép mã khôi phục vào clipboard an toàn. Hãy thử lại.",
                     "Không thể sao chép", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
+
         private void BtnFinish_Click(object sender, RoutedEventArgs e)
         {
             var result = TwoFactorService.CommitRecoveryCodes(_username, _codes);
@@ -33,9 +38,11 @@ namespace PersonalInfoManager
                 lblError.Visibility = Visibility.Visible;
                 return;
             }
+
             _finished = true;
             DialogResult = true;
         }
+
         protected override void OnClosing(CancelEventArgs e)
         {
             if (!_finished && SessionService.IsLoggedIn)
@@ -43,6 +50,7 @@ namespace PersonalInfoManager
                 var r = MessageBox.Show(this,
                     "Bạn chưa bấm hoàn tất.\nNếu đóng bây giờ, các mã mới sẽ bị hủy và mã khôi phục cũ vẫn dùng như trước.\n\nĐóng cửa sổ?",
                     "Xác nhận", MessageBoxButton.YesNo, MessageBoxImage.Question);
+
                 if (r != MessageBoxResult.Yes)
                 {
                     e.Cancel = true;

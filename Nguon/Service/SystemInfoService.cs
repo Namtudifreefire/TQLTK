@@ -2,14 +2,18 @@ using System;
 using System.Diagnostics;
 using System.Security.Principal;
 using System.Text;
+
 namespace PersonalInfoManager.Services
 {
+
     public static class SystemInfoService
     {
+
         public static string GetSystemReport()
         {
             var sb = new StringBuilder();
             bool english = LanguageService.IsEnglish;
+
             sb.AppendLine(english ? "=== SYSTEM INFORMATION ===" : "=== THÔNG TIN HỆ THỐNG ===");
             AppendField(sb, english ? "OS" : "Hệ điều hành", Environment.OSVersion.ToString());
             AppendField(sb, english ? "Computer" : "Máy tính", Environment.MachineName);
@@ -21,6 +25,7 @@ namespace PersonalInfoManager.Services
             AppendField(sb, english ? "App folder" : "Thư mục ứng dụng", Environment.CurrentDirectory);
             AppendField(sb, english ? "System directory" : "Thư mục hệ thống", Environment.SystemDirectory);
             sb.AppendLine();
+
             sb.AppendLine(english ? "=== CURRENT PROCESS ===" : "=== TIẾN TRÌNH HIỆN TẠI ===");
             using (var me = Process.GetCurrentProcess())
             {
@@ -34,20 +39,25 @@ namespace PersonalInfoManager.Services
                 AppendField(sb, english ? "Uptime" : "Thời gian hoạt động", $"{uptimeSeconds:F1} {(english ? "seconds" : "giây")}");
             }
             sb.AppendLine();
+
             sb.AppendLine(english ? "=== PERMISSIONS ===" : "=== QUYỀN ===");
             AppendField(sb, english ? "Administrator" : "Quản trị viên", IsAdmin()
                 ? (english ? "Yes (Administrator)" : "Có (Quản trị viên)")
                 : (english ? "No (Standard user)" : "Không (Người dùng thường)"));
             AppendField(sb, english ? "Interactive" : "Tương tác người dùng", FormatBoolean(Environment.UserInteractive, english));
+
             return sb.ToString();
         }
+
         private static void AppendField(StringBuilder builder, string label, string value)
         {
             builder.Append(label.PadRight(22)).Append(" : ").AppendLine(value);
         }
+
         private static string FormatBoolean(bool value, bool english) => value
             ? (english ? "Yes" : "Có")
             : (english ? "No" : "Không");
+
         public static bool IsAdmin()
         {
             try
@@ -61,6 +71,7 @@ namespace PersonalInfoManager.Services
                 return false;
             }
         }
+
         public static string GetShortInfo()
         {
             return $".NET {Environment.Version} | " +
