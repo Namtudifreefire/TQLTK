@@ -39,6 +39,7 @@ internal static class Program
                 throw new InvalidOperationException("The app assembly is not using the isolated temporary test-data root.");
             Run("Argon2id, FIPS PBKDF2, legacy hash verification", TestPasswordHashes);
             Run("English translations for security features", TestEnglishSecurityTranslations);
+            Run("Activity-log translations and isolated test logging", () => TestActivityLogTranslations(tempRoot));
             Run("Vault search and combined filters", TestAccountSearch);
             Run("Per-website password rules and generation", TestWebsitePasswordPolicy);
             Run("JSON and KeePass XML import safety", () => TestCredentialImport(tempRoot));
@@ -526,6 +527,51 @@ internal static class Program
             if (!string.Equals(secondPass, actual, StringComparison.Ordinal))
                 throw new InvalidDataException($"English translation was not idempotent for '{source}': '{secondPass}'.");
         }
+    }
+
+    private static void TestActivityLogTranslations(string tempRoot)
+    {
+        const string timestampAndUser = "[2026-11-05 18:20:01] [admin] ";
+        var cases = new (string Source, string Expected)[]
+        {
+            (timestampAndUser + "[VAULT_KEY_ROTATION] Đã mã hóa lại 4 tệp; giữ 1 backup dùng cụm mật khẩu.",
+                timestampAndUser + "[Vault key rotation] Re-encrypted 4 files; retained 1 passphrase-protected backup."),
+            (timestampAndUser + "[VAULT_KEY_ROTATION] Đã mã hóa lại 1 tệp; giữ 0 backup dùng cụm mật khẩu.",
+                timestampAndUser + "[Vault key rotation] Re-encrypted 1 file; retained 0 passphrase-protected backups."),
+            (timestampAndUser + "[FILE_BACKUP_RESTORE_DRILL] recovery.tqf: True",
+                timestampAndUser + "[Personal-file backup restore drill] recovery.tqf: True"),
+            (timestampAndUser + "[VAULT_BACKUP_RESTORE_DRILL] recovery.vault: True",
+                timestampAndUser + "[Vault backup restore drill] recovery.vault: True"),
+            (timestampAndUser + "[IMPORT_CREDENTIALS] Thêm 3, ghi đè 1, bỏ qua 0 (Đã đọc 3 mục đăng nhập từ JSON.)",
+                timestampAndUser + "[Import credentials] Added 3, overwrote 1, and skipped 0 (Read 3 login entries from JSON.)"),
+            (timestampAndUser + "[UNDO_IMPORT] 0123456789abcdef",
+                timestampAndUser + "[Undo import] 0123456789abcdef"),
+            (timestampAndUser + "[AUTO_LOCK] Không hoạt động 5 phút",
+                timestampAndUser + "[Automatic lock] Inactive for 5 minutes"),
+            (timestampAndUser + "[BULK_ACCOUNT_ACTION] Thay đổi 2 tài khoản",
+                timestampAndUser + "[Bulk account action] Changed 2 accounts"),
+            (timestampAndUser + "[EXPORT_CSV] Xuất 2 tài khoản ra CSV",
+                timestampAndUser + "[Export CSV] Exported 2 accounts to CSV"),
+            (timestampAndUser + "[AUTO_BACKUP] Khi thoát: backup.vault",
+                timestampAndUser + "[Automatic backup] On exit: backup.vault")
+        };
+
+        foreach ((string source, string expected) in cases)
+        {
+            string actual = LanguageService.TranslateLogContent(source, "en");
+            if (!string.Equals(actual, expected, StringComparison.Ordinal))
+                throw new InvalidDataException($"Activity-log translation mismatch for '{source}': '{actual}'.");
+            if (actual.Contains("[VAULT_KEY_ROTATION]", StringComparison.Ordinal) ||
+                actual.Contains("[IMPORT_CREDENTIALS]", StringComparison.Ordinal) ||
+                actual.Contains("[UNDO_IMPORT]", StringComparison.Ordinal))
+                throw new InvalidDataException($"An activity action code was not translated: '{actual}'.");
+        }
+
+        ActivityLogger.Log("regressionadmin", "VAULT_KEY_ROTATION", "synthetic translation test");
+        string[] logFiles = ActivityLogger.ListLogFiles();
+        string expectedLogRoot = Path.Combine(tempRoot, "PersonalInfoManager", "Logs");
+        if (logFiles.Length == 0 || logFiles.Any(path => !path.StartsWith(expectedLogRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)))
+            throw new InvalidDataException("Security regression logs were written outside the isolated temporary test-data directory.");
     }
 
     private static void TestVaultKeyRotation(

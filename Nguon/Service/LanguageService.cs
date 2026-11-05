@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
@@ -61,7 +62,9 @@ public static class LanguageService
             ["BULK_ACCOUNT_ACTION_DENIED"] = "Bulk account action denied",
             ["UNDO_CSV_IMPORT"] = "Undo CSV import",
             ["UNDO_CSV_IMPORT_DENIED"] = "CSV import undo denied",
+            ["UNDO_IMPORT"] = "Undo import",
             ["IMPORT_CSV_DENIED"] = "CSV import denied",
+            ["IMPORT_CREDENTIALS"] = "Import credentials",
             ["CREATE_ACCOUNT_SHARE"] = "Create temporary account share",
             ["REVOKE_ACCOUNT_SHARE"] = "Revoke temporary account share",
             ["IMPORT_ACCOUNT_SHARE"] = "Import shared account",
@@ -72,6 +75,7 @@ public static class LanguageService
             ["EXPORT_CSV"] = "Export CSV",
             ["EXPORT_CSV_DENIED"] = "CSV export denied",
             ["EXPORT_FILE"] = "Export file",
+            ["FILE_BACKUP_RESTORE_DRILL"] = "Personal-file backup restore drill",
             ["EXPORT_VAULT"] = "Export vault",
             ["IMPORT_CSV"] = "Import CSV",
             ["IMPORT_FILE"] = "Import file",
@@ -116,8 +120,25 @@ public static class LanguageService
             ["VERIFY_BACKUP_DENIED"] = "Backup verification denied",
             ["VERIFY_FILE_BACKUP"] = "Verify file backup",
             ["VERIFY_VAULT_BACKUP"] = "Verify vault backup",
-            ["VAULT_KEY_ROTATION_DENIED"] = "Vault key rotation denied"
+            ["VAULT_KEY_ROTATION_DENIED"] = "Vault key rotation denied",
+            ["VAULT_KEY_ROTATION"] = "Vault key rotation",
+            ["VAULT_BACKUP_RESTORE_DRILL"] = "Vault backup restore drill"
         };
+    private static readonly Regex VaultKeyRotationLogDetail = new(
+        @"^Đã mã hóa lại (?<files>\d+) tệp; giữ (?<backups>\d+) backup dùng cụm mật khẩu\.$",
+        RegexOptions.CultureInvariant);
+    private static readonly Regex BulkAccountActionLogDetail = new(
+        @"^Thay đổi (?<count>\d+) tài khoản$",
+        RegexOptions.CultureInvariant);
+    private static readonly Regex CsvExportLogDetail = new(
+        @"^Xuất (?<count>\d+) tài khoản ra CSV$",
+        RegexOptions.CultureInvariant);
+    private static readonly Regex CredentialImportLogDetail = new(
+        @"^Thêm (?<added>\d+), ghi đè (?<overwritten>\d+), bỏ qua (?<skipped>\d+) \((?<message>.*)\)$",
+        RegexOptions.CultureInvariant);
+    private static readonly Regex AutoLockLogDetail = new(
+        @"^Không hoạt động (?<minutes>\d+) phút$",
+        RegexOptions.CultureInvariant);
     private static string _currentCode = RegistryService.GetLanguage();
 
     public static string CurrentCode => _currentCode;
@@ -144,30 +165,90 @@ public static class LanguageService
 
     public static string TranslateLogContent(string content)
     {
-        if (!IsEnglish || string.IsNullOrEmpty(content)) return content;
-
-        string normalized = content.Replace("\r\n", "\n", StringComparison.Ordinal);
-        return string.Join(Environment.NewLine, normalized.Split('\n').Select(TranslateLogLine));
+        return TranslateLogContent(content, _currentCode);
     }
 
-    private static string TranslateLogLine(string line)
+    internal static string TranslateLogContent(string content, string languageCode)
+    {
+        if (!string.Equals(languageCode, "en", StringComparison.OrdinalIgnoreCase) || string.IsNullOrEmpty(content)) return content;
+
+        string normalized = content.Replace("\r\n", "\n", StringComparison.Ordinal);
+        return string.Join(Environment.NewLine, normalized.Split('\n').Select(line => TranslateLogLine(line, languageCode)));
+    }
+
+    private static string TranslateLogLine(string line, string languageCode)
     {
         int timestampEnd = line.IndexOf("] [", StringComparison.Ordinal);
-        if (timestampEnd != 20) return Translate(line);
+        if (timestampEnd != 20) return Translate(line, languageCode);
 
         int usernameEnd = line.IndexOf("] [", timestampEnd + 3, StringComparison.Ordinal);
-        if (usernameEnd < 0) return Translate(line);
+        if (usernameEnd < 0) return Translate(line, languageCode);
 
         int actionEnd = line.IndexOf("] ", usernameEnd + 3, StringComparison.Ordinal);
-        if (actionEnd < 0) return Translate(line);
+        if (actionEnd < 0) return Translate(line, languageCode);
 
         int detailStart = actionEnd + 2;
         string action = line[(usernameEnd + 3)..actionEnd];
-        string translatedAction = IsEnglish && EnglishActivityActions.TryGetValue(action, out string? englishAction)
+        string detail = line[detailStart..];
+        string translatedAction = EnglishActivityActions.TryGetValue(action, out string? englishAction)
             ? englishAction
             : action;
-        return line[..(usernameEnd + 3)] + translatedAction + line[actionEnd..detailStart] + Translate(line[detailStart..]);
+        return line[..(usernameEnd + 3)] + translatedAction + line[actionEnd..detailStart] + TranslateActivityLogDetail(action, detail, languageCode);
     }
+
+    private static string TranslateActivityLogDetail(string action, string detail, string languageCode)
+    {
+        Match match;
+        switch (action)
+        {
+            case "VAULT_KEY_ROTATION":
+                match = VaultKeyRotationLogDetail.Match(detail);
+                if (match.Success && TryParseLogCount(match, "files", out int files) &&
+                    TryParseLogCount(match, "backups", out int backups))
+                {
+                    return $"Re-encrypted {files} {Plural(files, "file", "files")}; retained {backups} passphrase-protected {Plural(backups, "backup", "backups")}.";
+                }
+                break;
+            case "BULK_ACCOUNT_ACTION":
+                match = BulkAccountActionLogDetail.Match(detail);
+                if (match.Success && TryParseLogCount(match, "count", out int changed))
+                    return $"Changed {changed} accounts";
+                break;
+            case "EXPORT_CSV":
+                match = CsvExportLogDetail.Match(detail);
+                if (match.Success && TryParseLogCount(match, "count", out int exported))
+                    return $"Exported {exported} accounts to CSV";
+                break;
+            case "IMPORT_CREDENTIALS":
+                match = CredentialImportLogDetail.Match(detail);
+                if (match.Success && TryParseLogCount(match, "added", out int added) &&
+                    TryParseLogCount(match, "overwritten", out int overwritten) &&
+                    TryParseLogCount(match, "skipped", out int skipped))
+                {
+                    string message = Translate(match.Groups["message"].Value, languageCode);
+                    return $"Added {added}, overwrote {overwritten}, and skipped {skipped} ({message})";
+                }
+                break;
+            case "AUTO_LOCK":
+                match = AutoLockLogDetail.Match(detail);
+                if (match.Success && TryParseLogCount(match, "minutes", out int minutes))
+                    return $"Inactive for {minutes} minutes";
+                break;
+            case "AUTO_BACKUP":
+                if (detail.StartsWith("Khi thoát: ", StringComparison.Ordinal))
+                    return "On exit: " + detail["Khi thoát: ".Length..];
+                if (detail.StartsWith("Thủ công: ", StringComparison.Ordinal))
+                    return "Manual: " + detail["Thủ công: ".Length..];
+                break;
+        }
+
+        return Translate(detail, languageCode);
+    }
+
+    private static bool TryParseLogCount(Match match, string groupName, out int count) =>
+        int.TryParse(match.Groups[groupName].Value, NumberStyles.None, CultureInfo.InvariantCulture, out count);
+
+    private static string Plural(int count, string singular, string plural) => count == 1 ? singular : plural;
 
     public static string Translate(string value, string languageCode)
     {

@@ -1581,6 +1581,8 @@ internal static class EnglishCatalog
         new KeyValuePair<string, string>("Đã xuất ", "Exported "),
         new KeyValuePair<string, string>("Đã đóng gói ", "Packaged "),
         new KeyValuePair<string, string>("Đã đọc ", "Read "),
+        new KeyValuePair<string, string>(" mục đăng nhập từ JSON.", " login entries from JSON."),
+        new KeyValuePair<string, string>(" mục đăng nhập từ KeePass XML.", " login entries from KeePass XML."),
         new KeyValuePair<string, string>("Đăng nhập TQLTK với tài khoản '", "Sign in to TQLTK with account '"),
         new KeyValuePair<string, string>("Xác nhận để copy mật khẩu", "Confirm to copy password"),
         new KeyValuePair<string, string>("Xác nhận để hiện mật khẩu", "Confirm to reveal password"),

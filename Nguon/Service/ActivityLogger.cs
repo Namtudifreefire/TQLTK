@@ -8,7 +8,7 @@ namespace PersonalInfoManager.Services
     public static class ActivityLogger
     {
         private static readonly string _logRoot = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            ApplicationDataPath.Root,
             "PersonalInfoManager", "Logs");
 
         private static readonly object _lock = new();
