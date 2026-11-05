@@ -129,7 +129,7 @@ namespace PersonalInfoManager
                 }
                 catch { }
 
-                MessageBox.Show(this, result.message, "Thành công",
+                PersonalInfoManager.Services.LocalizedMessageBox.Show(this, result.message, "Thành công",
                     MessageBoxButton.OK, MessageBoxImage.Information);
                 Close();
             }

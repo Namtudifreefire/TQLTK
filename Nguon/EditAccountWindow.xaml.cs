@@ -121,7 +121,7 @@ namespace PersonalInfoManager
         private void BtnRemoveTotp_Click(object sender, RoutedEventArgs e)
         {
             if (_totp == null) return;
-            if (MessageBox.Show(this, "Xóa mã TOTP khỏi tài khoản này?", "Xóa TOTP",
+            if (PersonalInfoManager.Services.LocalizedMessageBox.Show(this, "Xóa mã TOTP khỏi tài khoản này?", "Xóa TOTP",
                     MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
             _totp = null;
             UpdateTotpStatus();
@@ -159,7 +159,7 @@ namespace PersonalInfoManager
         {
             string content = txtNote.Text.Trim();
             if (content.Length == 0) return;
-            if (MessageBox.Show(this, "Đưa ghi chú hiện tại vào thùng rác 30 ngày?", "Xóa ghi chú",
+            if (PersonalInfoManager.Services.LocalizedMessageBox.Show(this, "Đưa ghi chú hiện tại vào thùng rác 30 ngày?", "Xóa ghi chú",
                     MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
             _deletedNotes.Add(new DeletedNoteEntry { Content = content, DeletedAt = DateTime.UtcNow });
             _noteMovedToTrash = true;
@@ -195,7 +195,7 @@ namespace PersonalInfoManager
             if (!string.IsNullOrWhiteSpace(websiteUrl) &&
                 !WebsiteDomainService.TryNormalizeUrl(websiteUrl, out normalizedWebsiteUri, out _))
             {
-                MessageBox.Show(this, "URL phải là địa chỉ HTTP hoặc HTTPS hợp lệ và không chứa thông tin đăng nhập trong URL.",
+                PersonalInfoManager.Services.LocalizedMessageBox.Show(this, "URL phải là địa chỉ HTTP hoặc HTTPS hợp lệ và không chứa thông tin đăng nhập trong URL.",
                     "URL không hợp lệ", MessageBoxButton.OK, MessageBoxImage.Warning);
                 txtWebsiteUrl.Focus();
                 return;
@@ -203,7 +203,7 @@ namespace PersonalInfoManager
             if (normalizedWebsiteUri != null) websiteUrl = normalizedWebsiteUri.AbsoluteUri;
 
             var urlWarnings = WebsiteDomainService.GetRiskWarnings(websiteUrl);
-            if (urlWarnings.Count > 0 && MessageBox.Show(this,
+            if (urlWarnings.Count > 0 && PersonalInfoManager.Services.LocalizedMessageBox.Show(this,
                     LanguageService.Translate("Website URL có dấu hiệu cần kiểm tra:") + "\n\n" +
                     string.Join("\n", urlWarnings.Select(LanguageService.Translate)) + "\n\n" +
                     LanguageService.Translate("Chỉ tiếp tục nếu bạn đã xác minh domain chính thức."),
@@ -213,7 +213,7 @@ namespace PersonalInfoManager
             if (_existing != null && WebsiteDomainService.TryGetHost(_existing.WebsiteUrl, out string oldHost) &&
                 WebsiteDomainService.TryGetHost(websiteUrl, out string newHost) &&
                 !string.Equals(oldHost, newHost, StringComparison.OrdinalIgnoreCase) &&
-                MessageBox.Show(this,
+                PersonalInfoManager.Services.LocalizedMessageBox.Show(this,
                     $"Hostname thay đổi từ '{oldHost}' sang '{newHost}'. Hãy xác minh đây là domain chính thức trước khi lưu. Tiếp tục?",
                     "Xác nhận thay đổi domain", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
                 return;
@@ -230,21 +230,21 @@ namespace PersonalInfoManager
 
             if (string.IsNullOrWhiteSpace(service))
             {
-                MessageBox.Show("Vui lòng nhập tên dịch vụ.");
+                PersonalInfoManager.Services.LocalizedMessageBox.Show("Vui lòng nhập tên dịch vụ.");
                 txtService.Focus();
                 return;
             }
 
             if (string.IsNullOrWhiteSpace(username))
             {
-                MessageBox.Show("Vui lòng nhập tên đăng nhập.");
+                PersonalInfoManager.Services.LocalizedMessageBox.Show("Vui lòng nhập tên đăng nhập.");
                 txtUsername.Focus();
                 return;
             }
 
             if (string.IsNullOrWhiteSpace(password))
             {
-                MessageBox.Show("Vui lòng nhập mật khẩu.");
+                PersonalInfoManager.Services.LocalizedMessageBox.Show("Vui lòng nhập mật khẩu.");
                 return;
             }
 

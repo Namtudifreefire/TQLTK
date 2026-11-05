@@ -155,7 +155,7 @@ namespace PersonalInfoManager
 
             RegisteredUsername = username;
 
-            MessageBox.Show(
+            PersonalInfoManager.Services.LocalizedMessageBox.Show(
                 $"Đăng ký thành công!\n\n" +
                 $"Tên đăng nhập: {username}\n" +
                 $"Họ tên: {fullName}\n\n" +
@@ -177,7 +177,7 @@ namespace PersonalInfoManager
 
         private void ShowError(string message)
         {
-            MessageBox.Show(message, "Lỗi",
+            PersonalInfoManager.Services.LocalizedMessageBox.Show(message, "Lỗi",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }

@@ -113,7 +113,7 @@ namespace PersonalInfoManager
             if (user == null)
             {
 
-                MessageBox.Show(
+                PersonalInfoManager.Services.LocalizedMessageBox.Show(
                     "Tài khoản này chưa bật đăng nhập bằng Windows Hello.\n\n" +
                     "👉 Vui lòng đăng nhập bằng mật khẩu, sau đó vào:\n" +
                     "   Tab '👤 Thông tin cá nhân' → Bật 'Đăng nhập bằng Windows Hello'.",
@@ -192,7 +192,7 @@ namespace PersonalInfoManager
             catch { }
 
             if (warning != null)
-                MessageBox.Show(this, warning, "Cảnh báo bảo mật", MessageBoxButton.OK, MessageBoxImage.Warning);
+                PersonalInfoManager.Services.LocalizedMessageBox.Show(this, warning, "Cảnh báo bảo mật", MessageBoxButton.OK, MessageBoxImage.Warning);
 
             var main = new MainWindow();
             Application.Current.MainWindow = main;

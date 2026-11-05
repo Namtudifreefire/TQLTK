@@ -49,7 +49,7 @@ public partial class TrashWindow : Window
     {
         if (dgTrash.SelectedItem is not TrashItemRow item)
         {
-            MessageBox.Show(this, "Chọn một mục để khôi phục.", "Thùng rác", MessageBoxButton.OK, MessageBoxImage.Information);
+            PersonalInfoManager.Services.LocalizedMessageBox.Show(this, "Chọn một mục để khôi phục.", "Thùng rác", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
         if (await _restore(item))
@@ -62,10 +62,10 @@ public partial class TrashWindow : Window
     {
         if (dgTrash.SelectedItem is not TrashItemRow item)
         {
-            MessageBox.Show(this, "Chọn một mục để xóa hẳn.", "Thùng rác", MessageBoxButton.OK, MessageBoxImage.Information);
+            PersonalInfoManager.Services.LocalizedMessageBox.Show(this, "Chọn một mục để xóa hẳn.", "Thùng rác", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
-        if (MessageBox.Show(this, $"Xóa vĩnh viễn '{item.Title}'? Không thể hoàn tác.", "Xóa hẳn",
+        if (PersonalInfoManager.Services.LocalizedMessageBox.Show(this, $"Xóa vĩnh viễn '{item.Title}'? Không thể hoàn tác.", "Xóa hẳn",
                 MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
         if (await _deleteForever(item))
         {

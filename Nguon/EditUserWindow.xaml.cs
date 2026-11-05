@@ -31,13 +31,13 @@ namespace PersonalInfoManager
 
             if (result.ok)
             {
-                MessageBox.Show("Cập nhật thành công!");
+                PersonalInfoManager.Services.LocalizedMessageBox.Show("Cập nhật thành công!");
                 DialogResult = true;
                 Close();
             }
             else
             {
-                MessageBox.Show(result.message, "Lỗi",
+                PersonalInfoManager.Services.LocalizedMessageBox.Show(result.message, "Lỗi",
                     MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Windows;
 using PersonalInfoManager.Services;
 
@@ -31,7 +31,7 @@ namespace PersonalInfoManager
             {
                 try
                 {
-                    MessageBox.Show(
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show(
                         $"Đã xảy ra lỗi:\n\n{args.Exception.Message}",
                         "Lỗi hệ thống",
                         MessageBoxButton.OK,
@@ -72,7 +72,7 @@ namespace PersonalInfoManager
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
+                PersonalInfoManager.Services.LocalizedMessageBox.Show(
                     $"Không thể khởi động ứng dụng:\n\n{ex.Message}",
                     "Lỗi khởi động",
                     MessageBoxButton.OK,

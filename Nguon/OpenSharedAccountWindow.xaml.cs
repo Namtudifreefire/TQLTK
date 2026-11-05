@@ -29,7 +29,7 @@ public partial class OpenSharedAccountWindow : Window
     {
         if (string.IsNullOrWhiteSpace(PackagePath) || string.IsNullOrWhiteSpace(Passphrase))
         {
-            MessageBox.Show(this, LanguageService.Translate("Chọn tệp chia sẻ và nhập khóa."),
+            PersonalInfoManager.Services.LocalizedMessageBox.Show(this, LanguageService.Translate("Chọn tệp chia sẻ và nhập khóa."),
                 LanguageService.Translate("Thiếu thông tin"), MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }

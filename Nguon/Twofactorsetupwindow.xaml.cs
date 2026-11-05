@@ -50,7 +50,7 @@ namespace PersonalInfoManager
         private void BtnCopySecret_Click(object sender, RoutedEventArgs e)
         {
             if (!ClipboardGuard.CopySensitive(_secret))
-                MessageBox.Show(this,
+                PersonalInfoManager.Services.LocalizedMessageBox.Show(this,
                     "Không thể sao chép khóa 2FA vào clipboard an toàn. Hãy thử lại.",
                     "Không thể sao chép", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
@@ -78,7 +78,7 @@ namespace PersonalInfoManager
         private void BtnCopyRecovery_Click(object sender, RoutedEventArgs e)
         {
             if (!ClipboardGuard.CopySensitive(txtRecovery.Text))
-                MessageBox.Show(this,
+                PersonalInfoManager.Services.LocalizedMessageBox.Show(this,
                     "Không thể sao chép mã khôi phục vào clipboard an toàn. Hãy thử lại.",
                     "Không thể sao chép", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
@@ -93,7 +93,7 @@ namespace PersonalInfoManager
         {
             if (_enabled && !_finished)
             {
-                var r = MessageBox.Show(this,
+                var r = PersonalInfoManager.Services.LocalizedMessageBox.Show(this,
                     "Bạn đã lưu mã khôi phục chưa?\nMã này chỉ hiển thị một lần và sẽ không xem lại được.",
                     "Xác nhận", MessageBoxButton.YesNo, MessageBoxImage.Warning);
 

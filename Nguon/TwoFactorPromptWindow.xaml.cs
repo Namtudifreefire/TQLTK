@@ -30,7 +30,7 @@ namespace PersonalInfoManager
                 if (!TwoFactorService.IsEnabled(username)) return true;
                 if (!TwoFactorService.HasUsableConfiguration(username))
                 {
-                    MessageBox.Show(owner,
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show(owner,
                         "Tài khoản đang bật xác thực 2 bước nhưng file cấu hình bị thiếu hoặc không đọc được. Đăng nhập đã bị từ chối. Hãy khôi phục cấu hình 2FA từ bản sao lưu hoặc liên hệ quản trị viên.",
                         "Không thể xác thực 2 bước", MessageBoxButton.OK, MessageBoxImage.Error);
                     return false;
@@ -38,7 +38,7 @@ namespace PersonalInfoManager
             }
             catch (Exception ex)
             {
-                MessageBox.Show(owner,
+                PersonalInfoManager.Services.LocalizedMessageBox.Show(owner,
                     $"Không thể xác định trạng thái xác thực 2 bước. Đăng nhập đã bị từ chối để bảo vệ tài khoản.\n\nChi tiết: {ex.Message}",
                     "Không thể xác thực 2 bước", MessageBoxButton.OK, MessageBoxImage.Error);
                 return false;
@@ -64,7 +64,7 @@ namespace PersonalInfoManager
             if (result.ok)
             {
                 if (!string.IsNullOrWhiteSpace(result.message))
-                    MessageBox.Show(this, result.message, "Thông báo", MessageBoxButton.OK, MessageBoxImage.Information);
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show(this, result.message, "Thông báo", MessageBoxButton.OK, MessageBoxImage.Information);
 
                 DialogResult = true;
                 return;
@@ -74,7 +74,7 @@ namespace PersonalInfoManager
 
             if (_attempts >= MaxAttempts)
             {
-                MessageBox.Show(this, "Bạn đã nhập sai quá nhiều lần.", "Bị từ chối", MessageBoxButton.OK, MessageBoxImage.Warning);
+                PersonalInfoManager.Services.LocalizedMessageBox.Show(this, "Bạn đã nhập sai quá nhiều lần.", "Bị từ chối", MessageBoxButton.OK, MessageBoxImage.Warning);
                 DialogResult = false;
                 return;
             }

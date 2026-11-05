@@ -92,7 +92,7 @@ public partial class CsvImportWindow : Window
     {
         if (!Decisions.Any(decision => decision.Action != CsvImportAction.Skip))
         {
-            MessageBox.Show(this, LanguageService.Translate("Bạn chưa chọn tài khoản nào để nhập."),
+            PersonalInfoManager.Services.LocalizedMessageBox.Show(this, LanguageService.Translate("Bạn chưa chọn tài khoản nào để nhập."),
                 LanguageService.Translate("Thông báo"), MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }

@@ -98,7 +98,7 @@ namespace PersonalInfoManager
                 if (_status.SelectedItem is not Choice choice) return;
                 if (choice.Status == SecurityFindingReviewStatus.Ignored && string.IsNullOrWhiteSpace(_reason.Text))
                 {
-                    MessageBox.Show(this, LanguageService.Translate("Hãy ghi lý do khi bỏ qua cảnh báo."),
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show(this, LanguageService.Translate("Hãy ghi lý do khi bỏ qua cảnh báo."),
                         LanguageService.Translate("Thiếu lý do"), MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }

@@ -27,11 +27,11 @@ public partial class ShareCreatedWindow : Window
     {
         if (!ClipboardGuard.CopySensitive(text))
         {
-            MessageBox.Show(this, LanguageService.Translate("Không thể sao chép an toàn."),
+            PersonalInfoManager.Services.LocalizedMessageBox.Show(this, LanguageService.Translate("Không thể sao chép an toàn."),
                 LanguageService.Translate("Lỗi clipboard"), MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
-        MessageBox.Show(this, LanguageService.Translate(message), LanguageService.Translate("Đã sao chép"),
+        PersonalInfoManager.Services.LocalizedMessageBox.Show(this, LanguageService.Translate(message), LanguageService.Translate("Đã sao chép"),
             MessageBoxButton.OK, MessageBoxImage.Information);
     }
 }

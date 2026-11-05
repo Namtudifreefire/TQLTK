@@ -20,7 +20,7 @@ namespace PersonalInfoManager
             {
                 Loaded += (_, _) =>
                 {
-                    MessageBox.Show(
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show(
                         "Bạn không có quyền truy cập chức năng quản trị.",
                         "Từ chối truy cập",
                         MessageBoxButton.OK,
@@ -60,7 +60,7 @@ namespace PersonalInfoManager
                 txtNewEmail.Text,
                 txtNewPhone.Text);
 
-            MessageBox.Show(result.message,
+            PersonalInfoManager.Services.LocalizedMessageBox.Show(result.message,
                 result.ok ? "Thành công" : "Lỗi",
                 MessageBoxButton.OK,
                 result.ok ? MessageBoxImage.Information : MessageBoxImage.Warning);
@@ -89,7 +89,7 @@ namespace PersonalInfoManager
         {
             if (dgUsers.SelectedItem is not User u)
             {
-                MessageBox.Show("Chọn một tài khoản để sửa.");
+                PersonalInfoManager.Services.LocalizedMessageBox.Show("Chọn một tài khoản để sửa.");
                 return;
             }
 
@@ -110,7 +110,7 @@ namespace PersonalInfoManager
         {
             if (dgUsers.SelectedItem is not User u)
             {
-                MessageBox.Show("Chọn một tài khoản.");
+                PersonalInfoManager.Services.LocalizedMessageBox.Show("Chọn một tài khoản.");
                 return;
             }
 
@@ -122,7 +122,7 @@ namespace PersonalInfoManager
             if (string.IsNullOrWhiteSpace(input)) return;
 
             var result = _userService.ResetPassword(u.Id, input);
-            MessageBox.Show(result.message,
+            PersonalInfoManager.Services.LocalizedMessageBox.Show(result.message,
                 result.ok ? "OK" : "Lỗi",
                 MessageBoxButton.OK,
                 result.ok ? MessageBoxImage.Information : MessageBoxImage.Warning);
@@ -142,13 +142,13 @@ namespace PersonalInfoManager
         {
             if (dgUsers.SelectedItem is not User u)
             {
-                MessageBox.Show("Chọn một tài khoản.");
+                PersonalInfoManager.Services.LocalizedMessageBox.Show("Chọn một tài khoản.");
                 return;
             }
 
             if (u.Id == SessionService.CurrentUser!.Id)
             {
-                MessageBox.Show("Không thể khóa chính mình.");
+                PersonalInfoManager.Services.LocalizedMessageBox.Show("Không thể khóa chính mình.");
                 return;
             }
 
@@ -169,7 +169,7 @@ namespace PersonalInfoManager
         {
             if (dgUsers.SelectedItem is not User u)
             {
-                MessageBox.Show("Chọn một tài khoản.");
+                PersonalInfoManager.Services.LocalizedMessageBox.Show("Chọn một tài khoản.");
                 return;
             }
 
@@ -179,7 +179,7 @@ namespace PersonalInfoManager
             var result = _userService.SetRole(u.Id, newRole);
             if (!result.ok)
             {
-                MessageBox.Show(result.message, "Lỗi", MessageBoxButton.OK, MessageBoxImage.Warning);
+                PersonalInfoManager.Services.LocalizedMessageBox.Show(result.message, "Lỗi", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -196,11 +196,11 @@ namespace PersonalInfoManager
         {
             if (dgUsers.SelectedItem is not User u)
             {
-                MessageBox.Show("Chọn một tài khoản.");
+                PersonalInfoManager.Services.LocalizedMessageBox.Show("Chọn một tài khoản.");
                 return;
             }
 
-            if (MessageBox.Show(
+            if (PersonalInfoManager.Services.LocalizedMessageBox.Show(
                     $"Xóa tài khoản '{u.Username}'?\nKhông thể hoàn tác!",
                     "Xác nhận", MessageBoxButton.YesNo,
                     MessageBoxImage.Warning) != MessageBoxResult.Yes)
@@ -211,7 +211,7 @@ namespace PersonalInfoManager
 
             if (leftovers.Count > 0)
             {
-                var ask = MessageBox.Show(
+                var ask = PersonalInfoManager.Services.LocalizedMessageBox.Show(
                     $"Dữ liệu còn lại của '{u.Username}' trên máy này:\n\n" +
                     string.Join("\n", leftovers) + "\n\n" +
                     "Xóa vĩnh viễn luôn các dữ liệu này?\n\n" +
@@ -232,7 +232,7 @@ namespace PersonalInfoManager
 
             if (!result.ok)
             {
-                MessageBox.Show(result.message, "Lỗi");
+                PersonalInfoManager.Services.LocalizedMessageBox.Show(result.message, "Lỗi");
                 return;
             }
 
@@ -265,7 +265,7 @@ namespace PersonalInfoManager
             }
             catch { }
 
-            MessageBox.Show(message, "OK");
+            PersonalInfoManager.Services.LocalizedMessageBox.Show(message, "OK");
             Refresh();
         }
 

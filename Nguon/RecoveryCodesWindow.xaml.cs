@@ -24,7 +24,7 @@ namespace PersonalInfoManager
         private void BtnCopy_Click(object sender, RoutedEventArgs e)
         {
             if (!ClipboardGuard.CopySensitive(txtCodes.Text))
-                MessageBox.Show(this,
+                PersonalInfoManager.Services.LocalizedMessageBox.Show(this,
                     "Không thể sao chép mã khôi phục vào clipboard an toàn. Hãy thử lại.",
                     "Không thể sao chép", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
@@ -47,7 +47,7 @@ namespace PersonalInfoManager
         {
             if (!_finished && SessionService.IsLoggedIn)
             {
-                var r = MessageBox.Show(this,
+                var r = PersonalInfoManager.Services.LocalizedMessageBox.Show(this,
                     "Bạn chưa bấm hoàn tất.\nNếu đóng bây giờ, các mã mới sẽ bị hủy và mã khôi phục cũ vẫn dùng như trước.\n\nĐóng cửa sổ?",
                     "Xác nhận", MessageBoxButton.YesNo, MessageBoxImage.Question);
 

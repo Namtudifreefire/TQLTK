@@ -133,7 +133,7 @@ namespace PersonalInfoManager
         {
             if (!SessionService.IsLoggedIn)
             {
-                MessageBox.Show("Chưa đăng nhập. Vui lòng đăng nhập lại.");
+                PersonalInfoManager.Services.LocalizedMessageBox.Show("Chưa đăng nhập. Vui lòng đăng nhập lại.");
                 var login = new LoginWindow();
                 Application.Current.MainWindow = login;
                 login.Show();
@@ -146,7 +146,7 @@ namespace PersonalInfoManager
             try { _vaultService.PurgeExpiredTrash(SessionService.CurrentUser!.Username); }
             catch (Exception ex)
             {
-                MessageBox.Show($"Không thể dọn thùng rác đã hết hạn. Dữ liệu hiện có vẫn được giữ nguyên.\n\n{ex.Message}",
+                PersonalInfoManager.Services.LocalizedMessageBox.Show($"Không thể dọn thùng rác đã hết hạn. Dữ liệu hiện có vẫn được giữ nguyên.\n\n{ex.Message}",
                     "Không thể dọn thùng rác", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
 
@@ -344,7 +344,7 @@ namespace PersonalInfoManager
             if (cmbAutoLockMinutes.SelectedItem is not ComboBoxItem item ||
                 !int.TryParse(item.Tag?.ToString(), out int minutes) || minutes is not (1 or 5 or 10 or 15))
             {
-                MessageBox.Show(LanguageService.Translate("Chọn thời gian tự khóa hợp lệ."),
+                PersonalInfoManager.Services.LocalizedMessageBox.Show(LanguageService.Translate("Chọn thời gian tự khóa hợp lệ."),
                     LanguageService.Translate("Cài đặt bảo mật"), MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
@@ -352,7 +352,7 @@ namespace PersonalInfoManager
             _lockWhenMinimized = chkLockWhenMinimized.IsChecked == true;
             RegistryService.SetAutoLockMinutes(AutoLockMinutes);
             RegistryService.SetLockWhenMinimized(_lockWhenMinimized);
-            MessageBox.Show(LanguageService.Translate("Đã lưu cài đặt tự khóa."),
+            PersonalInfoManager.Services.LocalizedMessageBox.Show(LanguageService.Translate("Đã lưu cài đặt tự khóa."),
                 LanguageService.Translate("Cài đặt bảo mật"), MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
@@ -360,7 +360,7 @@ namespace PersonalInfoManager
         {
             bool enabled = chkFipsCompatiblePasswordHash.IsChecked == true;
             if (enabled != RegistryService.GetFipsCompatiblePasswordHash() &&
-                MessageBox.Show(LanguageService.Translate(
+                PersonalInfoManager.Services.LocalizedMessageBox.Show(LanguageService.Translate(
                     enabled
                         ? "Mật khẩu mới và hash được nâng cấp sau đăng nhập sẽ dùng PBKDF2-HMAC-SHA256 600.000 vòng. Hash Argon2id hiện tại vẫn được xác minh bình thường."
                         : "Mật khẩu mới và hash được nâng cấp sau đăng nhập sẽ dùng Argon2id. Hash PBKDF2 hiện tại vẫn được xác minh bình thường."),
@@ -371,7 +371,7 @@ namespace PersonalInfoManager
             }
 
             RegistryService.SetFipsCompatiblePasswordHash(enabled);
-            MessageBox.Show(LanguageService.Translate("Đã lưu lựa chọn thuật toán băm cho mật khẩu mới và lần nâng cấp hash tiếp theo."),
+            PersonalInfoManager.Services.LocalizedMessageBox.Show(LanguageService.Translate("Đã lưu lựa chọn thuật toán băm cho mật khẩu mới và lần nâng cấp hash tiếp theo."),
                 LanguageService.Translate("Cài đặt bảo mật"), MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
@@ -383,7 +383,7 @@ namespace PersonalInfoManager
             if (!CanRotateVaultKey(currentUser))
             {
                 try { ActivityLogger.Log(authenticatedUser?.Username ?? "SYSTEM", "VAULT_KEY_ROTATION_DENIED", "Chỉ quản trị viên đang hoạt động được xoay khóa dùng chung."); } catch { }
-                MessageBox.Show(
+                PersonalInfoManager.Services.LocalizedMessageBox.Show(
                     LanguageService.Translate("Chỉ quản trị viên đang hoạt động mới được phép xoay khóa vault."),
                     LanguageService.Translate("Không đủ quyền"), MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
@@ -391,7 +391,7 @@ namespace PersonalInfoManager
             string username = currentUser!.Username;
             if (!BackupCrypto.HasStoredPassphrase(username))
             {
-                MessageBox.Show(
+                PersonalInfoManager.Services.LocalizedMessageBox.Show(
                     LanguageService.Translate("Trước khi xoay khóa, hãy đặt cụm mật khẩu sao lưu trong Tiện ích → Cụm mật khẩu sao lưu. " +
                     "Bạn cần tạo một bản phục hồi mở được độc lập với khóa Windows cũ."),
                     LanguageService.Translate("Cần chuẩn bị bản phục hồi"), MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -409,7 +409,7 @@ namespace PersonalInfoManager
             LocalizedFileDialog.Apply(dialog);
             if (dialog.ShowDialog(this) != true || !EnsureActiveSession()) return;
 
-            if (MessageBox.Show(
+            if (PersonalInfoManager.Services.LocalizedMessageBox.Show(
                     LanguageService.Translate("Ứng dụng sẽ tạo và xác minh bản backup có cụm mật khẩu, sau đó mã hóa lại vault, ghi chú và các backup cục bộ đã nhận diện. " +
                     "Khóa cũ được giữ dưới DPAPI để mở bản xuất lịch sử. Tệp cá nhân dùng khóa riêng và không bị thay đổi. Tiếp tục?"),
                     LanguageService.Translate("Xác nhận xoay khóa vault"), MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
@@ -446,11 +446,11 @@ namespace PersonalInfoManager
                 if (operation.result.PreservedLegacyBackups > 0)
                     details += "\n" + string.Format(LanguageService.Translate("Đã giữ nguyên {0} backup dùng cụm mật khẩu."),
                         operation.result.PreservedLegacyBackups);
-                MessageBox.Show(details, LanguageService.Translate("Xoay khóa hoàn tất"), MessageBoxButton.OK, MessageBoxImage.Information);
+                PersonalInfoManager.Services.LocalizedMessageBox.Show(details, LanguageService.Translate("Xoay khóa hoàn tất"), MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
+                PersonalInfoManager.Services.LocalizedMessageBox.Show(
                     string.Format(LanguageService.Translate(
                         "Không thể hoàn tất xoay khóa. Dữ liệu gốc và nhật ký phục hồi được giữ lại; không xóa thư mục dữ liệu ứng dụng. Lần đọc tiếp theo sẽ thử tiếp tục giao dịch.\n\n{0}"),
                         LanguageService.Translate(ex.Message)),
@@ -575,7 +575,7 @@ namespace PersonalInfoManager
             if (!TwoFactorService.IsEnabled(username))
             {
                 try { ActivityLogger.Log(username, deniedLogCode, "Windows Hello thất bại, chưa bật 2FA"); } catch { }
-                MessageBox.Show(
+                PersonalInfoManager.Services.LocalizedMessageBox.Show(
                     $"Cần xác thực để {localizedActionText}, nhưng Windows Hello không thành công và bạn chưa bật xác thực 2 bước.\n\n" +
                     "Vào Bảo mật → Bật xác thực 2 bước (Authenticator) để có cách xác thực dự phòng.",
                     "Từ chối", MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -587,7 +587,7 @@ namespace PersonalInfoManager
             if (ok2) { MarkAuthenticated(); return true; }
 
             try { ActivityLogger.Log(username, deniedLogCode, "Windows Hello và 2FA đều thất bại"); } catch { }
-            MessageBox.Show("Xác thực thất bại.", "Từ chối", MessageBoxButton.OK, MessageBoxImage.Warning);
+            PersonalInfoManager.Services.LocalizedMessageBox.Show("Xác thực thất bại.", "Từ chối", MessageBoxButton.OK, MessageBoxImage.Warning);
             return false;
         }
 
@@ -830,7 +830,7 @@ namespace PersonalInfoManager
                 if (_isLocked || !EnsureActiveSession()) return;
                 if (!available)
                 {
-                    MessageBox.Show(
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show(
                         "Hiện mật khẩu cần xác thực bằng Windows Hello nhưng máy này chưa hỗ trợ hoặc chưa thiết lập.\n\n" +
                         "Hãy cài đặt vân tay / khuôn mặt / PIN trong Cài đặt Windows rồi thử lại.",
                         "Không thể xác thực", MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -842,7 +842,7 @@ namespace PersonalInfoManager
                 if (!verified)
                 {
                     try { ActivityLogger.Log(username, "SHOW_PASSWORD_DENIED", "Xác thực Windows Hello thất bại"); } catch { }
-                    MessageBox.Show("Xác thực thất bại. Mật khẩu vẫn được ẩn.", "Từ chối", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show("Xác thực thất bại. Mật khẩu vẫn được ẩn.", "Từ chối", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
 
@@ -852,7 +852,7 @@ namespace PersonalInfoManager
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Lỗi: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                PersonalInfoManager.Services.LocalizedMessageBox.Show($"Lỗi: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
             {
@@ -878,7 +878,7 @@ namespace PersonalInfoManager
         private async void BtnEditAccount_Click(object? sender, RoutedEventArgs e)
         {
             var selected = GetSelectedAccount();
-            if (selected == null) { MessageBox.Show("Chọn một tài khoản để sửa."); return; }
+            if (selected == null) { PersonalInfoManager.Services.LocalizedMessageBox.Show("Chọn một tài khoản để sửa."); return; }
 
             var btn = sender as Button;
             if (btn != null) btn.IsEnabled = false;
@@ -891,7 +891,7 @@ namespace PersonalInfoManager
             catch (Exception ex)
             {
                 if (!_isLocked)
-                    MessageBox.Show($"Lỗi: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show($"Lỗi: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
             {
@@ -1002,19 +1002,19 @@ namespace PersonalInfoManager
         private async void BtnPasswordHistory_Click(object? sender, RoutedEventArgs e)
         {
             var selected = GetSelectedAccount();
-            if (selected == null) { MessageBox.Show("Chọn một tài khoản để xem lịch sử mật khẩu."); return; }
+            if (selected == null) { PersonalInfoManager.Services.LocalizedMessageBox.Show("Chọn một tài khoản để xem lịch sử mật khẩu."); return; }
             if (!await RequireAuthAsync("xem lịch sử mật khẩu", "PASSWORD_HISTORY_DENIED")) return;
 
             string username = SessionService.CurrentUser!.Username;
             var latest = _vaultService.Load(username).FirstOrDefault(account => account.Id == selected.Id);
-            if (latest == null) { MessageBox.Show("Tài khoản không còn trong kho mật khẩu.", "Không tìm thấy", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
+            if (latest == null) { PersonalInfoManager.Services.LocalizedMessageBox.Show("Tài khoản không còn trong kho mật khẩu.", "Không tìm thấy", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
             if (!EnsureActiveSession()) return;
 
             var dialog = new PasswordHistoryWindow(latest) { Owner = this };
             if (dialog.ShowDialog() != true || dialog.SelectedEntry == null) return;
             if (!EnsureActiveSession()) return;
 
-            if (MessageBox.Show(
+            if (PersonalInfoManager.Services.LocalizedMessageBox.Show(
                     $"Đặt lại mật khẩu của '{latest.ServiceName}' về mật khẩu đã dùng ngày {dialog.SelectedEntry.ChangedAt:dd/MM/yyyy HH:mm}?",
                     "Dùng lại mật khẩu cũ", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
                 return;
@@ -1045,7 +1045,7 @@ namespace PersonalInfoManager
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Không thể khôi phục mật khẩu từ lịch sử. Kho mật khẩu chưa được cập nhật.\n\n{ex.Message}",
+                PersonalInfoManager.Services.LocalizedMessageBox.Show($"Không thể khôi phục mật khẩu từ lịch sử. Kho mật khẩu chưa được cập nhật.\n\n{ex.Message}",
                     "Không thể lưu", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
@@ -1057,9 +1057,9 @@ namespace PersonalInfoManager
         private void BtnDeleteAccount_Click(object? sender, RoutedEventArgs e)
         {
             var selected = GetSelectedAccount();
-            if (selected == null) { MessageBox.Show("Chọn một tài khoản để xóa."); return; }
+            if (selected == null) { PersonalInfoManager.Services.LocalizedMessageBox.Show("Chọn một tài khoản để xóa."); return; }
 
-            if (MessageBox.Show($"Đưa '{selected.ServiceName}' vào thùng rác 30 ngày?", "Xóa tài khoản", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
+            if (PersonalInfoManager.Services.LocalizedMessageBox.Show($"Đưa '{selected.ServiceName}' vào thùng rác 30 ngày?", "Xóa tài khoản", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
 
             string user = SessionService.CurrentUser!.Username;
             var list = _vaultService.Load(user);
@@ -1080,7 +1080,7 @@ namespace PersonalInfoManager
             var selected = GetSelectedAccount();
             if (selected == null || string.IsNullOrWhiteSpace(selected.TotpSecret))
             {
-                MessageBox.Show("Tài khoản này chưa có mã TOTP.", "Mã TOTP", MessageBoxButton.OK, MessageBoxImage.Information);
+                PersonalInfoManager.Services.LocalizedMessageBox.Show("Tài khoản này chưa có mã TOTP.", "Mã TOTP", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
             if (!await RequireAuthAsync("xem mã TOTP", "SHOW_ACCOUNT_TOTP_DENIED")) return;
@@ -1097,7 +1097,7 @@ namespace PersonalInfoManager
             try { _vaultService.PurgeExpiredTrash(username); }
             catch (Exception ex)
             {
-                MessageBox.Show($"Không thể cập nhật thùng rác. Dữ liệu hiện có vẫn được giữ nguyên.\n\n{ex.Message}",
+                PersonalInfoManager.Services.LocalizedMessageBox.Show($"Không thể cập nhật thùng rác. Dữ liệu hiện có vẫn được giữ nguyên.\n\n{ex.Message}",
                     "Không thể mở thùng rác", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
@@ -1159,7 +1159,7 @@ namespace PersonalInfoManager
 
             if (account.IsDeleted)
             {
-                MessageBox.Show("Khôi phục tài khoản trước khi khôi phục ghi chú của tài khoản đó.",
+                PersonalInfoManager.Services.LocalizedMessageBox.Show("Khôi phục tài khoản trước khi khôi phục ghi chú của tài khoản đó.",
                     "Chưa thể khôi phục", MessageBoxButton.OK, MessageBoxImage.Information);
                 return false;
             }
@@ -1167,7 +1167,7 @@ namespace PersonalInfoManager
             if (note == null) return false;
             if (!string.IsNullOrWhiteSpace(account.Note))
             {
-                if (MessageBox.Show($"Ghi chú hiện tại của '{account.ServiceName}' sẽ được đưa vào thùng rác và thay bằng ghi chú được khôi phục. Tiếp tục?",
+                if (PersonalInfoManager.Services.LocalizedMessageBox.Show($"Ghi chú hiện tại của '{account.ServiceName}' sẽ được đưa vào thùng rác và thay bằng ghi chú được khôi phục. Tiếp tục?",
                         "Khôi phục ghi chú", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
                     return false;
                 account.DeletedNotes.Add(new DeletedNoteEntry { Content = account.Note, DeletedAt = DateTime.UtcNow });
@@ -1200,7 +1200,7 @@ namespace PersonalInfoManager
         {
             var selected = GetSelectedAccount();
             if (selected == null) return;
-            try { Clipboard.SetText(selected.Username); MessageBox.Show("Đã sao chép tên đăng nhập!"); } catch { }
+            try { Clipboard.SetText(selected.Username); PersonalInfoManager.Services.LocalizedMessageBox.Show("Đã sao chép tên đăng nhập!"); } catch { }
         }
 
         private async void BtnCopyPassword_Click(object? sender, RoutedEventArgs e)
@@ -1245,7 +1245,7 @@ namespace PersonalInfoManager
                     if (!TwoFactorService.IsEnabled(username))
                     {
                         try { ActivityLogger.Log(username, "COPY_PASSWORD_DENIED", "Windows Hello thất bại, chưa bật 2FA"); } catch { }
-                        MessageBox.Show(
+                        PersonalInfoManager.Services.LocalizedMessageBox.Show(
                             "Xác thực Windows Hello không thành công và bạn chưa bật xác thực 2 bước nên không thể sao chép mật khẩu.\n\n" +
                             "Vào Bảo mật → Bật xác thực 2 bước (Authenticator) để có cách xác thực dự phòng.",
                             "Từ chối", MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -1260,7 +1260,7 @@ namespace PersonalInfoManager
                 if (!ok)
                 {
                     try { ActivityLogger.Log(username, "COPY_PASSWORD_DENIED", "Windows Hello và 2FA đều thất bại"); } catch { }
-                    MessageBox.Show("Xác thực thất bại. Đã hủy sao chép mật khẩu.", "Từ chối", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show("Xác thực thất bại. Đã hủy sao chép mật khẩu.", "Từ chối", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
 
@@ -1268,19 +1268,19 @@ namespace PersonalInfoManager
 
                 if (!ClipboardGuard.CopySensitive(selected.Password))
                 {
-                    MessageBox.Show(
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show(
                         "Không thể sao chép mật khẩu vào bộ nhớ tạm an toàn. Hãy thử lại.",
                         "Không thể sao chép", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
 
                 try { ActivityLogger.Log(username, "COPY_PASSWORD", $"{selected.ServiceName} (xác thực: {method})"); } catch { }
-                MessageBox.Show($"Đã sao chép mật khẩu! Bộ nhớ tạm sẽ tự xóa sau {ClipboardGuard.ClearAfterSeconds} giây.");
+                PersonalInfoManager.Services.LocalizedMessageBox.Show($"Đã sao chép mật khẩu! Bộ nhớ tạm sẽ tự xóa sau {ClipboardGuard.ClearAfterSeconds} giây.");
             }
             catch (Exception ex)
             {
                 if (!_isLocked)
-                    MessageBox.Show($"Lỗi: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show($"Lỗi: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
             {
@@ -1316,16 +1316,16 @@ namespace PersonalInfoManager
         private void BtnOpenWebsite_Click(object? sender, RoutedEventArgs e)
         {
             var selected = GetSelectedAccount();
-            if (selected == null) { MessageBox.Show("Chọn một tài khoản trước."); return; }
+            if (selected == null) { PersonalInfoManager.Services.LocalizedMessageBox.Show("Chọn một tài khoản trước."); return; }
             if (!WebsiteDomainService.TryNormalizeUrl(selected.WebsiteUrl, out Uri? uri, out string host) || uri == null)
             {
-                MessageBox.Show(this, LanguageService.Translate("Mục này chưa có URL HTTP hoặc HTTPS hợp lệ."),
+                PersonalInfoManager.Services.LocalizedMessageBox.Show(this, LanguageService.Translate("Mục này chưa có URL HTTP hoặc HTTPS hợp lệ."),
                     LanguageService.Translate("Không có website"), MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
             var risks = WebsiteDomainService.GetRiskWarnings(selected.WebsiteUrl);
-            if (risks.Count > 0 && MessageBox.Show(this,
+            if (risks.Count > 0 && PersonalInfoManager.Services.LocalizedMessageBox.Show(this,
                     string.Format(LanguageService.Translate("Domain {0} có dấu hiệu cần kiểm tra: {1}\n\nBạn vẫn muốn mở website này?"), host,
                         string.Join("\n", risks.Select(LanguageService.Translate))),
                     LanguageService.Translate("Kiểm tra domain"), MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
@@ -1334,7 +1334,7 @@ namespace PersonalInfoManager
             try { Process.Start(new ProcessStartInfo(uri.AbsoluteUri) { UseShellExecute = true }); }
             catch (Exception ex)
             {
-                MessageBox.Show(this, string.Format(LanguageService.Translate("Không thể mở website: {0}"), ex.Message),
+                PersonalInfoManager.Services.LocalizedMessageBox.Show(this, string.Format(LanguageService.Translate("Không thể mở website: {0}"), ex.Message),
                     LanguageService.Translate("Lỗi"), MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
@@ -1342,7 +1342,7 @@ namespace PersonalInfoManager
         private async void BtnManageAttachments_Click(object? sender, RoutedEventArgs e)
         {
             var selected = GetSelectedAccount();
-            if (selected == null) { MessageBox.Show("Chọn một tài khoản trước."); return; }
+            if (selected == null) { PersonalInfoManager.Services.LocalizedMessageBox.Show("Chọn một tài khoản trước."); return; }
             if (!await RequireAuthAsync("quản lý tệp đính kèm", "ACCOUNT_ATTACHMENTS_DENIED")) return;
             string username = SessionService.CurrentUser!.Username;
             var accounts = _vaultService.Load(username);
@@ -1362,7 +1362,7 @@ namespace PersonalInfoManager
         private async void BtnAccountHistory_Click(object? sender, RoutedEventArgs e)
         {
             var selected = GetSelectedAccount();
-            if (selected == null) { MessageBox.Show("Chọn một tài khoản trước."); return; }
+            if (selected == null) { PersonalInfoManager.Services.LocalizedMessageBox.Show("Chọn một tài khoản trước."); return; }
             if (!await RequireAuthAsync("xem và hoàn tác lịch sử chỉnh sửa", "ACCOUNT_HISTORY_DENIED")) return;
             string username = SessionService.CurrentUser!.Username;
             var accounts = _vaultService.Load(username);
@@ -1393,11 +1393,11 @@ namespace PersonalInfoManager
         private async void BtnBulkActions_Click(object? sender, RoutedEventArgs e)
         {
             var selected = GetSelectedAccounts();
-            if (selected.Count == 0) { MessageBox.Show("Chọn một hoặc nhiều tài khoản trước."); return; }
+            if (selected.Count == 0) { PersonalInfoManager.Services.LocalizedMessageBox.Show("Chọn một hoặc nhiều tài khoản trước."); return; }
             if (!await RequireAuthAsync("thay đổi nhiều tài khoản cùng lúc", "BULK_ACCOUNT_ACTION_DENIED")) return;
             var dialog = new BulkAccountActionsWindow(selected.Count) { Owner = this };
             if (dialog.ShowDialog() != true || !EnsureActiveSession()) return;
-            if (dialog.MoveToTrash && MessageBox.Show(this,
+            if (dialog.MoveToTrash && PersonalInfoManager.Services.LocalizedMessageBox.Show(this,
                     string.Format(LanguageService.Translate("Đưa {0} tài khoản đã chọn vào thùng rác trong 30 ngày?"), selected.Count),
                     LanguageService.Translate("Xác nhận xóa hàng loạt"), MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
                 return;
@@ -1435,7 +1435,7 @@ namespace PersonalInfoManager
         private async void BtnExportSelected_Click(object? sender, RoutedEventArgs e)
         {
             var selected = GetSelectedAccounts();
-            if (selected.Count == 0) { MessageBox.Show("Chọn một hoặc nhiều tài khoản trước."); return; }
+            if (selected.Count == 0) { PersonalInfoManager.Services.LocalizedMessageBox.Show("Chọn một hoặc nhiều tài khoản trước."); return; }
             if (!await RequireAuthAsync("xuất các tài khoản đã chọn", "EXPORT_CSV_DENIED")) return;
             var dialog = new SaveFileDialog
             {
@@ -1448,7 +1448,7 @@ namespace PersonalInfoManager
             var current = _vaultService.Load(SessionService.CurrentUser!.Username)
                 .Where(account => !account.IsDeleted && selected.Any(item => item.Id == account.Id)).ToList();
             var result = CsvService.ExportToFile(current, dialog.FileName);
-            MessageBox.Show(this, LanguageService.Translate(result.message),
+            PersonalInfoManager.Services.LocalizedMessageBox.Show(this, LanguageService.Translate(result.message),
                 LanguageService.Translate(result.ok ? "Thành công" : "Lỗi xuất CSV"), MessageBoxButton.OK,
                 result.ok ? MessageBoxImage.Information : MessageBoxImage.Warning);
         }
@@ -1461,13 +1461,13 @@ namespace PersonalInfoManager
             try { batch = CsvImportBatchStore.Load(username); }
             catch (Exception ex)
             {
-                MessageBox.Show(this, LanguageService.Translate("Không đọc được dữ liệu hoàn tác nhập: ") + ex.Message,
+                PersonalInfoManager.Services.LocalizedMessageBox.Show(this, LanguageService.Translate("Không đọc được dữ liệu hoàn tác nhập: ") + ex.Message,
                     LanguageService.Translate("Lỗi"), MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
             if (batch == null)
             {
-                MessageBox.Show(this, LanguageService.Translate("Không có lần nhập nào có thể hoàn tác trên máy này."),
+                PersonalInfoManager.Services.LocalizedMessageBox.Show(this, LanguageService.Translate("Không có lần nhập nào có thể hoàn tác trên máy này."),
                     LanguageService.Translate("Thông tin"), MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
@@ -1477,11 +1477,11 @@ namespace PersonalInfoManager
                     account.ImportBatchId != batch.Id || !account.ImportUndoable ||
                     (!account.CreatedInImportBatch && account.ImportUndoSnapshot == null)))
             {
-                MessageBox.Show(this, LanguageService.Translate("Không thể hoàn tác cả lô vì một hoặc nhiều tài khoản đã bị xóa hoặc thay đổi sau lần nhập."),
+                PersonalInfoManager.Services.LocalizedMessageBox.Show(this, LanguageService.Translate("Không thể hoàn tác cả lô vì một hoặc nhiều tài khoản đã bị xóa hoặc thay đổi sau lần nhập."),
                     LanguageService.Translate("Không thể hoàn tác"), MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
-            if (MessageBox.Show(this,
+            if (PersonalInfoManager.Services.LocalizedMessageBox.Show(this,
                     string.Format(LanguageService.Translate("Hoàn tác lần nhập gồm {0} tài khoản? Thay đổi sau lần nhập sẽ bị từ chối để tránh mất dữ liệu."), affected.Count),
                     LanguageService.Translate("Hoàn tác nhập"), MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes || !EnsureActiveSession())
                 return;
@@ -1505,7 +1505,7 @@ namespace PersonalInfoManager
             CsvImportBatchStore.Clear(username);
             try { ActivityLogger.Log(username, "UNDO_IMPORT", batch.Id.ToString("N")); } catch { }
             RefreshAccounts();
-            MessageBox.Show(this, LanguageService.Translate("Đã hoàn tác lần nhập."),
+            PersonalInfoManager.Services.LocalizedMessageBox.Show(this, LanguageService.Translate("Đã hoàn tác lần nhập."),
                 LanguageService.Translate("Hoàn tất"), MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
@@ -1520,7 +1520,7 @@ namespace PersonalInfoManager
             catch (Exception ex)
             {
                 dgFiles.ItemsSource = null;
-                MessageBox.Show(
+                PersonalInfoManager.Services.LocalizedMessageBox.Show(
                     $"Không thể đọc hoặc mã hóa kho File cá nhân. File chưa chuyển đổi được vẫn được giữ nguyên.\n\n{ex.Message}",
                     "Kho File cá nhân", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
@@ -1545,7 +1545,7 @@ namespace PersonalInfoManager
             {
                 dgFiles.ItemsSource = null;
                 if (!_isLocked)
-                    MessageBox.Show(
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show(
                         $"Không thể đọc hoặc mã hóa kho File cá nhân. File chưa chuyển đổi được vẫn được giữ nguyên.\n\n{ex.Message}",
                         "Kho File cá nhân", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
@@ -1569,7 +1569,7 @@ namespace PersonalInfoManager
                     _fileService.ImportFile(user, path);
                     try { ActivityLogger.Log(user, "IMPORT_FILE", Path.GetFileName(path)); } catch { }
                 }
-                catch (Exception ex) { MessageBox.Show($"Lỗi: {ex.Message}"); }
+                catch (Exception ex) { PersonalInfoManager.Services.LocalizedMessageBox.Show($"Lỗi: {ex.Message}"); }
             }
             RefreshFiles();
             UpdateStorageInfo();
@@ -1577,7 +1577,7 @@ namespace PersonalInfoManager
 
         private void BtnExport_Click(object? sender, RoutedEventArgs e)
         {
-            if (dgFiles.SelectedItem is not FileInfo fi) { MessageBox.Show("Chọn tệp cần xuất."); return; }
+            if (dgFiles.SelectedItem is not FileInfo fi) { PersonalInfoManager.Services.LocalizedMessageBox.Show("Chọn tệp cần xuất."); return; }
 
             var dlg = new SaveFileDialog { Title = "Xuất tệp", Filter = "Tất cả tệp (*.*)|*.*", FileName = fi.Name };
             LocalizedFileDialog.Apply(dlg);
@@ -1587,9 +1587,9 @@ namespace PersonalInfoManager
             {
                 _fileService.ExportFile(fi.FullName, dlg.FileName);
                 try { ActivityLogger.Log(SessionService.CurrentUser!.Username, "EXPORT_FILE", fi.Name); } catch { }
-                MessageBox.Show("Xuất thành công!");
+                PersonalInfoManager.Services.LocalizedMessageBox.Show("Xuất thành công!");
             }
-            catch (Exception ex) { MessageBox.Show($"Lỗi: {ex.Message}"); }
+            catch (Exception ex) { PersonalInfoManager.Services.LocalizedMessageBox.Show($"Lỗi: {ex.Message}"); }
         }
 
         private void BtnCreateText_Click(object? sender, RoutedEventArgs e)
@@ -1608,7 +1608,7 @@ namespace PersonalInfoManager
         private void BtnDeleteFile_Click(object? sender, RoutedEventArgs e)
         {
             if (dgFiles.SelectedItem is not FileInfo fi) return;
-            if (MessageBox.Show($"Xóa {fi.Name}?", "Xác nhận", MessageBoxButton.YesNo) != MessageBoxResult.Yes) return;
+            if (PersonalInfoManager.Services.LocalizedMessageBox.Show($"Xóa {fi.Name}?", "Xác nhận", MessageBoxButton.YesNo) != MessageBoxResult.Yes) return;
 
             _fileService.DeleteFile(fi.FullName);
             try { ActivityLogger.Log(SessionService.CurrentUser!.Username, "DELETE_FILE", fi.Name); } catch { }
@@ -1661,9 +1661,9 @@ namespace PersonalInfoManager
                 LoadProfile();
                 UpdateUserChip();
 
-                MessageBox.Show("Đã lưu thông tin cá nhân!");
+                PersonalInfoManager.Services.LocalizedMessageBox.Show("Đã lưu thông tin cá nhân!");
             }
-            else { MessageBox.Show(result.message, "Lỗi"); }
+            else { PersonalInfoManager.Services.LocalizedMessageBox.Show(result.message, "Lỗi"); }
         }
 
         private async void BtnToggleWindowsHello_Click(object sender, RoutedEventArgs e)
@@ -1676,16 +1676,16 @@ namespace PersonalInfoManager
                 if (!u.WindowsHelloEnabled)
                 {
                     bool available = await WindowsHelloService.IsAvailableAsync();
-                    if (!available) { MessageBox.Show("Máy tính không hỗ trợ Windows Hello.", "Không khả dụng", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
+                    if (!available) { PersonalInfoManager.Services.LocalizedMessageBox.Show("Máy tính không hỗ trợ Windows Hello.", "Không khả dụng", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
 
                     string sid = WindowsHelloService.GetCurrentWindowsSid();
-                    if (string.IsNullOrWhiteSpace(sid)) { MessageBox.Show("Không lấy được SID tài khoản Windows.", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error); return; }
+                    if (string.IsNullOrWhiteSpace(sid)) { PersonalInfoManager.Services.LocalizedMessageBox.Show("Không lấy được SID tài khoản Windows.", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error); return; }
 
-                    var confirm = MessageBox.Show($"Bật đăng nhập bằng Windows Hello cho '{u.Username}'?", "Xác nhận", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                    var confirm = PersonalInfoManager.Services.LocalizedMessageBox.Show($"Bật đăng nhập bằng Windows Hello cho '{u.Username}'?", "Xác nhận", MessageBoxButton.YesNo, MessageBoxImage.Question);
                     if (confirm != MessageBoxResult.Yes) return;
 
                     bool verified = await WindowsHelloService.VerifyAsync(this, $"Xác nhận bật Windows Hello");
-                    if (!verified) { MessageBox.Show("Xác thực thất bại.", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
+                    if (!verified) { PersonalInfoManager.Services.LocalizedMessageBox.Show("Xác thực thất bại.", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
 
                     var result = _userService.SetWindowsHello(u.Id, true, sid);
                     if (result.ok)
@@ -1694,13 +1694,13 @@ namespace PersonalInfoManager
                         if (updated != null) SessionService.Login(updated);
 
                         ActivityLogger.Log(u.Username, "ENABLE_WINDOWS_HELLO", "");
-                        MessageBox.Show("Đã bật thành công!", "OK", MessageBoxButton.OK, MessageBoxImage.Information);
+                        PersonalInfoManager.Services.LocalizedMessageBox.Show("Đã bật thành công!", "OK", MessageBoxButton.OK, MessageBoxImage.Information);
                         LoadProfile();
                     }
                 }
                 else
                 {
-                    var confirm = MessageBox.Show($"Tắt đăng nhập bằng Windows Hello cho '{u.Username}'?", "Xác nhận", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                    var confirm = PersonalInfoManager.Services.LocalizedMessageBox.Show($"Tắt đăng nhập bằng Windows Hello cho '{u.Username}'?", "Xác nhận", MessageBoxButton.YesNo, MessageBoxImage.Question);
                     if (confirm != MessageBoxResult.Yes) return;
 
                     var result = _userService.SetWindowsHello(u.Id, false, "");
@@ -1710,12 +1710,12 @@ namespace PersonalInfoManager
                         if (updated != null) SessionService.Login(updated);
 
                         ActivityLogger.Log(u.Username, "DISABLE_WINDOWS_HELLO", "");
-                        MessageBox.Show("Đã tắt thành công!", "OK", MessageBoxButton.OK, MessageBoxImage.Information);
+                        PersonalInfoManager.Services.LocalizedMessageBox.Show("Đã tắt thành công!", "OK", MessageBoxButton.OK, MessageBoxImage.Information);
                         LoadProfile();
                     }
                 }
             }
-            catch (Exception ex) { MessageBox.Show($"Lỗi: {ex.Message}"); }
+            catch (Exception ex) { PersonalInfoManager.Services.LocalizedMessageBox.Show($"Lỗi: {ex.Message}"); }
             finally { btnToggleWindowsHello.IsEnabled = true; }
         }
 
@@ -1762,7 +1762,7 @@ namespace PersonalInfoManager
 
                 if (!TwoFactorService.IsEnabled(username))
                 {
-                    MessageBox.Show("Bạn chưa bật xác thực 2 bước nên chưa có mã khôi phục.",
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show("Bạn chưa bật xác thực 2 bước nên chưa có mã khôi phục.",
                         "Thông báo", MessageBoxButton.OK, MessageBoxImage.Information);
                     Update2FAMenu();
                     return;
@@ -1790,13 +1790,13 @@ namespace PersonalInfoManager
                 if (codesWindow.ShowDialog() == true)
                 {
                     try { ActivityLogger.Log(username, "REGENERATE_RECOVERY_CODES", ""); } catch { }
-                    MessageBox.Show("Đã tạo mã khôi phục mới. Các mã cũ không còn dùng được.",
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show("Đã tạo mã khôi phục mới. Các mã cũ không còn dùng được.",
                         "Thành công", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Lỗi: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                PersonalInfoManager.Services.LocalizedMessageBox.Show($"Lỗi: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -1829,7 +1829,7 @@ namespace PersonalInfoManager
                     if (dlg.ShowDialog() == true)
                     {
                         try { ActivityLogger.Log(username, "DISABLE_2FA", ""); } catch { }
-                        MessageBox.Show("Đã tắt xác thực 2 bước.", "Thành công", MessageBoxButton.OK, MessageBoxImage.Information);
+                        PersonalInfoManager.Services.LocalizedMessageBox.Show("Đã tắt xác thực 2 bước.", "Thành công", MessageBoxButton.OK, MessageBoxImage.Information);
                     }
                 }
 
@@ -1837,7 +1837,7 @@ namespace PersonalInfoManager
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Lỗi: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                PersonalInfoManager.Services.LocalizedMessageBox.Show($"Lỗi: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -1850,7 +1850,7 @@ namespace PersonalInfoManager
                 bool available = await WindowsHelloService.IsAvailableAsync();
                 if (!available)
                 {
-                    MessageBox.Show(
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show(
                         "Xuất CSV cần xác thực bằng Windows Hello nhưng máy này chưa hỗ trợ hoặc chưa thiết lập.\n\n" +
                         "Hãy cài đặt vân tay / khuôn mặt / PIN trong Cài đặt Windows rồi thử lại.",
                         "Không thể xác thực", MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -1862,7 +1862,7 @@ namespace PersonalInfoManager
                 if (!verified)
                 {
                     try { ActivityLogger.Log(username, "EXPORT_CSV_DENIED", "Xác thực Windows Hello thất bại"); } catch { }
-                    MessageBox.Show("Xác thực thất bại. Đã hủy xuất CSV.", "Từ chối", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show("Xác thực thất bại. Đã hủy xuất CSV.", "Từ chối", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
 
@@ -1878,23 +1878,23 @@ namespace PersonalInfoManager
                 var accounts = _vaultService.Load(username).Where(account => !account.IsDeleted).ToList();
                 if (accounts.Count == 0)
                 {
-                    MessageBox.Show("Không có tài khoản nào để xuất.", "Thông báo");
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show("Không có tài khoản nào để xuất.", "Thông báo");
                     return;
                 }
 
                 var res = CsvService.ExportToFile(accounts, dlg.FileName);
                 if (!res.ok)
                 {
-                    MessageBox.Show(res.message, "Lỗi xuất CSV", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show(res.message, "Lỗi xuất CSV", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
 
                 ActivityLogger.Log(username, "EXPORT_CSV", $"Xuất {accounts.Count} tài khoản ra CSV");
-                MessageBox.Show(res.message, "Thành công", MessageBoxButton.OK, MessageBoxImage.Information);
+                PersonalInfoManager.Services.LocalizedMessageBox.Show(res.message, "Thành công", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Lỗi xuất CSV: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                PersonalInfoManager.Services.LocalizedMessageBox.Show($"Lỗi xuất CSV: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -1916,7 +1916,7 @@ namespace PersonalInfoManager
                 CredentialImportResult parsed = CredentialImportService.ImportFromFile(dlg.FileName);
                 if (!parsed.Ok)
                 {
-                    MessageBox.Show(parsed.Message, LanguageService.Translate("Lỗi nhập dữ liệu"), MessageBoxButton.OK, MessageBoxImage.Warning);
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show(parsed.Message, LanguageService.Translate("Lỗi nhập dữ liệu"), MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
 
@@ -2026,7 +2026,7 @@ namespace PersonalInfoManager
 
                 if (affectedIds.Count == 0)
                 {
-                    MessageBox.Show(this, LanguageService.Translate("Không có thay đổi nào để nhập."),
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show(this, LanguageService.Translate("Không có thay đổi nào để nhập."),
                         LanguageService.Translate("Kết quả nhập dữ liệu"), MessageBoxButton.OK, MessageBoxImage.Information);
                     return;
                 }
@@ -2054,10 +2054,10 @@ namespace PersonalInfoManager
                 UpdateStorageInfo();
                 ActivityLogger.Log(username, "IMPORT_CREDENTIALS", $"Thêm {added}, ghi đè {overwritten}, bỏ qua {skipped} ({parsed.Message})");
 
-                MessageBox.Show(this, string.Format(LanguageService.Translate("Đã thêm {0}, ghi đè {1}, bỏ qua {2} tài khoản. Có thể hoàn tác lô này bằng nút Hoàn tác nhập."), added, overwritten, skipped),
+                PersonalInfoManager.Services.LocalizedMessageBox.Show(this, string.Format(LanguageService.Translate("Đã thêm {0}, ghi đè {1}, bỏ qua {2} tài khoản. Có thể hoàn tác lô này bằng nút Hoàn tác nhập."), added, overwritten, skipped),
                     LanguageService.Translate("Kết quả nhập dữ liệu"), MessageBoxButton.OK, MessageBoxImage.Information);
             }
-            catch (Exception ex) { MessageBox.Show(this, LanguageService.Translate("Lỗi nhập dữ liệu: ") + ex.Message, LanguageService.Translate("Lỗi"), MessageBoxButton.OK, MessageBoxImage.Error); }
+            catch (Exception ex) { PersonalInfoManager.Services.LocalizedMessageBox.Show(this, LanguageService.Translate("Lỗi nhập dữ liệu: ") + ex.Message, LanguageService.Translate("Lỗi"), MessageBoxButton.OK, MessageBoxImage.Error); }
         }
 
         private void BtnKeyboardShortcuts_Click(object? sender, RoutedEventArgs e) =>
@@ -2065,7 +2065,7 @@ namespace PersonalInfoManager
 
         private void MnuAdmin_Click(object? sender, RoutedEventArgs e) => new AdminWindow().ShowDialog();
         private void MnuChangePwd_Click(object? sender, RoutedEventArgs e) => new ChangePasswordWindow().ShowDialog();
-        private void MnuSysInfo_Click(object? sender, RoutedEventArgs e) => MessageBox.Show(SystemInfoService.GetSystemReport(), LanguageService.Translate("Thông tin hệ thống"));
+        private void MnuSysInfo_Click(object? sender, RoutedEventArgs e) => PersonalInfoManager.Services.LocalizedMessageBox.Show(SystemInfoService.GetSystemReport(), LanguageService.Translate("Thông tin hệ thống"));
 
         private void MnuLogout_Click(object? sender, RoutedEventArgs e)
         {
@@ -2113,19 +2113,22 @@ namespace PersonalInfoManager
                     AutoThemeService.Start();
                     RegistryService.SetAutoThemeEnabled(true);
                     string currentTheme = AutoThemeService.GetCurrentThemeByTime();
-                MessageBox.Show($"Đã bật tự động đổi giao diện theo giờ.\n\n• 06:00 - 18:00: Sáng\n• 18:00 - 06:00: Tối\n\nHiện tại ({DateTime.Now:HH:mm}): {currentTheme}", "Giao diện tự động");
+                    string message = string.Format(
+                        LanguageService.Translate("Đã bật tự động đổi giao diện theo giờ.\n\n• 06:00 - 18:00: Sáng\n• 18:00 - 06:00: Tối\n\nHiện tại ({0}): {1}"),
+                        DateTime.Now.ToString("HH:mm"), currentTheme);
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show(message, "Giao diện tự động");
                 }
                 else
                 {
                     AutoThemeService.Stop();
                     RegistryService.SetAutoThemeEnabled(false);
-                MessageBox.Show("Đã tắt tự động đổi giao diện theo giờ.", "Giao diện tự động");
+                PersonalInfoManager.Services.LocalizedMessageBox.Show("Đã tắt tự động đổi giao diện theo giờ.", "Giao diện tự động");
                 }
 
                 UpdateAutoThemeCard();
                 UpdateThemeIndicator();
             }
-            catch (Exception ex) { MessageBox.Show($"Lỗi: {ex.Message}"); }
+            catch (Exception ex) { PersonalInfoManager.Services.LocalizedMessageBox.Show($"Lỗi: {ex.Message}"); }
         }
 
         private async void MnuExportVault_Click(object? sender, RoutedEventArgs e)
@@ -2141,9 +2144,9 @@ namespace PersonalInfoManager
                 string username = SessionService.CurrentUser!.Username;
                 var result = VaultBackupService.ExportToFile(username, dlg.FileName);
                 if (result.ok) AutoBackupService.RecordBackup(username, dlg.FileName);
-                MessageBox.Show(result.message, result.ok ? "Thành công" : "Lỗi", MessageBoxButton.OK, result.ok ? MessageBoxImage.Information : MessageBoxImage.Warning);
+                PersonalInfoManager.Services.LocalizedMessageBox.Show(result.message, result.ok ? "Thành công" : "Lỗi", MessageBoxButton.OK, result.ok ? MessageBoxImage.Information : MessageBoxImage.Warning);
             }
-            catch (Exception ex) { MessageBox.Show($"Lỗi: {ex.Message}"); }
+            catch (Exception ex) { PersonalInfoManager.Services.LocalizedMessageBox.Show($"Lỗi: {ex.Message}"); }
         }
 
         private async void MnuImportVault_Click(object? sender, RoutedEventArgs e)
@@ -2164,7 +2167,7 @@ namespace PersonalInfoManager
                 if (_isLocked || !EnsureActiveSession()) return;
                 if (!prepared.ok || prepared.preview == null)
                 {
-                    MessageBox.Show(prepared.message, "Không thể xem trước", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show(prepared.message, "Không thể xem trước", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
 
@@ -2182,7 +2185,7 @@ namespace PersonalInfoManager
                 if (previewWindow.ShowDialog() != true || !EnsureActiveSession()) return;
 
                 var result = VaultBackupService.CommitImport(username, preview, ConfirmForeignOwner);
-                MessageBox.Show(result.message, result.ok ? "Thành công" : "Lỗi", MessageBoxButton.OK, result.ok ? MessageBoxImage.Information : MessageBoxImage.Warning);
+                PersonalInfoManager.Services.LocalizedMessageBox.Show(result.message, result.ok ? "Thành công" : "Lỗi", MessageBoxButton.OK, result.ok ? MessageBoxImage.Information : MessageBoxImage.Warning);
 
                 if (result.ok) await OfferSavePassphraseAsync(passphrase);
                 if (_isLocked) return;
@@ -2193,7 +2196,7 @@ namespace PersonalInfoManager
                     UpdateStorageInfo();
                 }
             }
-            catch (Exception ex) { if (!_isLocked) MessageBox.Show($"Lỗi: {ex.Message}"); }
+            catch (Exception ex) { if (!_isLocked) PersonalInfoManager.Services.LocalizedMessageBox.Show($"Lỗi: {ex.Message}"); }
             finally { Mouse.OverrideCursor = null; }
         }
 
@@ -2228,7 +2231,7 @@ namespace PersonalInfoManager
                     if (_isLocked || !EnsureActiveSession()) return;
                     AutoBackupService.RecordBackupVerification(username, dlg.FileName, inspection.ok);
                     try { ActivityLogger.Log(username, "VERIFY_FILE_BACKUP", Path.GetFileName(dlg.FileName)); } catch { }
-                    MessageBox.Show(inspection.message,
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show(inspection.message,
                         inspection.ok ? "Bản sao lưu hợp lệ" : "Không thể xác minh",
                         MessageBoxButton.OK,
                         inspection.ok ? MessageBoxImage.Information : MessageBoxImage.Warning);
@@ -2245,7 +2248,7 @@ namespace PersonalInfoManager
                     if (_isLocked || !EnsureActiveSession()) return;
                     AutoBackupService.RecordBackupVerification(username, dlg.FileName, inspection.ok);
                     try { ActivityLogger.Log(username, "VERIFY_VAULT_BACKUP", Path.GetFileName(dlg.FileName)); } catch { }
-                    MessageBox.Show(inspection.message,
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show(inspection.message,
                         inspection.ok ? "Bản sao lưu hợp lệ" : "Không thể xác minh",
                         MessageBoxButton.OK,
                         inspection.ok ? MessageBoxImage.Information : MessageBoxImage.Warning);
@@ -2254,13 +2257,13 @@ namespace PersonalInfoManager
             catch (OperationCanceledException)
             {
                 if (!_isLocked)
-                    MessageBox.Show("Đã hủy kiểm tra vì phiên đăng nhập không còn hoạt động.", "Đã hủy",
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show("Đã hủy kiểm tra vì phiên đăng nhập không còn hoạt động.", "Đã hủy",
                         MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
                 if (!_isLocked)
-                    MessageBox.Show($"Không thể kiểm tra bản sao lưu: {ex.Message}", "Lỗi",
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show($"Không thể kiểm tra bản sao lưu: {ex.Message}", "Lỗi",
                         MessageBoxButton.OK, MessageBoxImage.Warning);
             }
             finally
@@ -2297,7 +2300,7 @@ namespace PersonalInfoManager
                     if (_isLocked || !EnsureActiveSession()) return;
                     AutoBackupService.RecordRestoreDrill(username, dialog.FileName, result.ok, result.message);
                     try { ActivityLogger.Log(username, "FILE_BACKUP_RESTORE_DRILL", $"{Path.GetFileName(dialog.FileName)}: {result.ok}"); } catch { }
-                    MessageBox.Show(LanguageService.Translate(result.message), LanguageService.Translate(result.ok ? "Diễn tập hoàn tất" : "Diễn tập thất bại"),
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show(LanguageService.Translate(result.message), LanguageService.Translate(result.ok ? "Diễn tập hoàn tất" : "Diễn tập thất bại"),
                         MessageBoxButton.OK, result.ok ? MessageBoxImage.Information : MessageBoxImage.Warning);
                 }
                 else
@@ -2309,19 +2312,19 @@ namespace PersonalInfoManager
                     if (_isLocked || !EnsureActiveSession()) return;
                     AutoBackupService.RecordRestoreDrill(username, dialog.FileName, result.ok, result.message);
                     try { ActivityLogger.Log(username, "VAULT_BACKUP_RESTORE_DRILL", $"{Path.GetFileName(dialog.FileName)}: {result.ok}"); } catch { }
-                    MessageBox.Show(LanguageService.Translate(result.message), LanguageService.Translate(result.ok ? "Diễn tập hoàn tất" : "Diễn tập thất bại"),
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show(LanguageService.Translate(result.message), LanguageService.Translate(result.ok ? "Diễn tập hoàn tất" : "Diễn tập thất bại"),
                         MessageBoxButton.OK, result.ok ? MessageBoxImage.Information : MessageBoxImage.Warning);
                 }
                 RefreshSecurityOverview();
             }
             catch (OperationCanceledException)
             {
-                if (!_isLocked) MessageBox.Show(LanguageService.Translate("Đã hủy diễn tập vì phiên đăng nhập không còn hoạt động."), LanguageService.Translate("Đã hủy"),
+                if (!_isLocked) PersonalInfoManager.Services.LocalizedMessageBox.Show(LanguageService.Translate("Đã hủy diễn tập vì phiên đăng nhập không còn hoạt động."), LanguageService.Translate("Đã hủy"),
                     MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
-                if (!_isLocked) MessageBox.Show(LanguageService.Translate($"Không thể diễn tập khôi phục: {ex.Message}"), LanguageService.Translate("Lỗi"),
+                if (!_isLocked) PersonalInfoManager.Services.LocalizedMessageBox.Show(LanguageService.Translate($"Không thể diễn tập khôi phục: {ex.Message}"), LanguageService.Translate("Lỗi"),
                     MessageBoxButton.OK, MessageBoxImage.Warning);
             }
             finally { Mouse.OverrideCursor = null; }
@@ -2398,7 +2401,7 @@ namespace PersonalInfoManager
                 if (!await RequireAuthAsync("ngắt kết nối Google Drive trên máy này", "DISCONNECT_GOOGLE_DRIVE_DENIED")) return;
                 if (!EnsureActiveSession()) return;
 
-                var answer = MessageBox.Show(
+                var answer = PersonalInfoManager.Services.LocalizedMessageBox.Show(
                     "Xóa token Google Drive đã mã hóa đang lưu trên máy này? Bản sao lưu trên Drive không bị xóa. " +
                     "Quyền ứng dụng trong tài khoản Google vẫn còn và cần thu hồi riêng nếu bạn muốn.",
                     "Ngắt kết nối Google Drive", MessageBoxButton.YesNo, MessageBoxImage.Warning);
@@ -2412,7 +2415,7 @@ namespace PersonalInfoManager
             catch (Exception ex)
             {
                 if (!_isLocked)
-                    MessageBox.Show($"Không thể ngắt kết nối Google Drive: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show($"Không thể ngắt kết nối Google Drive: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
 
@@ -2423,12 +2426,12 @@ namespace PersonalInfoManager
             {
                 if (GetSelectedAccounts().Count != 1)
                 {
-                    MessageBox.Show(this, LanguageService.Translate("Chọn đúng một tài khoản để tạo chia sẻ."),
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show(this, LanguageService.Translate("Chọn đúng một tài khoản để tạo chia sẻ."),
                         LanguageService.Translate("Thông tin"), MessageBoxButton.OK, MessageBoxImage.Information);
                     return;
                 }
                 var selected = GetSelectedAccount();
-                if (selected == null) { MessageBox.Show(this, LanguageService.Translate("Chọn một tài khoản trước."), LanguageService.Translate("Thông tin"), MessageBoxButton.OK, MessageBoxImage.Information); return; }
+                if (selected == null) { PersonalInfoManager.Services.LocalizedMessageBox.Show(this, LanguageService.Translate("Chọn một tài khoản trước."), LanguageService.Translate("Thông tin"), MessageBoxButton.OK, MessageBoxImage.Information); return; }
                 if (!await RequireAuthAsync("tạo liên kết chia sẻ tạm thời cho tài khoản", "ACCOUNT_SHARE_DENIED")) return;
                 string username = SessionService.CurrentUser!.Username;
                 var account = _vaultService.Load(username).FirstOrDefault(item => item.Id == selected.Id && !item.IsDeleted);
@@ -2436,7 +2439,7 @@ namespace PersonalInfoManager
 
                 var setup = new AccountShareSetupWindow { Owner = this };
                 if (setup.ShowDialog() != true || !EnsureActiveSession()) return;
-                if (MessageBox.Show(this,
+                if (PersonalInfoManager.Services.LocalizedMessageBox.Show(this,
                         string.Format(LanguageService.Translate("Gói được mã hóa sẽ chứa toàn bộ tài khoản '{0}', gồm mật khẩu, TOTP, trường tùy chỉnh và tệp đính kèm. Cấp quyền đọc Drive cho {1} trong {2} ngày?"),
                             account.ServiceName, setup.RecipientEmail, setup.ExpirationDays),
                         LanguageService.Translate("Xác nhận chia sẻ thông tin nhạy cảm"), MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
@@ -2454,7 +2457,7 @@ namespace PersonalInfoManager
                 Mouse.OverrideCursor = null;
                 if (share == null)
                 {
-                    MessageBox.Show(this, LanguageService.Translate("Không thể tạo liên kết Drive: ") + LanguageService.Translate(cloud.LastError ?? ""),
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show(this, LanguageService.Translate("Không thể tạo liên kết Drive: ") + LanguageService.Translate(cloud.LastError ?? ""),
                         LanguageService.Translate("Lỗi chia sẻ"), MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
@@ -2471,7 +2474,7 @@ namespace PersonalInfoManager
             {
                 Mouse.OverrideCursor = null;
                 if (!_isLocked)
-                    MessageBox.Show(this, LanguageService.Translate("Không thể tạo chia sẻ: ") + LanguageService.Translate(ex.Message),
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show(this, LanguageService.Translate("Không thể tạo chia sẻ: ") + LanguageService.Translate(ex.Message),
                         LanguageService.Translate("Lỗi chia sẻ"), MessageBoxButton.OK, MessageBoxImage.Warning);
             }
             finally
@@ -2496,13 +2499,13 @@ namespace PersonalInfoManager
                     if (_isLocked || !EnsureActiveSession()) return;
                     if (shares == null)
                     {
-                        MessageBox.Show(this, LanguageService.Translate("Không thể tải liên kết đang chia sẻ: ") + LanguageService.Translate(cloud.LastError ?? ""),
+                        PersonalInfoManager.Services.LocalizedMessageBox.Show(this, LanguageService.Translate("Không thể tải liên kết đang chia sẻ: ") + LanguageService.Translate(cloud.LastError ?? ""),
                             LanguageService.Translate("Lỗi chia sẻ"), MessageBoxButton.OK, MessageBoxImage.Warning);
                         return;
                     }
                     var dialog = new DriveSharesWindow(shares) { Owner = this };
                     if (dialog.ShowDialog() != true || dialog.SelectedShare == null || !EnsureActiveSession()) return;
-                    if (MessageBox.Show(this,
+                    if (PersonalInfoManager.Services.LocalizedMessageBox.Show(this,
                             string.Format(LanguageService.Translate("Thu hồi quyền Drive của {0} và chuyển gói chia sẻ vào thùng rác? Bản sao đã tải xuống vẫn có thể được giữ."), dialog.SelectedShare.RecipientEmail),
                             LanguageService.Translate("Thu hồi chia sẻ"), MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
                         continue;
@@ -2513,13 +2516,13 @@ namespace PersonalInfoManager
                     if (_isLocked || !EnsureActiveSession()) return;
                     if (!revoked)
                     {
-                        MessageBox.Show(this, LanguageService.Translate("Không thể thu hồi chia sẻ: ") + LanguageService.Translate(cloud.LastError ?? ""),
+                        PersonalInfoManager.Services.LocalizedMessageBox.Show(this, LanguageService.Translate("Không thể thu hồi chia sẻ: ") + LanguageService.Translate(cloud.LastError ?? ""),
                             LanguageService.Translate("Lỗi chia sẻ"), MessageBoxButton.OK, MessageBoxImage.Warning);
                         return;
                     }
                     try { ActivityLogger.Log(username, "REVOKE_ACCOUNT_SHARE", dialog.SelectedShare.RecipientEmail); } catch { }
                     if (!string.IsNullOrWhiteSpace(cloud.LastError))
-                        MessageBox.Show(this, LanguageService.Translate(cloud.LastError),
+                        PersonalInfoManager.Services.LocalizedMessageBox.Show(this, LanguageService.Translate(cloud.LastError),
                             LanguageService.Translate("Quyền đã bị thu hồi"), MessageBoxButton.OK, MessageBoxImage.Warning);
                 }
             }
@@ -2527,7 +2530,7 @@ namespace PersonalInfoManager
             {
                 Mouse.OverrideCursor = null;
                 if (!_isLocked)
-                    MessageBox.Show(this, LanguageService.Translate("Lỗi quản lý chia sẻ: ") + LanguageService.Translate(ex.Message),
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show(this, LanguageService.Translate("Lỗi quản lý chia sẻ: ") + LanguageService.Translate(ex.Message),
                         LanguageService.Translate("Lỗi chia sẻ"), MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
@@ -2553,7 +2556,7 @@ namespace PersonalInfoManager
                 if (preview.ShowDialog() != true || !EnsureActiveSession()) return;
                 if (package.ExpiresAtUtc <= DateTimeOffset.UtcNow)
                 {
-                    MessageBox.Show(this, LanguageService.Translate("Gói chia sẻ đã hết hạn trong lúc xem trước."),
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show(this, LanguageService.Translate("Gói chia sẻ đã hết hạn trong lúc xem trước."),
                         LanguageService.Translate("Gói đã hết hạn"), MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
@@ -2563,7 +2566,7 @@ namespace PersonalInfoManager
             {
                 Mouse.OverrideCursor = null;
                 if (!_isLocked)
-                    MessageBox.Show(this, LanguageService.Translate("Không thể mở gói chia sẻ: ") + LanguageService.Translate(ex.Message),
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show(this, LanguageService.Translate("Không thể mở gói chia sẻ: ") + LanguageService.Translate(ex.Message),
                         LanguageService.Translate("Lỗi chia sẻ"), MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
@@ -2605,7 +2608,7 @@ namespace PersonalInfoManager
                 var target = accounts.FirstOrDefault(item => item.Id == targetId && !item.IsDeleted);
                 if (target == null)
                 {
-                    MessageBox.Show(this, LanguageService.Translate("Tài khoản trùng không còn tồn tại; không có gì được ghi đè."),
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show(this, LanguageService.Translate("Tài khoản trùng không còn tồn tại; không có gì được ghi đè."),
                         LanguageService.Translate("Không thể ghi đè"), MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
@@ -2658,7 +2661,7 @@ namespace PersonalInfoManager
             try { ActivityLogger.Log(username, "IMPORT_ACCOUNT_SHARE", decision.Account.ServiceName); } catch { }
             RefreshAccounts();
             UpdateStorageInfo();
-            MessageBox.Show(this, LanguageService.Translate("Đã thêm mục được chia sẻ. Có thể hoàn tác bằng nút Hoàn tác nhập CSV."),
+            PersonalInfoManager.Services.LocalizedMessageBox.Show(this, LanguageService.Translate("Đã thêm mục được chia sẻ. Có thể hoàn tác bằng nút Hoàn tác nhập CSV."),
                 LanguageService.Translate("Đã nhập mục được chia sẻ"), MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
@@ -2674,7 +2677,7 @@ namespace PersonalInfoManager
                 if (_isLocked) return;
                 if (!BackupCrypto.HasStoredPassphrase(username))
                 {
-                    var ask = MessageBox.Show(
+                    var ask = PersonalInfoManager.Services.LocalizedMessageBox.Show(
                         "Bản sao lưu lên Google Drive chưa có cụm mật khẩu khôi phục, nên chỉ mở được trên máy này. " +
                         "Nếu mất máy hoặc cài lại Windows, bạn sẽ không khôi phục được.\n\nĐặt cụm mật khẩu ngay bây giờ?",
                         "Nên đặt cụm mật khẩu sao lưu", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning);
@@ -2694,7 +2697,7 @@ namespace PersonalInfoManager
                 if (_isLocked || !EnsureActiveSession()) return;
                 if (remoteBackups == null)
                 {
-                    MessageBox.Show(this, LanguageService.Translate("Không thể kiểm tra bản trên Drive: ") +
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show(this, LanguageService.Translate("Không thể kiểm tra bản trên Drive: ") +
                         (syncService.LastError ?? ""), LanguageService.Translate("Lỗi đồng bộ"),
                         MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
@@ -2705,7 +2708,7 @@ namespace PersonalInfoManager
                 int keep = 5;
                 if (checkpoint == null && latestRemote != null)
                 {
-                    var firstSyncChoice = MessageBox.Show(this,
+                    var firstSyncChoice = PersonalInfoManager.Services.LocalizedMessageBox.Show(this,
                         LanguageService.Translate("Drive đã có bản của tài khoản này nhưng máy chưa có mốc đồng bộ. Không thể xác định an toàn bản nào mới hơn.\n\nCó: tải kho trên máy này lên thành một bản riêng, giữ lại các bản Drive hiện có.\nKhông: hủy và dùng Khôi phục từ Google Drive để xem bản từ xa.\nHủy: dừng."),
                         LanguageService.Translate("Chưa có mốc đồng bộ"), MessageBoxButton.YesNoCancel, MessageBoxImage.Warning);
                     if (firstSyncChoice != MessageBoxResult.Yes) return;
@@ -2717,14 +2720,14 @@ namespace PersonalInfoManager
                     bool localChanged = localFingerprint != checkpoint.LocalFingerprint;
                     if (remoteChanged && !localChanged)
                     {
-                        MessageBox.Show(this,
+                        PersonalInfoManager.Services.LocalizedMessageBox.Show(this,
                             LanguageService.Translate("Bản Drive đã đổi kể từ lần đồng bộ trước, còn kho trên máy này chưa đổi. Không có dữ liệu nào được ghi lên Drive. Dùng Khôi phục từ Google Drive để xem và nhập bản mới."),
                             LanguageService.Translate("Có thay đổi trên Drive"), MessageBoxButton.OK, MessageBoxImage.Warning);
                         return;
                     }
                     if (remoteChanged && localChanged)
                     {
-                        var conflictChoice = MessageBox.Show(this,
+                        var conflictChoice = PersonalInfoManager.Services.LocalizedMessageBox.Show(this,
                             LanguageService.Translate("Cả kho trên máy này và bản Drive đều đã đổi kể từ lần đồng bộ trước. Đồng bộ tự động đã dừng để tránh ghi đè.\n\nCó: tải kho cục bộ lên thành bản riêng, giữ bản Drive hiện tại để so sánh.\nKhông: dừng để bạn xem và xử lý bản Drive trước.\nHủy: dừng."),
                             LanguageService.Translate("Phát hiện xung đột đồng bộ"), MessageBoxButton.YesNoCancel, MessageBoxImage.Warning);
                         if (conflictChoice != MessageBoxResult.Yes) return;
@@ -2732,7 +2735,7 @@ namespace PersonalInfoManager
                     }
                     else if (!localChanged)
                     {
-                        MessageBox.Show(this, LanguageService.Translate("Kho trên máy này và bản Drive đã đồng bộ; không có thay đổi mới."),
+                        PersonalInfoManager.Services.LocalizedMessageBox.Show(this, LanguageService.Translate("Kho trên máy này và bản Drive đã đồng bộ; không có thay đổi mới."),
                             LanguageService.Translate("Đã đồng bộ"), MessageBoxButton.OK, MessageBoxImage.Information);
                         return;
                     }
@@ -2741,7 +2744,7 @@ namespace PersonalInfoManager
                 tempFile = Path.Combine(Path.GetTempPath(), $"vault_backup_{DateTime.Now:yyyyMMdd_HHmmss}.vault");
 
                 var exportResult = VaultBackupService.ExportToFile(username, tempFile, out string exportedFingerprint);
-                if (!exportResult.ok) { MessageBox.Show(LanguageService.Translate(exportResult.message), LanguageService.Translate("Lỗi xuất file"), MessageBoxButton.OK, MessageBoxImage.Warning); return; }
+                if (!exportResult.ok) { PersonalInfoManager.Services.LocalizedMessageBox.Show(LanguageService.Translate(exportResult.message), LanguageService.Translate("Lỗi xuất file"), MessageBoxButton.OK, MessageBoxImage.Warning); return; }
                 if (!EnsureActiveSession()) return;
 
                 Mouse.OverrideCursor = Cursors.Wait;
@@ -2755,7 +2758,7 @@ namespace PersonalInfoManager
                     .FirstOrDefault()?.Id;
                 if (remoteImmediatelyBeforeUpload == null || newestRemoteId != latestRemote?.Id)
                 {
-                    MessageBox.Show(this,
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show(this,
                         LanguageService.Translate("Bản Drive vừa thay đổi trong lúc chuẩn bị đồng bộ. Chưa tải dữ liệu nào lên; hãy chạy lại để kiểm tra xung đột mới."),
                         LanguageService.Translate("Phát hiện xung đột đồng bộ"), MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
@@ -2776,19 +2779,19 @@ namespace PersonalInfoManager
                             LocalFingerprint = exportedFingerprint,
                             LastSyncAtUtc = DateTime.UtcNow
                         });
-                    MessageBox.Show(LanguageService.Translate("Đã đồng bộ kho mật khẩu lên Google Drive thành công!\n\nBản sao lưu nằm trong thư mục 'TQLTK Backup' trên Google Drive của bạn."), LanguageService.Translate("Thành công"), MessageBoxButton.OK, MessageBoxImage.Information);
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show(LanguageService.Translate("Đã đồng bộ kho mật khẩu lên Google Drive thành công!\n\nBản sao lưu nằm trong thư mục 'TQLTK Backup' trên Google Drive của bạn."), LanguageService.Translate("Thành công"), MessageBoxButton.OK, MessageBoxImage.Information);
                     ActivityLogger.Log(username, "SYNC_GOOGLE_DRIVE", "Đã tải kho mật khẩu lên thành công");
                 }
                 else
                 {
-                    MessageBox.Show(LanguageService.Translate("Đồng bộ thất bại.\n\n") + LanguageService.Translate(syncService.LastError ?? "Vui lòng kiểm tra kết nối mạng, quyền truy cập Google Drive và cửa sổ trình duyệt (nếu có)."), LanguageService.Translate("Lỗi"), MessageBoxButton.OK, MessageBoxImage.Warning);
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show(LanguageService.Translate("Đồng bộ thất bại.\n\n") + LanguageService.Translate(syncService.LastError ?? "Vui lòng kiểm tra kết nối mạng, quyền truy cập Google Drive và cửa sổ trình duyệt (nếu có)."), LanguageService.Translate("Lỗi"), MessageBoxButton.OK, MessageBoxImage.Warning);
                 }
             }
             catch (Exception ex)
             {
                 Mouse.OverrideCursor = null;
                 if (!_isLocked)
-                    MessageBox.Show(string.Format(LanguageService.Translate("Lỗi đồng bộ: {0}"), LanguageService.Translate(ex.Message)), LanguageService.Translate("Lỗi"), MessageBoxButton.OK, MessageBoxImage.Error);
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show(string.Format(LanguageService.Translate("Lỗi đồng bộ: {0}"), LanguageService.Translate(ex.Message)), LanguageService.Translate("Lỗi"), MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
             {
@@ -2818,7 +2821,7 @@ namespace PersonalInfoManager
 
                 if (!downloaded)
                 {
-                    MessageBox.Show(LanguageService.Translate(syncService.LastError ?? "Tải bản sao lưu từ Google Drive thất bại."), LanguageService.Translate("Lỗi"), MessageBoxButton.OK, MessageBoxImage.Warning);
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show(LanguageService.Translate(syncService.LastError ?? "Tải bản sao lưu từ Google Drive thất bại."), LanguageService.Translate("Lỗi"), MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
 
@@ -2830,7 +2833,7 @@ namespace PersonalInfoManager
                 if (_isLocked || !EnsureActiveSession()) return;
                 if (!prepared.ok || prepared.preview == null)
                 {
-                    MessageBox.Show(LanguageService.Translate(prepared.message), LanguageService.Translate("Không thể xem trước"), MessageBoxButton.OK, MessageBoxImage.Warning);
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show(LanguageService.Translate(prepared.message), LanguageService.Translate("Không thể xem trước"), MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
 
@@ -2855,13 +2858,13 @@ namespace PersonalInfoManager
                     item.Owner == BackupOwner.Mine && item.Id == pick.Id) == true;
                 if (!selectedBackupStillExists)
                 {
-                    MessageBox.Show(this, LanguageService.Translate("Bản Drive đã thay đổi trong lúc xem trước. Không có dữ liệu nào được nhập; hãy tải lại danh sách bản sao lưu."),
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show(this, LanguageService.Translate("Bản Drive đã thay đổi trong lúc xem trước. Không có dữ liệu nào được nhập; hãy tải lại danh sách bản sao lưu."),
                         LanguageService.Translate("Phát hiện xung đột đồng bộ"), MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
 
                 var result = VaultBackupService.CommitImport(username, preview, ConfirmForeignOwner);
-                MessageBox.Show(LanguageService.Translate(result.message), LanguageService.Translate(result.ok ? "Thành công" : "Lỗi"), MessageBoxButton.OK, result.ok ? MessageBoxImage.Information : MessageBoxImage.Warning);
+                PersonalInfoManager.Services.LocalizedMessageBox.Show(LanguageService.Translate(result.message), LanguageService.Translate(result.ok ? "Thành công" : "Lỗi"), MessageBoxButton.OK, result.ok ? MessageBoxImage.Information : MessageBoxImage.Warning);
 
                 if (result.ok)
                 {
@@ -2885,7 +2888,7 @@ namespace PersonalInfoManager
             catch (Exception ex)
             {
                 Mouse.OverrideCursor = null;
-                if (!_isLocked) MessageBox.Show(string.Format(LanguageService.Translate("Lỗi khôi phục: {0}"), LanguageService.Translate(ex.Message)), LanguageService.Translate("Lỗi"), MessageBoxButton.OK, MessageBoxImage.Error);
+                if (!_isLocked) PersonalInfoManager.Services.LocalizedMessageBox.Show(string.Format(LanguageService.Translate("Lỗi khôi phục: {0}"), LanguageService.Translate(ex.Message)), LanguageService.Translate("Lỗi"), MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
             {
@@ -2902,7 +2905,7 @@ namespace PersonalInfoManager
                 if (_isLocked) return;
 
                 if (BackupCrypto.HasStoredPassphrase(username) &&
-                    MessageBox.Show(
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show(
                         "Máy này đã có cụm mật khẩu sao lưu.\n\nĐổi sang cụm mới? Các bản sao lưu đã tạo trước đó " +
                         "vẫn cần cụm cũ để mở, nên hãy giữ lại cụm cũ.",
                         "Đổi cụm mật khẩu sao lưu", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
@@ -2910,7 +2913,7 @@ namespace PersonalInfoManager
 
                 await SetBackupPassphraseAsync();
             }
-            catch (Exception ex) { MessageBox.Show($"Lỗi: {ex.Message}"); }
+            catch (Exception ex) { PersonalInfoManager.Services.LocalizedMessageBox.Show($"Lỗi: {ex.Message}"); }
         }
 
         private async Task<bool> SetBackupPassphraseAsync()
@@ -2925,7 +2928,7 @@ namespace PersonalInfoManager
             BackupCrypto.SaveStoredPassphrase(username, dlg.Passphrase);
             try { ActivityLogger.Log(SessionService.CurrentUser!.Username, "SET_BACKUP_PASSPHRASE", ""); } catch { }
 
-            MessageBox.Show(
+            PersonalInfoManager.Services.LocalizedMessageBox.Show(
                 "Đã đặt cụm mật khẩu sao lưu.\n\nTừ giờ các bản sao lưu và tệp xuất kho mật khẩu mới sẽ mở được trên máy khác " +
                 "bằng cụm này. Hãy ghi lại cụm ở nơi an toàn.",
                 "Thành công", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -2951,7 +2954,7 @@ namespace PersonalInfoManager
                     return true;
                 }
 
-                MessageBox.Show("Cụm mật khẩu không đúng.", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Warning);
+                PersonalInfoManager.Services.LocalizedMessageBox.Show("Cụm mật khẩu không đúng.", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
 
             return false;
@@ -2963,7 +2966,7 @@ namespace PersonalInfoManager
             string username = currentUser.Username;
             if (passphrase == null || BackupCrypto.HasStoredPassphrase(username)) return;
 
-            if (MessageBox.Show(
+            if (PersonalInfoManager.Services.LocalizedMessageBox.Show(
                     "Dùng cụm mật khẩu vừa nhập làm cụm sao lưu cho máy này?\n\n" +
                     "Từ giờ các bản sao lưu mới từ máy này sẽ mở được bằng cùng cụm đó.",
                     "Lưu cụm mật khẩu", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
@@ -2978,7 +2981,7 @@ namespace PersonalInfoManager
         {
             string current = SessionService.CurrentUser!.Username;
 
-            return MessageBox.Show(
+            return PersonalInfoManager.Services.LocalizedMessageBox.Show(
                 $"Bản sao lưu này được tạo bởi người dùng '{owner}', không phải '{current}'.\n\n" +
                     $"Nhập vào sẽ thêm các tài khoản của '{owner}' vào kho mật khẩu của '{current}'.\n" +
                 "Chỉ tiếp tục nếu đây là dữ liệu của chính bạn (ví dụ bạn dùng tên đăng nhập khác trên máy mới).\n\n" +
@@ -2991,7 +2994,7 @@ namespace PersonalInfoManager
         {
             if (BackupCrypto.HasStoredPassphrase(username) || !BackupCrypto.HasLegacyPassphrase()) return;
 
-            var ask = MessageBox.Show(
+            var ask = PersonalInfoManager.Services.LocalizedMessageBox.Show(
                 "Máy này có một cụm mật khẩu sao lưu được đặt từ phiên bản trước, khi app chưa tách theo người dùng.\n\n" +
                 $"Đây có phải cụm của '{username}'?\n\n" +
                 "Có: dùng cụm đó cho tài khoản này (người dùng khác sẽ không nhận được nữa).\n" +
@@ -3004,7 +3007,7 @@ namespace PersonalInfoManager
 
             if (!BackupCrypto.TryAdoptLegacyPassphrase(username))
             {
-                MessageBox.Show(
+                PersonalInfoManager.Services.LocalizedMessageBox.Show(
                     "Không đọc được cụm cũ trên máy này. Hãy đặt cụm mới (Google Drive → Cụm mật khẩu sao lưu).",
                     "Lỗi", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
@@ -3021,13 +3024,13 @@ namespace PersonalInfoManager
                 var (count, bytes) = FileBackupService.Summarize(username);
                 if (count == 0)
                 {
-                    MessageBox.Show("Kho File cá nhân đang trống, không có gì để sao lưu.", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Information);
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show("Kho File cá nhân đang trống, không có gì để sao lưu.", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Information);
                     return;
                 }
 
                 if (bytes > FileBackupService.MaxTotalBytes)
                 {
-                    MessageBox.Show(
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show(
                         $"Kho File cá nhân hiện là {FileBackupService.FormatSize(bytes)}, vượt giới hạn sao lưu {FileBackupService.FormatSize(FileBackupService.MaxTotalBytes)}.\n\n" +
                         "Hãy xóa bớt hoặc xuất bớt file ra ngoài rồi thử lại.",
                         "Quá dung lượng", MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -3039,7 +3042,7 @@ namespace PersonalInfoManager
                 string? passphrase = BackupCrypto.GetStoredPassphrase(username);
                 if (passphrase == null)
                 {
-                    var ask = MessageBox.Show(
+                    var ask = PersonalInfoManager.Services.LocalizedMessageBox.Show(
                         "Bản sao lưu lên Google Drive cần cụm mật khẩu sao lưu để có thể mở trên máy khác.\n\n" +
                         "Đặt cụm mật khẩu ngay bây giờ?",
                         "Cần cụm mật khẩu sao lưu", MessageBoxButton.YesNo, MessageBoxImage.Question);
@@ -3050,7 +3053,7 @@ namespace PersonalInfoManager
                     if (passphrase == null) return;
                 }
 
-                if (MessageBox.Show(
+                if (PersonalInfoManager.Services.LocalizedMessageBox.Show(
                         $"Sao lưu {count} File cá nhân ({FileBackupService.FormatSize(bytes)}) lên Google Drive?\n\n" +
                         "Các file được nén và mã hóa bằng cụm mật khẩu sao lưu trước khi tải lên.",
                         "Xác nhận sao lưu", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
@@ -3062,7 +3065,7 @@ namespace PersonalInfoManager
                 if (!pack.ok)
                 {
                     Mouse.OverrideCursor = null;
-                    MessageBox.Show(pack.message, "Không thể sao lưu", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show(pack.message, "Không thể sao lưu", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
 
@@ -3076,14 +3079,14 @@ namespace PersonalInfoManager
 
                 if (success)
                 {
-                    MessageBox.Show(
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show(
                         $"{pack.message}\n\nĐã đồng bộ lên Google Drive thành công!\n\nBản sao lưu nằm trong thư mục 'TQLTK Backup' trên Google Drive của bạn.",
                         "Thành công", MessageBoxButton.OK, MessageBoxImage.Information);
                     ActivityLogger.Log(username, "SYNC_FILES_GOOGLE_DRIVE", $"Tải lên {pack.count} tệp cá nhân ({FileBackupService.FormatSize(pack.bytes)})");
                 }
                 else
                 {
-                    MessageBox.Show(
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show(
                         "Đồng bộ thất bại.\n\n" + (syncService.LastError ?? "Vui lòng kiểm tra kết nối mạng và quyền truy cập Google Drive."),
                         "Lỗi", MessageBoxButton.OK, MessageBoxImage.Warning);
                 }
@@ -3092,7 +3095,7 @@ namespace PersonalInfoManager
             {
                 Mouse.OverrideCursor = null;
                 if (!_isLocked)
-                    MessageBox.Show($"Lỗi đồng bộ File cá nhân: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show($"Lỗi đồng bộ File cá nhân: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
             {
@@ -3123,7 +3126,7 @@ namespace PersonalInfoManager
                 if (!downloaded)
                 {
                     Mouse.OverrideCursor = null;
-                    MessageBox.Show(syncService.LastError ?? "Tải bản sao lưu từ Google Drive thất bại.", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show(syncService.LastError ?? "Tải bản sao lưu từ Google Drive thất bại.", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
 
@@ -3136,7 +3139,7 @@ namespace PersonalInfoManager
                 if (_isLocked || !EnsureActiveSession()) return;
                 if (!prepared.ok || prepared.preview == null)
                 {
-                    MessageBox.Show(prepared.message, "Không thể xem trước", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show(prepared.message, "Không thể xem trước", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
 
@@ -3183,7 +3186,7 @@ namespace PersonalInfoManager
 
                 if (_isLocked || !EnsureActiveSession()) return;
 
-                MessageBox.Show(result.message, result.ok ? "Thành công" : "Lỗi", MessageBoxButton.OK, result.ok ? MessageBoxImage.Information : MessageBoxImage.Warning);
+                PersonalInfoManager.Services.LocalizedMessageBox.Show(result.message, result.ok ? "Thành công" : "Lỗi", MessageBoxButton.OK, result.ok ? MessageBoxImage.Information : MessageBoxImage.Warning);
 
                 RefreshFiles();
                 UpdateStorageInfo();
@@ -3200,7 +3203,7 @@ namespace PersonalInfoManager
             {
                 Mouse.OverrideCursor = null;
                 if (!_isLocked)
-                    MessageBox.Show($"Lỗi khôi phục File cá nhân: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show($"Lỗi khôi phục File cá nhân: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
             {
@@ -3218,7 +3221,7 @@ namespace PersonalInfoManager
         private string? PromptRestorePassphrase(string? previousError)
         {
             if (previousError != null)
-                MessageBox.Show(this, previousError, "Cụm mật khẩu sao lưu", MessageBoxButton.OK, MessageBoxImage.Warning);
+                PersonalInfoManager.Services.LocalizedMessageBox.Show(this, previousError, "Cụm mật khẩu sao lưu", MessageBoxButton.OK, MessageBoxImage.Warning);
 
             var dlg = new BackupPassphraseWindow(confirmMode: false) { Owner = this };
             return dlg.ShowDialog() == true ? dlg.Passphrase : null;
@@ -3233,17 +3236,17 @@ namespace PersonalInfoManager
             RegistryService.ClearWindowPosition();
             SaveWindowState();
 
-            MessageBox.Show("Đã đưa cửa sổ về giữa màn hình.");
+            PersonalInfoManager.Services.LocalizedMessageBox.Show("Đã đưa cửa sổ về giữa màn hình.");
         }
 
         private void MnuResetSettings_Click(object? sender, RoutedEventArgs e)
         {
-            if (MessageBox.Show("Xóa toàn bộ cài đặt (giao diện, kích thước, vị trí, tài khoản gần nhất)?\n\nKhởi động lại ứng dụng để áp dụng toàn bộ.", "Xác nhận đặt lại", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
+            if (PersonalInfoManager.Services.LocalizedMessageBox.Show("Xóa toàn bộ cài đặt (giao diện, kích thước, vị trí, tài khoản gần nhất)?\n\nKhởi động lại ứng dụng để áp dụng toàn bộ.", "Xác nhận đặt lại", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
 
             RegistryService.Clear();
             ThemeService.ApplyLight();
 
-            MessageBox.Show("Đã đặt lại cài đặt.\n\nKhởi động lại ứng dụng để áp dụng toàn bộ.");
+            PersonalInfoManager.Services.LocalizedMessageBox.Show("Đã đặt lại cài đặt.\n\nKhởi động lại ứng dụng để áp dụng toàn bộ.");
         }
 
         private void UpdateStorageInfo()
@@ -3262,7 +3265,7 @@ namespace PersonalInfoManager
 
         private async void BtnCheckPwnedPasswords_Click(object? sender, RoutedEventArgs e)
         {
-            if (MessageBox.Show(
+            if (PersonalInfoManager.Services.LocalizedMessageBox.Show(
                     "Ứng dụng sẽ kiểm tra các mật khẩu hiện tại trong vault qua Have I Been Pwned. " +
                     "Ứng dụng chỉ gửi 5 ký tự đầu của SHA-1 hash qua HTTPS; mật khẩu đầy đủ, hash đầy đủ, tên dịch vụ và username không được gửi. " +
                     "Dịch vụ vẫn có thể thấy địa chỉ IP và tiền tố hash. Bạn chỉ tiếp tục nếu đồng ý gửi yêu cầu này.",
@@ -3505,7 +3508,7 @@ namespace PersonalInfoManager
             }
             catch (Exception ex)
             {
-                MessageBox.Show(this, ex.Message, "Không thể mở tài khoản",
+                PersonalInfoManager.Services.LocalizedMessageBox.Show(this, ex.Message, "Không thể mở tài khoản",
                     MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
@@ -3549,7 +3552,7 @@ namespace PersonalInfoManager
             }
             catch (Exception ex)
             {
-                MessageBox.Show(this, ex.Message, LanguageService.Translate("Không thể đọc mục"),
+                PersonalInfoManager.Services.LocalizedMessageBox.Show(this, ex.Message, LanguageService.Translate("Không thể đọc mục"),
                     MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
@@ -3574,7 +3577,7 @@ namespace PersonalInfoManager
             }
             catch (Exception ex)
             {
-                MessageBox.Show(this, ex.Message, LanguageService.Translate("Không lưu được trạng thái"),
+                PersonalInfoManager.Services.LocalizedMessageBox.Show(this, ex.Message, LanguageService.Translate("Không lưu được trạng thái"),
                     MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }

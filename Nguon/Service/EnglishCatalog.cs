@@ -1425,6 +1425,74 @@ internal static class EnglishCatalog
         Add("Tệp tài khoản (*.csv;*.json;*.xml;*.kdbx)|*.csv;*.json;*.xml;*.kdbx|CSV (*.csv)|*.csv|JSON (*.json)|*.json|KeePass XML (*.xml)|*.xml|Tất cả tệp (*.*)|*.*", "Account files (*.csv;*.json;*.xml;*.kdbx)|*.csv;*.json;*.xml;*.kdbx|CSV (*.csv)|*.csv|JSON (*.json)|*.json|KeePass XML (*.xml)|*.xml|All files (*.*)|*.*");
         Add("Không thể đọc tệp nhập. Hãy kiểm tra định dạng, quyền truy cập và giới hạn 64 MB.", "Could not read the import file. Check its format, access permissions, and the 64 MB limit.");
 
+        Add("(tìm cả ghi chú và trường tùy chỉnh không nhạy cảm)", "(also searches notes and non-sensitive custom fields)");
+        Add("Nhập dữ liệu tài khoản", "Import account data");
+        Add("Đã hoàn tác lần nhập.", "The import batch was undone.");
+        Add("Đã thêm {0}, ghi đè {1}, bỏ qua {2} tài khoản. Có thể hoàn tác lô này bằng nút Hoàn tác nhập.", "Added {0}, replaced {1}, and skipped {2} accounts. Use Undo import to reverse this batch.");
+        Add("Đưa {0} tài khoản đã chọn vào thùng rác trong 30 ngày?", "Move the {0} selected accounts to Trash for 30 days?");
+        Add("Hoàn tác lần nhập gồm {0} tài khoản? Thay đổi sau lần nhập sẽ bị từ chối để tránh mất dữ liệu.", "Undo the import of {0} accounts? Changes made since the import will be rejected to prevent data loss.");
+        Add("Hoàn tác nhập", "Undo import");
+        Add("Kết quả nhập dữ liệu", "Import result");
+        Add("Không có lần nhập nào có thể hoàn tác trên máy này.", "There is no import batch available to undo on this computer.");
+        Add("Không đọc được dữ liệu hoàn tác nhập: ", "Could not read import undo data: ");
+        Add("Lỗi chia sẻ", "Sharing error");
+        Add("Lỗi nhập dữ liệu", "Import error");
+        Add("Lỗi nhập dữ liệu: ", "Import error: ");
+        Add("Xác nhận xóa hàng loạt", "Confirm bulk deletion");
+        Add("Không thể kiểm tra tài khoản Google Drive: {0}", "Could not check the Google Drive account: {0}");
+        Add("Không thể mở tài khoản", "Could not open account");
+        Add("Không thể sao chép mật khẩu vào bộ nhớ tạm an toàn.", "Could not safely copy the password to the clipboard.");
+        Add("Đã đặt cụm mật khẩu sao lưu.\n\nTừ giờ các bản sao lưu và tệp xuất kho mật khẩu mới sẽ mở được trên máy khác bằng cụm này. Hãy ghi lại cụm ở nơi an toàn.", "Backup passphrase set.\n\nNew backups and password vault exports can now be opened on another computer with this passphrase. Write it down and keep it somewhere safe.");
+        Add("Windows chuyển sang chế độ ngủ.", "Windows entered sleep mode.");
+        Add("Windows vừa tiếp tục sau chế độ ngủ.", "Windows resumed from sleep.");
+        Add("Chỉ quản trị viên đang hoạt động được xoay khóa dùng chung.", "Only an active administrator can rotate the shared key.");
+        Add("xoay khóa vault", "rotate the vault key");
+        Add("quản lý tệp đính kèm", "manage attachments");
+        Add("xem và hoàn tác lịch sử chỉnh sửa", "view and undo edit history");
+        Add("thay đổi nhiều tài khoản cùng lúc", "change multiple accounts at once");
+        Add("xuất các tài khoản đã chọn", "export selected accounts");
+        Add("Xuất tài khoản đã chọn", "Export selected accounts");
+        Add("hoàn tác lần nhập gần nhất", "undo the most recent import");
+        Add("nhập dữ liệu tài khoản", "import account data");
+        Add("diễn tập khôi phục bản sao lưu", "run a backup restore drill");
+        Add("kiểm tra tài khoản Google Drive đã liên kết", "check the linked Google Drive account");
+        Add("ngắt kết nối Google Drive trên máy này", "disconnect Google Drive on this device");
+        Add("tạo liên kết chia sẻ tạm thời cho tài khoản", "create a temporary share for an account");
+        Add("xem hoặc thu hồi liên kết chia sẻ Drive", "view or revoke Drive shares");
+        Add("mở gói tài khoản được chia sẻ", "open a shared account package");
+        Add("Xóa token Google Drive đã mã hóa đang lưu trên máy này? Bản sao lưu trên Drive không bị xóa. Quyền ứng dụng trong tài khoản Google vẫn còn và cần thu hồi riêng nếu bạn muốn.", "Remove the encrypted Google Drive token saved on this device? Drive backups will not be deleted. The app's permission in your Google account will remain and must be revoked separately if desired.");
+        Add("Không có tệp nào bị ghi đè: tệp trùng nội dung được bỏ qua, tệp trùng tên nhưng khác nội dung được lưu thêm với tên mới.", "No files were overwritten: files with identical contents were skipped, and files with the same name but different contents were saved under new names.");
+        Add("Không tìm thấy tài khoản để xác định kho dữ liệu riêng.", "Could not find the account for its isolated data vault.");
+        Add("Tài khoản đã bị khóa, không thể truy cập kho dữ liệu.", "This account is locked and its vault cannot be accessed.");
+        Add("Một tài khoản có quá 50 tệp đính kèm.", "An account cannot have more than 50 attachments.");
+        Add("Một tệp đính kèm không hợp lệ hoặc vượt quá 10 MB.", "An attachment is invalid or exceeds 10 MB.");
+        Add("Tổng tệp đính kèm của tài khoản vượt quá 25 MB.", "The account's total attachment size exceeds 25 MB.");
+        Add("Đang có thao tác khóa vault khác; hãy thử lại sau.", "Another vault locking operation is in progress. Try again later.");
+        Add("Định dạng mã hóa không được hỗ trợ.", "The encryption format is not supported.");
+        Add("Không thể giải mã bằng khóa hiện tại hoặc khóa lịch sử. File được giữ nguyên để khôi phục.", "Could not decrypt with the current or historical key. The file was left unchanged for recovery.");
+        Add("Google Drive không trả về thông tin file vừa tải lên.", "Google Drive did not return metadata for the uploaded file.");
+        Add("Không tìm thấy gói chia sẻ đã mã hóa.", "The encrypted share package was not found.");
+        Add("Không thể phân tích file KeePass XML.", "Could not parse the KeePass XML file.");
+        Add("Tệp xuất mật khẩu JSON", "Password manager JSON export");
+        Add("Thông tin hoàn tác nhập CSV có kích thước không hợp lệ.", "The CSV import undo data has an invalid size.");
+        Add("Thông tin hoàn tác nhập CSV không hợp lệ.", "The CSV import undo data is invalid.");
+        Add("Thông tin lô nhập CSV không hợp lệ.", "The CSV import batch is invalid.");
+        Add("Đường dẫn trạng thái hoàn tác CSV không an toàn.", "The CSV import undo state path is unsafe.");
+        Add("Bản sao lưu có tên file trùng nhau nên không thể diễn tập an toàn.", "The backup contains duplicate file names and cannot be safely restore-tested.");
+        Add("Thư mục diễn tập không nằm trong thư mục tạm.", "The restore drill folder is outside the temporary directory.");
+        Add("Thư mục diễn tập không được là liên kết hệ thống.", "The restore drill folder cannot be a reparse point.");
+        Add("Thời điểm nhắc lại phải nằm trong tương lai.", "The reminder time must be in the future.");
+        Add("Cần ghi lý do khi bỏ qua cảnh báo.", "Enter a reason before ignoring this warning.");
+        Add("Tệp trạng thái xem xét bảo mật vượt giới hạn kích thước.", "The security review state file exceeds the size limit.");
+        Add("Tệp trạng thái xem xét bảo mật không hợp lệ.", "The security review state file is invalid.");
+        Add("Nội dung tài khoản, TOTP hoặc tệp đính kèm sau khôi phục thử không khớp bản sao lưu.", "The accounts, TOTP data, or attachments from the restore drill do not match the backup.");
+        Add("Tài khoản không hợp lệ.", "The account is invalid.");
+        Add("Xác minh dữ liệu sau khi mã hóa lại thất bại.", "Data verification failed after re-encryption.");
+        Add("Không xoay bản sao lưu nằm trong thư mục liên kết hệ thống.", "Cannot rotate a backup in a reparse-point directory.");
+        Add("Phục hồi xoay khóa bị dừng vì key.dat đã đổi ngoài giao dịch. Dữ liệu và nhật ký được giữ nguyên.", "Key rotation recovery stopped because key.dat changed outside the transaction. Data and the journal were left unchanged.");
+        Add("Journal xoay khóa không hợp lệ.", "The key rotation journal is invalid.");
+        Add("Trạng thái đồng bộ Drive không hợp lệ.", "The Drive sync state is invalid.");
+
         return values;
     }
 
@@ -1870,5 +1938,19 @@ internal static class EnglishCatalog
         new KeyValuePair<string, string>("Không thể xác định trạng thái xác thực 2 bước. Đăng nhập đã bị từ chối để bảo vệ tài khoản.\n\nChi tiết: ", "Could not determine the two-factor authentication state. Sign-in was denied to protect the account.\n\nDetails: "),
         new KeyValuePair<string, string>("Không thể xác định trạng thái xác thực 2 bước. Đăng nhập đã bị từ chối để bảo vệ tài khoản.\n\n", "Could not determine the two-factor authentication state. Sign-in was denied to protect the account.\n\n"),
         new KeyValuePair<string, string>("Đồng bộ thất bại.\n\n", "Sync failed.\n\n"),
+        new KeyValuePair<string, string>("Không thể ngắt kết nối Google Drive: ", "Could not disconnect from Google Drive: "),
+        new KeyValuePair<string, string>("Quyền Drive đã bị thu hồi, nhưng gói mã hóa chưa chuyển được vào thùng rác: ", "Drive access was revoked, but the encrypted package could not be moved to the trash: "),
+        new KeyValuePair<string, string>("Không xoay tệp liên kết ngoài kho: ", "Cannot rotate an externally linked file: "),
+        new KeyValuePair<string, string>("Không thể xoay khóa an toàn vì '", "Cannot safely rotate the key because '"),
+        new KeyValuePair<string, string>("' không dùng định dạng AES-GCM được hỗ trợ. File vẫn được giữ nguyên.", "' does not use a supported AES-GCM format. The file was left unchanged."),
+        new KeyValuePair<string, string>("Phục hồi xoay khóa bị dừng vì '", "Key rotation recovery stopped because '"),
+        new KeyValuePair<string, string>("' đã đổi ngoài giao dịch. File gốc và nhật ký vẫn được giữ nguyên.", "' changed outside the transaction. The original file and journal were left unchanged."),
+        new KeyValuePair<string, string>("Thiếu bản đã mã hóa để phục hồi '", "The encrypted recovery copy is missing for '"),
+        new KeyValuePair<string, string>("'. File gốc vẫn được giữ nguyên.", "'. The original file was left unchanged."),
+        new KeyValuePair<string, string>("Thiếu bản phục hồi trước khi xoay khóa cho '", "The pre-rotation recovery copy is missing for '"),
+        new KeyValuePair<string, string>("Không xác minh được tệp sau khi thay thế '", "Could not verify the file after replacing '"),
+        new KeyValuePair<string, string>("'. Khóa mới chưa được kích hoạt.", "'. The new key has not been activated."),
+        new KeyValuePair<string, string>("Nội dung kiểm tra sau khôi phục không khớp: ", "Content verification after restore did not match: "),
+        new KeyValuePair<string, string>(" vào kho mật khẩu của '", " into the password vault for '"),
     };
 }

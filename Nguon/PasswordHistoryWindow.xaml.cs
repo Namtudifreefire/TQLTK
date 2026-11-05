@@ -65,11 +65,11 @@ namespace PersonalInfoManager
             if (dgHistory.SelectedItem is not HistoryRow row) return;
             if (!ClipboardGuard.CopySensitive(row.Entry.Password))
             {
-                MessageBox.Show("Không thể sao chép mật khẩu vào bộ nhớ tạm an toàn.", "Không thể sao chép",
+                PersonalInfoManager.Services.LocalizedMessageBox.Show("Không thể sao chép mật khẩu vào bộ nhớ tạm an toàn.", "Không thể sao chép",
                     MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
-            MessageBox.Show($"Đã sao chép. Bộ nhớ tạm sẽ tự xóa sau {ClipboardGuard.ClearAfterSeconds} giây.",
+            PersonalInfoManager.Services.LocalizedMessageBox.Show($"Đã sao chép. Bộ nhớ tạm sẽ tự xóa sau {ClipboardGuard.ClearAfterSeconds} giây.",
                 "Đã sao chép", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 

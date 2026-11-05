@@ -113,7 +113,7 @@ public partial class AccountAttachmentsWindow : Window
         {
             string destination = Path.GetFullPath(dialog.FileName);
             File.WriteAllBytes(destination, attachment.Content);
-            MessageBox.Show(this, "Đã xuất tệp đính kèm.", "Thành công", MessageBoxButton.OK, MessageBoxImage.Information);
+            PersonalInfoManager.Services.LocalizedMessageBox.Show(this, "Đã xuất tệp đính kèm.", "Thành công", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex) { ShowError("Không thể xuất tệp: " + ex.Message); }
     }
@@ -147,7 +147,7 @@ public partial class AccountAttachmentsWindow : Window
 
     private void UpdateSize() => lblSize.Text = $"{CurrentBytes() / 1024.0:0.#} KB / {MaximumTotalBytes / 1024.0:0} KB";
 
-    private void ShowError(string message) => MessageBox.Show(this, LanguageService.Translate(message),
+    private void ShowError(string message) => PersonalInfoManager.Services.LocalizedMessageBox.Show(this, LanguageService.Translate(message),
         LanguageService.Translate("Lỗi"), MessageBoxButton.OK, MessageBoxImage.Warning);
 
     private static string GetContentType(string path) => Path.GetExtension(path).ToLowerInvariant() switch

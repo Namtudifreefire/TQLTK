@@ -30,7 +30,7 @@ public partial class AccountHistoryWindow : Window
 
         string fields = string.Join(", ", entry.ChangedFields.Split('|', StringSplitOptions.RemoveEmptyEntries)
             .Select(FieldLabel).Select(LanguageService.Translate));
-        var result = MessageBox.Show(this,
+        var result = PersonalInfoManager.Services.LocalizedMessageBox.Show(this,
             LanguageService.Translate("Hoàn tác sẽ khôi phục các trường sau về trạng thái trước thay đổi này:") +
             "\n\n" + fields + "\n\n" + LanguageService.Translate("Bạn muốn tiếp tục?"),
             LanguageService.Translate("Xác nhận hoàn tác"), MessageBoxButton.YesNo, MessageBoxImage.Warning);

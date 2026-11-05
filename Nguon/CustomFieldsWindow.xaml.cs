@@ -140,13 +140,13 @@ public partial class CustomFieldsWindow : Window
         CommitEditor();
         if (_fields.Any(field => string.IsNullOrWhiteSpace(field.Name)))
         {
-            MessageBox.Show(this, "Mỗi trường tùy chỉnh cần có tên.", "Thiếu tên trường",
+            PersonalInfoManager.Services.LocalizedMessageBox.Show(this, "Mỗi trường tùy chỉnh cần có tên.", "Thiếu tên trường",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
         if (_fields.GroupBy(field => field.Name.Trim(), StringComparer.OrdinalIgnoreCase).Any(group => group.Count() > 1))
         {
-            MessageBox.Show(this, "Tên trường tùy chỉnh không được trùng nhau.", "Tên bị trùng",
+            PersonalInfoManager.Services.LocalizedMessageBox.Show(this, "Tên trường tùy chỉnh không được trùng nhau.", "Tên bị trùng",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }

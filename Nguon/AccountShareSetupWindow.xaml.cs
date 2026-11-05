@@ -25,7 +25,7 @@ public partial class AccountShareSetupWindow : Window
         }
         catch
         {
-            MessageBox.Show(this, LanguageService.Translate("Nhập địa chỉ email người nhận hợp lệ."),
+            PersonalInfoManager.Services.LocalizedMessageBox.Show(this, LanguageService.Translate("Nhập địa chỉ email người nhận hợp lệ."),
                 LanguageService.Translate("Email không hợp lệ"), MessageBoxButton.OK, MessageBoxImage.Warning);
             txtEmail.Focus();
             return;

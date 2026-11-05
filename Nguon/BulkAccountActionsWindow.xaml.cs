@@ -42,7 +42,7 @@ public partial class BulkAccountActionsWindow : Window
         MoveToTrash = chkMoveToTrash.IsChecked == true;
         if (!ApplyFolder && !ApplyTags && !MoveToTrash)
         {
-            MessageBox.Show(this, LanguageService.Translate("Chọn ít nhất một thay đổi hoặc thao tác."),
+            PersonalInfoManager.Services.LocalizedMessageBox.Show(this, LanguageService.Translate("Chọn ít nhất một thay đổi hoặc thao tác."),
                 LanguageService.Translate("Thông tin"), MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
