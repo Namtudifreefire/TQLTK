@@ -556,7 +556,7 @@ namespace PersonalInfoManager.Services
             {
                 LastError = Explain(ex);
 
-                try { if (File.Exists(destPath)) File.Delete(destPath); } catch {   }
+                try { if (File.Exists(destPath)) File.Delete(destPath); } catch { }
 
                 return false;
             }

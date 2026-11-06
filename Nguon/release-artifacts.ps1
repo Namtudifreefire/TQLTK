@@ -2,29 +2,42 @@ param(
     [string]$Version = "3.6.7",
     [string]$CertificateThumbprint = $env:TQLTK_SIGNING_CERT_THUMBPRINT,
     [string]$TimestampUrl = "https://timestamp.digicert.com",
-    [switch]$AllowUnsignedForTesting
+    [switch]$UnsignedRelease
 )
 
 $ErrorActionPreference = "Stop"
 if ($Version -notmatch '^\d+\.\d+\.\d+$') { throw "Version must use major.minor.patch format." }
 
+function Get-Sha256Hash {
+    param([Parameter(Mandatory = $true)][string]$LiteralPath)
+    $algorithm = [Security.Cryptography.SHA256]::Create()
+    try {
+        $stream = [IO.File]::OpenRead($LiteralPath)
+        try {
+            $digest = $algorithm.ComputeHash($stream)
+            return [BitConverter]::ToString($digest).Replace("-", "").ToLowerInvariant()
+        } finally { $stream.Dispose() }
+    } finally { $algorithm.Dispose() }
+}
+
+$thumbprint = ($CertificateThumbprint -replace '\s', '').ToUpperInvariant()
 $projectRoot = [IO.Path]::GetFullPath($PSScriptRoot)
 $artifactsRoot = [IO.Path]::GetFullPath((Join-Path $projectRoot "artifacts"))
-$workDirectory = [IO.Path]::GetFullPath((Join-Path $artifactsRoot "v$Version"))
+$workDirectoryName = "v$Version"
+if (-not $thumbprint) { $workDirectoryName += "-unsigned" }
+$workDirectory = [IO.Path]::GetFullPath((Join-Path $artifactsRoot $workDirectoryName))
 $artifactsPrefix = $artifactsRoot.TrimEnd([IO.Path]::DirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
 if (-not $workDirectory.StartsWith($artifactsPrefix, [StringComparison]::OrdinalIgnoreCase)) {
     throw "Release output path escaped the project artifacts directory."
 }
-if ((Split-Path -Leaf $workDirectory) -ne "v$Version") { throw "Unexpected release output directory." }
+if ((Split-Path -Leaf $workDirectory) -ne $workDirectoryName) { throw "Unexpected release output directory." }
 
-$thumbprint = ($CertificateThumbprint -replace '\s', '').ToUpperInvariant()
 $signTool = $null
 $certificate = $null
-if (-not $thumbprint) {
-    if (-not $AllowUnsignedForTesting) {
-        throw "A code-signing certificate is required. Set TQLTK_SIGNING_CERT_THUMBPRINT or pass -CertificateThumbprint."
-    }
-} else {
+if (-not $thumbprint -and -not $UnsignedRelease) {
+    throw "A code-signing certificate is required for direct release-script execution; pass -UnsignedRelease to create an unsigned release package."
+}
+if ($thumbprint) {
     if ($thumbprint -notmatch '^[0-9A-F]{40}$') { throw "The certificate thumbprint must be 40 hexadecimal characters." }
     $certificate = Get-ChildItem -Path "Cert:\CurrentUser\My" |
         Where-Object { $_.Thumbprint.ToUpperInvariant() -eq $thumbprint } |
@@ -110,12 +123,12 @@ if ($thumbprint) {
     }
     $signatureStatus = "Valid"
 } else {
-    Write-Warning "Creating an unsigned testing artifact because -AllowUnsignedForTesting was explicitly selected. Do not publish it."
-    $signatureStatus = "UnsignedTestingOnly"
+    Write-Warning "Creating an unsigned release artifact. Windows may display a publisher or SmartScreen warning."
+    $signatureStatus = "Unsigned"
 }
 
 $productVersion = [Diagnostics.FileVersionInfo]::GetVersionInfo($executable).ProductVersion
-if (-not $productVersion -or $productVersion -notmatch '^([0-9]+\.[0-9]+\.[0-9]+)(?:\.|$)' -or $Matches[1] -ne $Version) {
+if (-not $productVersion -or $productVersion -notmatch '^([0-9]+\.[0-9]+\.[0-9]+)(?:\+[0-9A-Za-z.-]+)?$' -or $Matches[1] -ne $Version) {
     throw "Published executable product version does not match $Version."
 }
 
@@ -136,12 +149,14 @@ try {
 } finally { $archive.Dispose() }
 
 $packagedExecutable = Join-Path $packageDirectory "PersonalInfoManager.exe"
-$exeHash = (Get-FileHash -LiteralPath $packagedExecutable -Algorithm SHA256).Hash.ToLowerInvariant()
-$zipHash = (Get-FileHash -LiteralPath $zipPath -Algorithm SHA256).Hash.ToLowerInvariant()
+$exeHash = Get-Sha256Hash -LiteralPath $packagedExecutable
+$zipHash = Get-Sha256Hash -LiteralPath $zipPath
+if ($thumbprint) { $releaseMode = "Signed" } else { $releaseMode = "Unsigned" }
 $manifest = [ordered]@{
     SchemaVersion = 1
     Product = "TQLTK"
     Version = $Version
+    ReleaseMode = $releaseMode
     Runtime = "win-x64"
     Architecture = "x64"
     PackageFileName = [IO.Path]::GetFileName($zipPath)
@@ -154,7 +169,7 @@ $manifest = [ordered]@{
 }
 $manifestPath = Join-Path $workDirectory "release-manifest.json"
 $manifest | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $manifestPath -Encoding UTF8
-$manifestHash = (Get-FileHash -LiteralPath $manifestPath -Algorithm SHA256).Hash.ToLowerInvariant()
+$manifestHash = Get-Sha256Hash -LiteralPath $manifestPath
 $checksumPath = Join-Path $workDirectory "SHA256SUMS.txt"
 $checksumText = "$zipHash  $(Split-Path -Leaf $zipPath)`r`n$exeHash  PersonalInfoManager.exe`r`n$manifestHash  release-manifest.json`r`n"
 [IO.File]::WriteAllText($checksumPath, $checksumText, [Text.UTF8Encoding]::new($false))
@@ -165,4 +180,3 @@ Write-Host "Manifest: $manifestPath"
 Write-Host "SHA256: $checksumPath"
 Write-Host "PersonalInfoManager.exe SHA256: $exeHash"
 Write-Host "ZIP SHA256: $zipHash"
-if (-not $thumbprint) { Write-Warning "Unsigned testing artifacts must not be uploaded or submitted to Winget." }
