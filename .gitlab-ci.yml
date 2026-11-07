@@ -6,18 +6,19 @@ include:
 
   - template: Jobs/Dependency-Scanning.v2.gitlab-ci.yml
     inputs:
-      # The application project is under Nguon/.
-      max_scan_depth: 2
+      # Search the entire repository for supported dependency files.
+      max_scan_depth: -1
 
   - template: Jobs/Secret-Detection.gitlab-ci.yml
 
-# NuGet scanning requires packages.lock.json.
-# Generate it before the Dependency Scanning job and pass it as an artifact.
+# Temporarily generate and print the NuGet lockfile so it can be committed.
+# After Nguon/packages.lock.json is committed, this job can be removed.
 nuget-lockfile:
   stage: .pre
   image: mcr.microsoft.com/dotnet/sdk:10.0
   script:
     - dotnet restore Nguon/PersonalInfoManager.csproj --use-lock-file -p:EnableWindowsTargeting=true
+    - cat Nguon/packages.lock.json
   artifacts:
     paths:
       - Nguon/packages.lock.json
