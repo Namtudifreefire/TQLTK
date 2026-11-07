@@ -6,7 +6,7 @@
 
 TQLTK is a local account and password manager for Windows. It stores logins in an encrypted vault on your PC, supports per-account TOTP and optional Windows Hello authentication, and can back up to your own Google Drive. The interface is available in Vietnamese and English. TQLTK is written in C# with WPF and .NET and is distributed as a portable, self-contained executable.
 
-> The latest published release is **v3.6.6 (BETA)**. See its [release notes](https://github.com/Namtudifreefire/TQLTK/releases/tag/v3.6.6). This release currently has no installable binary attached. The latest ready-to-run ZIP is [PersonalInfoManager-3.6.5-win-x64.zip](https://github.com/Namtudifreefire/TQLTK/releases/download/v3.6.5/PersonalInfoManager-3.6.5-win-x64.zip).
+> The latest published build is **v3.6.7 (BETA, pre-release)**, released on November 6, 2026. Read the [release notes](https://github.com/Namtudifreefire/TQLTK/releases/tag/v3.6.7) or download [PersonalInfoManager-3.6.7-win-x64.zip](https://github.com/Namtudifreefire/TQLTK/releases/download/v3.6.7/PersonalInfoManager-3.6.7-win-x64.zip). The ZIP's SHA-256 is `39ba26a39bc3c10da9756739a58426bc1079c6daa5617cfd6ea8cdb087f5fe14`. This build is unsigned; Windows may display a publisher or SmartScreen warning.
 
 > English interface support was introduced in v3.6.6 (BETA); earlier versions are Vietnamese-only.
 
@@ -41,9 +41,9 @@ For vulnerability reporting and the current code-signing status, see the [Securi
 
 ## Install
 
-**Manual download:** v3.6.6 (BETA) is published without an installable binary asset. For a ready-to-run app, download [PersonalInfoManager-3.6.5-win-x64.zip](https://github.com/Namtudifreefire/TQLTK/releases/download/v3.6.5/PersonalInfoManager-3.6.5-win-x64.zip) from the [Releases page](https://github.com/Namtudifreefire/TQLTK/releases), extract it, then run PersonalInfoManager.exe. To remove the app, delete the extracted folder. Your data remains in %AppData%\PersonalInfoManager unless you remove it separately.
+**Manual download:** download [PersonalInfoManager-3.6.7-win-x64.zip](https://github.com/Namtudifreefire/TQLTK/releases/download/v3.6.7/PersonalInfoManager-3.6.7-win-x64.zip) from the [v3.6.7 BETA release](https://github.com/Namtudifreefire/TQLTK/releases/tag/v3.6.7), extract it, then run PersonalInfoManager.exe. The ZIP contains the executable and MIT license. This build is unsigned, so Windows may show a publisher or SmartScreen warning. To remove the app, delete the extracted folder. Your data remains in %AppData%\PersonalInfoManager unless you remove it separately.
 
-**WinGet:** the initial package submission [PR #463698](https://github.com/microsoft/winget-pkgs/pull/463698) is still open and targets v3.6.4, so it does not provide the v3.6.5 or v3.6.6 builds. After the package is accepted and updated, install it with:
+**WinGet:** the initial package submission [PR #463698](https://github.com/microsoft/winget-pkgs/pull/463698) is still open and targets v3.6.4, so WinGet does not provide v3.6.7 yet. After the package is accepted and its manifest is updated, install it with:
 
     winget install --id Namtudifreefire.TQLTK --exact
 
@@ -66,7 +66,7 @@ Requires the .NET 10 SDK on Windows.
     cd Nguon
     dotnet build
 
-`Nguon\publish.bat` runs `release-artifacts.ps1`. A release build requires a valid code-signing certificate with a private key in the current Windows user's Personal certificate store; set `TQLTK_SIGNING_CERT_THUMBPRINT` or pass `-CertificateThumbprint`. The script runs the security regression suite first, signs and verifies the EXE with an HTTPS timestamp, then writes a ZIP containing the EXE and MIT `LICENSE` at its root, a release manifest, and SHA-256 checksums. Unsigned output is available only with `-AllowUnsignedForTesting` and must not be published. Verify a package with `verify-release.ps1`, supplying the expected version and publisher thumbprint; provide an independently obtained package SHA-256 when available. The checksum file alone does not prove publisher identity.
+`Nguon\publish.bat` runs `release-artifacts.ps1` and the security regression suite. The ZIP contains `PersonalInfoManager.exe` and the MIT `LICENSE` at its root; the version manifest and `SHA256SUMS.txt` are saved beside the ZIP in the artifacts folder. If `TQLTK_SIGNING_CERT_THUMBPRINT` points to a valid code-signing certificate with a private key in the current Windows user's Personal certificate store, the script signs and verifies the EXE with an HTTPS timestamp. Without a configured certificate, `publish.bat` creates an unsigned release ZIP and Windows may show a publisher or SmartScreen warning. Directly running `release-artifacts.ps1` without a certificate requires `-UnsignedRelease`. Verify a package with `verify-release.ps1` and its manifest, supplying a publisher thumbprint for signed builds; an independently obtained package SHA-256 can also be checked. A checksum alone does not prove publisher identity.
 
 Google Drive features need your own OAuth client. In Google Cloud Console, create an OAuth client ID of type **Desktop app**, save it as credentials.json next to PersonalInfoManager.csproj, then build. The file is embedded at build time and is git-ignored, so it is not part of this repository. Without it, the rest of the app works but Drive sync is unavailable.
 
@@ -74,7 +74,7 @@ Google Drive features need your own OAuth client. In Google Cloud Console, creat
 
 See the [Releases page](https://github.com/Namtudifreefire/TQLTK/releases) for downloadable builds and the full release history.
 
-### v3.6.7 (in development)
+### v3.6.7 (BETA)
 
 - Verify backup manifests, entry counts and total sizes before a restore preview succeeds; new encrypted backups are verified before replacing the destination.
 - Use durable temporary-file writes for vaults, notes, recovery settings, CSV exports and backups so an interrupted write keeps the prior file intact.
@@ -87,7 +87,7 @@ See the [Releases page](https://github.com/Namtudifreefire/TQLTK/releases) for d
 - Lock the app when Windows locks the session, disconnects it or enters/resumes from sleep; clear decrypted account caches and close child windows.
 - Add persistent security-finding review states: open, fixed, snoozed or ignored with a required reason, plus the last checked time. Changing the account reopens its finding.
 - Show backup health for missing, stale, changed, unverified or failed backups and for missing, failed or overdue restore drills.
-- Run the security regression suite before creating release artifacts. Require a code-signing certificate for release builds, verify the signed executable and publisher, and generate a versioned manifest and SHA-256 checksums.
+- Run the security regression suite before creating release artifacts and generate a versioned manifest and SHA-256 checksums. A configured code-signing certificate signs and verifies the executable; without one, the release ZIP is unsigned and Windows may show a publisher or SmartScreen warning.
 - Store account attachments inside the encrypted vault and include them in vault backups. Each file is limited to 10 MB and each account to 25 MB total.
 - Add a bounded metadata edit history with preview and undo for service name, username, website URL, folder, tags, favorites, notes and custom fields. Passwords remain in the separate password history.
 - Add CSV duplicate handling to skip, overwrite or create a copy, plus undo for the latest import batch. Undo is refused if any affected account changed afterward.
@@ -142,7 +142,7 @@ TQLTK is distributed under the [MIT License](LICENSE). Copyright © 2026 Namtudi
 
 **TQLTK** là ứng dụng quản lý tài khoản và mật khẩu chạy trên Windows. Dữ liệu tài khoản được lưu trong vault mã hóa trên máy; ứng dụng hỗ trợ TOTP cho từng tài khoản, tùy chọn Windows Hello và sao lưu lên Google Drive của chính bạn. Giao diện có tiếng Việt và tiếng Anh. Ứng dụng viết bằng C# (WPF, .NET), phát hành dạng portable và không cần cài .NET riêng.
 
-> Bản phát hành mới nhất là **v3.6.6 (BETA)**. Xem [ghi chú phát hành](https://github.com/Namtudifreefire/TQLTK/releases/tag/v3.6.6). Hiện bản này chưa có file cài đặt đính kèm. ZIP mới nhất có thể chạy ngay là [PersonalInfoManager-3.6.5-win-x64.zip](https://github.com/Namtudifreefire/TQLTK/releases/download/v3.6.5/PersonalInfoManager-3.6.5-win-x64.zip).
+> Bản mới nhất đã phát hành là **v3.6.7 (BETA, pre-release)** vào ngày 06/11/2026. Xem [ghi chú phát hành](https://github.com/Namtudifreefire/TQLTK/releases/tag/v3.6.7) hoặc tải [PersonalInfoManager-3.6.7-win-x64.zip](https://github.com/Namtudifreefire/TQLTK/releases/download/v3.6.7/PersonalInfoManager-3.6.7-win-x64.zip). SHA-256 của ZIP: `39ba26a39bc3c10da9756739a58426bc1079c6daa5617cfd6ea8cdb087f5fe14`. Bản này chưa ký số; Windows có thể hiện cảnh báo nhà phát hành hoặc SmartScreen.
 
 > Giao diện tiếng Anh được giới thiệu từ v3.6.6 (BETA); các phiên bản trước chỉ có tiếng Việt.
 
@@ -171,9 +171,9 @@ Xem [Chính sách bảo mật](SECURITY.md) để biết cách báo cáo lỗ h�
 
 ## Cài đặt
 
-**Tải thủ công:** v3.6.6 (BETA) đã được đăng nhưng hiện chưa có file cài đặt đính kèm. Để dùng ứng dụng ngay, tải [PersonalInfoManager-3.6.5-win-x64.zip](https://github.com/Namtudifreefire/TQLTK/releases/download/v3.6.5/PersonalInfoManager-3.6.5-win-x64.zip) ở [trang Releases](https://github.com/Namtudifreefire/TQLTK/releases), giải nén rồi chạy PersonalInfoManager.exe. Xóa thư mục đã giải nén để gỡ ứng dụng; dữ liệu trong %AppData%\PersonalInfoManager vẫn được giữ lại.
+**Tải thủ công:** tải [PersonalInfoManager-3.6.7-win-x64.zip](https://github.com/Namtudifreefire/TQLTK/releases/download/v3.6.7/PersonalInfoManager-3.6.7-win-x64.zip) từ [bản phát hành v3.6.7 BETA](https://github.com/Namtudifreefire/TQLTK/releases/tag/v3.6.7), giải nén rồi chạy PersonalInfoManager.exe. ZIP gồm file thực thi và giấy phép MIT. Bản này chưa ký số nên Windows có thể hiện cảnh báo nhà phát hành hoặc SmartScreen. Xóa thư mục đã giải nén để gỡ ứng dụng; dữ liệu trong %AppData%\PersonalInfoManager vẫn được giữ lại.
 
-**WinGet:** PR tạo gói ban đầu [#463698](https://github.com/microsoft/winget-pkgs/pull/463698) vẫn đang mở và nhắm tới v3.6.4, nên chưa cung cấp v3.6.5 hoặc v3.6.6. Sau khi gói được chấp nhận và cập nhật, cài bằng lệnh:
+**WinGet:** PR tạo gói ban đầu [#463698](https://github.com/microsoft/winget-pkgs/pull/463698) vẫn đang mở và nhắm tới v3.6.4, nên WinGet chưa cung cấp v3.6.7. Sau khi PR được chấp nhận và manifest được cập nhật, cài bằng lệnh:
 
     winget install --id Namtudifreefire.TQLTK --exact
 
@@ -193,7 +193,7 @@ Trong thời gian chờ, hãy dùng file ZIP ở trên.
 
 Xem [trang Releases](https://github.com/Namtudifreefire/TQLTK/releases) để tải bản phát hành và đọc lịch sử đầy đủ.
 
-### v3.6.7 (đang phát triển)
+### v3.6.7 (BETA)
 
 - Kiểm tra manifest, số lượng và tổng dung lượng trước khi chấp nhận bước xem trước khôi phục; bản sao lưu mới được xác minh trước khi thay file đích.
 - Ghi vault, ghi chú, thiết lập khôi phục, CSV và backup qua file tạm bền vững để lần ghi bị gián đoạn vẫn giữ file cũ.
@@ -206,7 +206,7 @@ Xem [trang Releases](https://github.com/Namtudifreefire/TQLTK/releases) để t�
 - Tự khóa ứng dụng khi Windows khóa phiên, ngắt kết nối hoặc chuyển sang/thoát chế độ ngủ; xóa cache đã giải mã và đóng cửa sổ con.
 - Lưu trạng thái xem xét cảnh báo bảo mật: đang mở, đã xử lý, nhắc lại sau hoặc bỏ qua kèm lý do bắt buộc; ghi thời điểm kiểm tra gần nhất. Khi tài khoản thay đổi, cảnh báo được mở lại.
 - Hiển thị tình trạng backup bị thiếu, cũ, thay đổi, chưa xác minh hoặc thất bại; cảnh báo nếu chưa diễn tập khôi phục, lần diễn tập thất bại hoặc đã quá hạn.
-- Chạy bộ kiểm tra hồi quy bảo mật trước khi tạo file phát hành. Bản phát hành bắt buộc ký code-signing, xác minh chữ ký và nhà phát hành, đồng thời tạo manifest phiên bản và checksum SHA-256.
+- Chạy bộ kiểm tra hồi quy bảo mật trước khi tạo file phát hành, đồng thời tạo manifest phiên bản và checksum SHA-256. Nếu đã cấu hình chứng thư code-signing thì script ký và xác minh EXE; nếu chưa có, ZIP phát hành chưa ký và Windows có thể hiện cảnh báo nhà phát hành hoặc SmartScreen.
 - Lưu tệp đính kèm của tài khoản bên trong vault đã mã hóa và kèm chúng trong bản sao lưu vault. Mỗi tệp tối đa 10 MB, tổng mỗi tài khoản tối đa 25 MB.
 - Thêm lịch sử chỉnh sửa có giới hạn, cho xem trước và hoàn tác tên dịch vụ, tên đăng nhập, URL website, thư mục, nhãn, mục yêu thích, ghi chú và trường tùy chỉnh. Mật khẩu vẫn dùng lịch sử riêng.
 - Khi nhập CSV, cho chọn bỏ qua, ghi đè hoặc tạo bản sao đối với mục trùng; hỗ trợ hoàn tác lô nhập gần nhất. Ứng dụng từ chối hoàn tác nếu tài khoản liên quan đã thay đổi sau lần nhập.
@@ -258,7 +258,7 @@ Cần cài .NET 10 SDK trên Windows.
     cd Nguon
     dotnet build
 
-`Nguon\publish.bat` chạy `release-artifacts.ps1`. Bản phát hành yêu cầu chứng thư code-signing hợp lệ có private key trong kho Personal của tài khoản Windows hiện tại; đặt thumbprint vào `TQLTK_SIGNING_CERT_THUMBPRINT` hoặc truyền `-CertificateThumbprint`. Script chạy bộ kiểm tra hồi quy bảo mật trước, ký và xác minh EXE bằng timestamp HTTPS, rồi tạo ZIP chứa EXE và giấy phép MIT ở gốc, manifest phát hành và checksum SHA-256. Chỉ tạo file chưa ký bằng `-AllowUnsignedForTesting` để thử nghiệm; không phát hành file đó. Dùng `verify-release.ps1` với phiên bản và thumbprint nhà phát hành dự kiến để kiểm tra; nếu có, cung cấp thêm SHA-256 của ZIP lấy từ một nguồn độc lập. Riêng checksum không chứng minh danh tính nhà phát hành.
+`Nguon\publish.bat` chạy `release-artifacts.ps1` và bộ kiểm tra hồi quy bảo mật. ZIP chứa `PersonalInfoManager.exe` cùng giấy phép MIT ở gốc; manifest phiên bản và `SHA256SUMS.txt` được lưu bên cạnh ZIP trong thư mục artifacts. Nếu `TQLTK_SIGNING_CERT_THUMBPRINT` trỏ đến chứng thư code-signing hợp lệ có private key trong kho Personal của tài khoản Windows hiện tại, script sẽ ký và xác minh EXE bằng timestamp HTTPS. Nếu chưa cấu hình chứng thư, `publish.bat` vẫn tạo ZIP phát hành chưa ký; Windows có thể hiện cảnh báo nhà phát hành hoặc SmartScreen. Chạy trực tiếp `release-artifacts.ps1` mà không có chứng thư thì cần truyền `-UnsignedRelease`. Dùng `verify-release.ps1` cùng manifest để kiểm tra; chỉ cần cung cấp thumbprint nhà phát hành với bản đã ký. Có thể kiểm tra thêm SHA-256 ZIP lấy từ nguồn độc lập. Riêng checksum không chứng minh danh tính nhà phát hành.
 
 Tính năng Google Drive cần OAuth client của bạn. Trong Google Cloud Console, tạo OAuth client ID loại **Desktop app**, lưu thành credentials.json cạnh PersonalInfoManager.csproj rồi build. File được nhúng lúc build và bị git-ignore nên không nằm trong repo. Nếu không có file này, các phần còn lại vẫn hoạt động nhưng không dùng được Drive sync.
 
