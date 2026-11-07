@@ -1,0 +1,32 @@
+# GitLab CI for TQLTK (.NET 10 / WPF)
+# Security jobs run on GitLab's Linux hosted runners.
+
+include:
+  - template: Jobs/SAST.gitlab-ci.yml
+
+  - template: Jobs/Dependency-Scanning.v2.gitlab-ci.yml
+    inputs:
+      # The application project is under Nguon/.
+      max_scan_depth: 2
+
+  - template: Jobs/Secret-Detection.gitlab-ci.yml
+
+# NuGet scanning requires packages.lock.json.
+# Generate it before the Dependency Scanning job and pass it as an artifact.
+nuget-lockfile:
+  stage: .pre
+  image: mcr.microsoft.com/dotnet/sdk:10.0
+  script:
+    - dotnet restore Nguon/PersonalInfoManager.csproj --use-lock-file -p:EnableWindowsTargeting=true
+  artifacts:
+    paths:
+      - Nguon/packages.lock.json
+    expire_in: 1 day
+  rules:
+    - exists:
+        - Nguon/PersonalInfoManager.csproj
+
+# Make the generated NuGet lockfile available to the scanner.
+dependency-scanning:
+  dependencies:
+    - nuget-lockfile
