@@ -9,6 +9,18 @@ using PersonalInfoManager.Models;
 using PersonalInfoManager.Services;
 internal static partial class Program
 {
+    private static void AssertVaultExportVersion(string path, string? passphrase)
+    {
+        string text = File.ReadAllText(path);
+        bool portable = BackupCrypto.IsPassphraseFormat(text);
+        RequireBackup(portable == (passphrase != null), "vault metadata fixture uses the expected encryption format");
+        string json = portable ? BackupCrypto.Decrypt(text, passphrase!) : AesCrypto.Decrypt(text);
+        using var package = JsonDocument.Parse(json);
+        RequireBackup(package.RootElement.GetProperty("AppVersion").GetString() == AppVersion.Current,
+            (portable ? "passphrase" : "machine-key") + " vault export serializes the running application version");
+        RequireBackup(package.RootElement.GetProperty("AccountCount").GetInt32() == package.RootElement.GetProperty("Accounts").GetArrayLength(),
+            "vault version metadata change preserves account count and package structure");
+    }
     private static void WithBackupProbe(string parent, Action<string> test)
     {
         string root = Path.GetFullPath(parent).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;

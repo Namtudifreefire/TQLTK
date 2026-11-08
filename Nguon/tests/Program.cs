@@ -110,9 +110,18 @@ internal static partial class Program
             string backupPassphrase = "Regression backup passphrase 2026!";
             Run("Vault backup inspect and isolated restore drill", () =>
             {
+                WithBackupProbe(backupDirectory, folder =>
+                {
+                    string machineBackup = Path.Combine(folder, "machine-version.vault");
+                    if (BackupCrypto.HasStoredPassphrase(username)) throw new InvalidOperationException("Machine-key metadata fixture requires no stored passphrase.");
+                    var machineExport = VaultBackupService.ExportToFile(username, machineBackup);
+                    if (!machineExport.ok) throw new IOException(machineExport.message);
+                    AssertVaultExportVersion(machineBackup, null);
+                });
                 BackupCrypto.SaveStoredPassphrase(username, backupPassphrase);
                 var export = VaultBackupService.ExportToFile(username, vaultBackupPath);
                 if (!export.ok) throw new InvalidDataException(export.message);
+                AssertVaultExportVersion(vaultBackupPath, backupPassphrase);
                 var inspect = VaultBackupService.InspectBackup(username, vaultBackupPath);
                 if (!inspect.ok || inspect.accountCount != 1)
                     throw new InvalidDataException(inspect.message);

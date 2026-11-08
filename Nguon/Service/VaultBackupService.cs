@@ -51,7 +51,7 @@ namespace PersonalInfoManager.Services
                 {
                     ExportedAt = DateTime.Now,
                     ExportedBy = username,
-                    AppVersion = "3.6.7",
+                    AppVersion = global::PersonalInfoManager.Services.AppVersion.Current,
                     AccountCount = accounts.Count,
                     Accounts = accounts
                 };
