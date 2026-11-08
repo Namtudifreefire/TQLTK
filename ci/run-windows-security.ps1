@@ -1,5 +1,10 @@
 [CmdletBinding()]
-param([switch]$InstallSdk)
+param(
+    [switch]$InstallSdk,
+    [ValidateSet('', 'rollback', 'crash', 'disk-full', 'transfer-export', 'transfer-import')]
+    [string]$BackupLabMode = '',
+    [string]$LabPath = '.'
+)
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 if ([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT) {
@@ -47,10 +52,15 @@ try {
     if ($LASTEXITCODE -ne 0 -or $selectedSdk -notmatch '^10\.0\.\d+$') {
         throw 'SDK selection must resolve to stable .NET 10.'
     }
-    Write-Output ('Running the full synthetic-data regression suite with SDK ' + $selectedSdk)
+    Write-Output ('Running Windows security checks with SDK ' + $selectedSdk)
     & dotnet restore Nguon/PersonalInfoManager.csproj --locked-mode
     if ($LASTEXITCODE -ne 0) { throw 'Locked application restore failed.' }
-    & dotnet run --project Nguon/tests/PersonalInfoManager.SecurityRegression.csproj --configuration Release
+    if ($BackupLabMode) {
+        & dotnet run --project Nguon/tests/PersonalInfoManager.SecurityRegression.csproj --configuration Release -- --backup-lab $BackupLabMode $LabPath
+    }
+    else {
+        & dotnet run --project Nguon/tests/PersonalInfoManager.SecurityRegression.csproj --configuration Release
+    }
     if ($LASTEXITCODE -ne 0) { throw 'Security regression checks failed; inspect the named failing check.' }
 }
 finally {

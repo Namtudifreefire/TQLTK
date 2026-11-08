@@ -11,14 +11,15 @@ using Microsoft.Win32;
 using PersonalInfoManager;
 using PersonalInfoManager.Models;
 using PersonalInfoManager.Services;
-internal static class Program
+internal static partial class Program
 {
     private static int _passed;
     private static int _failed;
     private static readonly string? TestFilter = Environment.GetEnvironmentVariable("TQLTK_REGRESSION_FILTER");
     [STAThread]
-    private static int Main()
+    private static int Main(string[] args)
     {
+        if (args.Length > 0) return RunBackupLab(args);
         if (!OperatingSystem.IsWindows())
         {
             Console.Error.WriteLine("The security regression suite requires Windows DPAPI and WPF.");
@@ -137,6 +138,10 @@ internal static class Program
                 TestCompleteBackup(username, backupDirectory, backupPassphrase));
             Run("Selective backup recovery preserves current data", () =>
                 TestSelectiveBackupRecovery(username, backupDirectory, backupPassphrase));
+            Run("Backup failure matrix preserves original data", () => WithBackupProbe(backupDirectory, folder => TestBackupFailureMatrix(username, folder, backupPassphrase)));
+            Run("Backup compatibility fixtures and format rejection", () => WithBackupProbe(backupDirectory, folder => TestBackupCompatibility(username, folder, backupPassphrase)));
+            Run("Backup write failures preserve existing backup", () => WithBackupProbe(backupDirectory, folder => TestBackupWriteFailure(username, folder, backupPassphrase)));
+            Run("Restore write failure rolls back an already saved vault", () => WithBackupProbe(backupDirectory, folder => TestRestoreWriteFailure(username, folder, backupPassphrase)));
             Run("Verified pinning and backup retention policy", () =>
                 TestBackupRetentionPolicy(username, backupDirectory, backupPassphrase));
             Run("Vault-key rotation and interrupted transaction recovery", () =>

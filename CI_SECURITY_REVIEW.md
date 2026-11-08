@@ -4,6 +4,8 @@ Ngày đối chiếu: 2026-11-08. Baseline: `1134e7059e97dbc57052e8839c2ca20f004
 
 ## Cập nhật sau pipeline thực tế — lựa chọn áp dụng hiện tại
 
+Các nhóm kiểm thử backup nâng cao đã được bổ sung vào workflow Windows của GitHub theo [BACKUP_CI_TESTS.md](BACKUP_CI_TESTS.md). GitLab giữ các scanner và NuGet Audit. Chi tiết NOT TESTED trong phần lịch sử bên dưới cần đối chiếu phạm vi mới: transfer giữa hai VM, lỗi rollback, kill tiến trình con và volume VHD giới hạn được kiểm tra riêng; chưa có cam kết restore nguyên tử sau crash hoặc tương thích mọi backup cũ.
+
 Phần bên dưới ghi lại thiết kế và kiểm tra ban đầu. Sau khi pipeline [3041940691](https://gitlab.com/duyngadocton/TQLTK/-/pipelines/3041940691) chạy, người dùng chọn **GitHub Actions cho kiểm thử Windows, GitLab cho scanner và NuGet Audit**. Lựa chọn này thay thế kế hoạch chạy regression bằng hosted Windows của GitLab trong các mục lịch sử bên dưới.
 
 - Pipeline đó có bảy job thành công, gồm NuGet Audit trên Linux và ba scanner bắt buộc; job Windows đạt 11 nhóm rồi lỗi DPAPI `CurrentUser` khi tạo tài khoản giả, 16 nhóm sau chưa chạy. SDK 10.0.403 đã tải/cài thành công. Git Credential Manager cũng báo lỗi `wincredman` trong checkout/cleanup; lỗi quyết định của regression nằm tại `ProtectedData.Protect`, không phải cài SDK.

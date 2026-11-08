@@ -28,6 +28,23 @@ jobs:
         shell: pwsh
         run: ./ci/run-windows-security.ps1
 
+      - name: Confirm fault injection hooks are absent from production build
+        shell: pwsh
+        run: |
+          $assembly = 'Nguon/bin/Release/net10.0-windows10.0.19041.0/PersonalInfoManager.dll'
+          if (-not (Test-Path -LiteralPath $assembly)) { throw 'Production assembly not found.' }
+          $metadata = [Text.Encoding]::UTF8.GetString([IO.File]::ReadAllBytes((Resolve-Path -LiteralPath $assembly)))
+          if ($metadata.Contains('RestoreTestCheckpoint')) { throw 'Test checkpoint leaked into production build.' }
+          Write-Output 'PASS production assembly excludes backup fault-injection checkpoint.'
+
+      - name: Backup restore with rollback failure
+        shell: pwsh
+        run: ./ci/run-windows-security.ps1 -BackupLabMode rollback
+
+      - name: Backup restore after process termination
+        shell: pwsh
+        run: ./ci/run-windows-security.ps1 -BackupLabMode crash
+
       - name: Publish Windows x64
         run: dotnet publish Nguon/PersonalInfoManager.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=None -p:DebugSymbols=false -o artifacts/publish
 
@@ -44,3 +61,54 @@ jobs:
           name: TQLTK-win-x64
           path: artifacts/TQLTK-win-x64.zip
           if-no-files-found: error
+
+  backup-transfer-producer:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Export synthetic portable and legacy fixtures
+        shell: pwsh
+        run: ./ci/run-windows-security.ps1 -BackupLabMode transfer-export -LabPath "$env:RUNNER_TEMP/transfer-fixtures"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: synthetic-backup-transfer
+          path: |
+            ${{ runner.temp }}/transfer-fixtures/complete.tqltk
+            ${{ runner.temp }}/transfer-fixtures/legacy-v3p.vault
+            ${{ runner.temp }}/transfer-fixtures/machine-bound.txt
+            ${{ runner.temp }}/transfer-fixtures/producer.json
+          retention-days: 1
+          if-no-files-found: error
+
+  backup-transfer-consumer:
+    needs: backup-transfer-producer
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - uses: actions/download-artifact@v4
+        with:
+          name: synthetic-backup-transfer
+          path: ${{ runner.temp }}/transfer-fixtures
+      - name: Restore on a different Windows machine and SID
+        shell: pwsh
+        run: ./ci/run-windows-security.ps1 -BackupLabMode transfer-import -LabPath "$env:RUNNER_TEMP/transfer-fixtures"
+
+  backup-disk-full:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Real disk-full backup test on a bounded virtual disk
+        shell: pwsh
+        run: ./ci/run-disk-full-lab.ps1

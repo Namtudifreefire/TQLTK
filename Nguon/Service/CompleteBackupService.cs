@@ -83,6 +83,9 @@ public sealed class BackupComparisonEntry
 public sealed record BackupRecoverySelection(BackupRecoveryItemKind Kind, string Key, bool FromOlder);
 public static class CompleteBackupService
 {
+#if SECURITY_TEST
+    internal static Action<string>? RestoreTestCheckpoint { get; set; }
+#endif
     public const string FileExtension = ".tqltk";
     public const long MaximumArchiveBytes = 160L * 1024 * 1024;
     private const int CurrentFormatVersion = 1;
@@ -377,6 +380,9 @@ public static class CompleteBackupService
             {
                 vaultService.Save(username, currentAccounts);
                 accountsSaved = true;
+#if SECURITY_TEST
+                RestoreTestCheckpoint?.Invoke("after-vault-save");
+#endif
             }
             foreach (Note incoming in package.Notes)
             {
@@ -420,7 +426,13 @@ public static class CompleteBackupService
         catch (Exception ex)
         {
             var rollbackErrors = new List<string>();
-            try { if (accountsSaved && originalAccounts != null) vaultService!.Save(username, originalAccounts); }
+            try
+            {
+#if SECURITY_TEST
+                RestoreTestCheckpoint?.Invoke("before-vault-rollback");
+#endif
+                if (accountsSaved && originalAccounts != null) vaultService!.Save(username, originalAccounts);
+            }
             catch (Exception rollback) { rollbackErrors.Add("vault: " + rollback.Message); }
             try { if (notesSaved && originalNotes != null) new NoteService().Save(originalNotes); }
             catch (Exception rollback) { rollbackErrors.Add("notes: " + rollback.Message); }
