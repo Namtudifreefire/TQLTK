@@ -240,7 +240,7 @@ namespace PersonalInfoManager.Services
             if (legacy == null) return false;
 
             WritePassFile(PassFileFor(username), legacy);
-            try { File.Delete(LegacyPassFile); } catch { }
+            try { File.Delete(LegacyPassFile); } catch {              }
             return true;
         }
 

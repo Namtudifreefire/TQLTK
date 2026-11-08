@@ -38,7 +38,7 @@ public partial class AccountAttachmentsWindow : Window
             if (!info.Exists) continue;
             if (info.Length > MaximumFileBytes)
             {
-                ShowError(string.Format(LanguageService.Translate("Tệp '{0}' vượt quá giới hạn 10 MB."), Path.GetFileName(path)));
+                ShowError(LanguageService.Format("Tệp '{0}' vượt quá giới hạn 10 MB.", Path.GetFileName(path)));
                 continue;
             }
             if (CurrentBytes() + info.Length > MaximumTotalBytes)
@@ -53,7 +53,7 @@ public partial class AccountAttachmentsWindow : Window
                 using var input = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
                 if (input.Length > MaximumFileBytes)
                 {
-                    ShowError(string.Format(LanguageService.Translate("Tệp '{0}' vượt quá giới hạn 10 MB."), Path.GetFileName(path)));
+                    ShowError(LanguageService.Format("Tệp '{0}' vượt quá giới hạn 10 MB.", Path.GetFileName(path)));
                     continue;
                 }
                 using var output = new MemoryStream((int)input.Length);
@@ -70,13 +70,13 @@ public partial class AccountAttachmentsWindow : Window
             }
             catch (Exception ex)
             {
-                ShowError(string.Format(LanguageService.Translate("Không thể đọc tệp '{0}': {1}"),
+                ShowError(LanguageService.Format("Không thể đọc tệp '{0}': {1}",
                     Path.GetFileName(path), LanguageService.Translate(ex.Message)));
                 continue;
             }
             if (content.LongLength != info.Length)
             {
-                ShowError(string.Format(LanguageService.Translate("Tệp '{0}' đã thay đổi trong lúc đọc."), Path.GetFileName(path)));
+                ShowError(LanguageService.Format("Tệp '{0}' đã thay đổi trong lúc đọc.", Path.GetFileName(path)));
                 continue;
             }
             _items.Add(new AccountAttachment
@@ -166,6 +166,6 @@ public partial class AccountAttachmentsWindow : Window
     private sealed record AttachmentView(Guid Id, string FileName, string SizeText, string AddedAtText)
     {
         public AttachmentView(AccountAttachment item) : this(item.Id, item.FileName,
-            $"{item.Content.Length / 1024.0:0.#} KB", item.AddedAtUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")) { }
+            $"{item.Content.Length / 1024.0:0.#} KB", LocalizationAuditService.FormatDateTime(item.AddedAtUtc)) { }
     }
 }

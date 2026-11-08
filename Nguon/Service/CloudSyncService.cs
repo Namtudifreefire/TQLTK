@@ -20,22 +20,16 @@ using DriveFile = Google.Apis.Drive.v3.Data.File;
 
 namespace PersonalInfoManager.Services
 {
-
     public enum BackupKind
     {
-
         Vault,
-
         Files
     }
 
     public enum BackupOwner
     {
-
         Mine,
-
         Legacy,
-
         Other
     }
 
@@ -55,7 +49,7 @@ namespace PersonalInfoManager.Services
         };
 
         public string CreatedText =>
-            Created?.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss") ?? "?";
+            Created.HasValue ? LocalizationAuditService.FormatDateTime(Created.Value, includeSeconds: true) : "?";
 
         public string SizeText
         {
@@ -556,7 +550,7 @@ namespace PersonalInfoManager.Services
             {
                 LastError = Explain(ex);
 
-                try { if (File.Exists(destPath)) File.Delete(destPath); } catch { }
+                try { if (File.Exists(destPath)) File.Delete(destPath); } catch {              }
 
                 return false;
             }

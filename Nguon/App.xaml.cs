@@ -13,6 +13,8 @@ namespace PersonalInfoManager
             ShutdownMode = ShutdownMode.OnMainWindowClose;
             EventManager.RegisterClassHandler(typeof(Window), FrameworkElement.LoadedEvent,
                 new RoutedEventHandler(LanguageService.HandleWindowLoaded), handledEventsToo: true);
+            EventManager.RegisterClassHandler(typeof(Window), FrameworkElement.LoadedEvent,
+                new RoutedEventHandler(WindowLayoutService.HandleWindowLoaded), handledEventsToo: true);
 
             try { ThemeService.Initialize(); } catch { }
 

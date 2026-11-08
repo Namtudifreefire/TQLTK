@@ -122,10 +122,22 @@ public static class LanguageService
             ["VERIFY_VAULT_BACKUP"] = "Verify vault backup",
             ["VAULT_KEY_ROTATION_DENIED"] = "Vault key rotation denied",
             ["VAULT_KEY_ROTATION"] = "Vault key rotation",
-            ["VAULT_BACKUP_RESTORE_DRILL"] = "Vault backup restore drill"
+            ["VAULT_BACKUP_RESTORE_DRILL"] = "Vault backup restore drill",
+            ["CREATE_COMPLETE_BACKUP"] = "Create full backup",
+            ["CREATE_COMPLETE_BACKUP_DENIED"] = "Full backup creation denied",
+            ["RESTORE_COMPLETE_BACKUP"] = "Restore full backup",
+            ["RESTORE_COMPLETE_BACKUP_DENIED"] = "Full backup restore denied",
+            ["RESTORE_COMPLETE_BACKUP_FAILED"] = "Full backup restore failed",
+            ["BACKUP_CENTER_DENIED"] = "Backup manager access denied",
+            ["RECOVER_SELECTED_BACKUP_DENIED"] = "Selected backup recovery denied",
+            ["RECOVER_SELECTED_BACKUP_COPIES"] = "Recover backup entries as copies",
+            ["EDIT_DRAFT_SAVE_FAILED"] = "Encrypted edit draft save failed"
         };
     private static readonly Regex VaultKeyRotationLogDetail = new(
         @"^Đã mã hóa lại (?<files>\d+) tệp; giữ (?<backups>\d+) backup dùng cụm mật khẩu\.$",
+        RegexOptions.CultureInvariant);
+    private static readonly Regex CompleteRestoreLogDetail = new(
+        @"^Đã (?:thêm|khôi phục thành bản sao) (?<accounts>\d+) tài khoản, (?<notes>\d+) ghi chú và (?<files>\d+) tệp\.$",
         RegexOptions.CultureInvariant);
     private static readonly Regex BulkAccountActionLogDetail = new(
         @"^Thay đổi (?<count>\d+) tài khoản$",
@@ -166,6 +178,10 @@ public static class LanguageService
 
     public static bool IsEnglish => _currentCode == "en";
 
+#if SECURITY_TEST
+    internal static void SetLanguageForTesting(string code) => _currentCode = code == "en" ? "en" : "vi";
+#endif
+
     public static string GetDisplayName(string code) => code == "en" ? "English" : "Tiếng Việt";
 
     public static void SetLanguage(string code)
@@ -183,6 +199,9 @@ public static class LanguageService
     {
         return Translate(value, _currentCode);
     }
+
+    public static string Format(string source, params object?[] arguments) =>
+        LocalizationAuditService.FormatSource(source, _currentCode, arguments);
 
     public static string TranslateLogContent(string content)
     {
@@ -222,6 +241,18 @@ public static class LanguageService
         Match match;
         switch (action)
         {
+            case "CREATE_COMPLETE_BACKUP":
+                const string packagePrefix = "Đã tạo gói chuyển máy: ";
+                if (detail.StartsWith(packagePrefix, StringComparison.Ordinal))
+                    return "Created migration package: " + detail[packagePrefix.Length..];
+                break;
+            case "RESTORE_COMPLETE_BACKUP":
+            case "RECOVER_SELECTED_BACKUP_COPIES":
+                match = CompleteRestoreLogDetail.Match(detail);
+                if (match.Success && TryParseLogCount(match, "accounts", out int restoredAccountCount) &&
+                    TryParseLogCount(match, "notes", out int restoredNoteCount) && TryParseLogCount(match, "files", out int restoredFileCount))
+                    return $"Accounts restored: {restoredAccountCount}; private notes: {restoredNoteCount}; files: {restoredFileCount}.";
+                break;
             case "VAULT_KEY_ROTATION":
                 match = VaultKeyRotationLogDetail.Match(detail);
                 if (match.Success && TryParseLogCount(match, "files", out int files) &&
@@ -305,6 +336,8 @@ public static class LanguageService
                     return $"{match.Groups["username"].Value}: deleted {deleted} {Plural(deleted, "entry", "entries")}, {errors} {Plural(errors, "error", "errors")}";
                 break;
             case "AUTO_BACKUP":
+                if (detail.StartsWith("Định kỳ: ", StringComparison.Ordinal))
+                    return "Scheduled: " + detail["Định kỳ: ".Length..];
                 if (detail.StartsWith("Khi thoát: ", StringComparison.Ordinal))
                     return "On exit: " + detail["Khi thoát: ".Length..];
                 if (detail.StartsWith("Thủ công: ", StringComparison.Ordinal))
@@ -323,7 +356,7 @@ public static class LanguageService
     public static string Translate(string value, string languageCode)
     {
         if (!string.Equals(languageCode, "en", StringComparison.OrdinalIgnoreCase) || string.IsNullOrEmpty(value)) return value;
-        if (EnglishCatalog.Entries.TryGetValue(value, out string? translated)) return translated;
+        if (LocalizationAuditService.TryTranslateKnown(value, languageCode, out string translated)) return translated;
 
         int start = 0;
         while (start < value.Length && char.IsWhiteSpace(value[start])) start++;
@@ -332,8 +365,8 @@ public static class LanguageService
         if (start > 0 || end < value.Length)
         {
             string content = value[start..end];
-            if (EnglishCatalog.Entries.TryGetValue(content, out translated))
-                return string.Concat(value.AsSpan(0, start), translated, value.AsSpan(end));
+            if (EnglishCatalog.Entries.TryGetValue(content, out string? innerTranslation))
+                return string.Concat(value.AsSpan(0, start), innerTranslation, value.AsSpan(end));
         }
 
         string result = ProtectQuotedValues(value, out List<(string Token, string Value)> quotedValues);
@@ -489,6 +522,16 @@ public static class LanguageService
         RenderLocalizedTextBlock(textBlock, observation);
     }
 
+    public static void SetLocalizedKey(TextBlock textBlock, string localizationKey)
+    {
+        ArgumentNullException.ThrowIfNull(textBlock);
+        ArgumentException.ThrowIfNullOrWhiteSpace(localizationKey);
+        ObservedValue observation = LocalizedTextBlocks.GetValue(textBlock, _ => new());
+        observation.Source = localizationKey;
+        observation.Renderer = () => LocalizationAuditService.Get(localizationKey);
+        RenderLocalizedTextBlock(textBlock, observation);
+    }
+
     public static void SetLocalizedFormattedText(
         TextBlock textBlock,
         string sourceTemplate,
@@ -496,8 +539,7 @@ public static class LanguageService
     {
         ObservedValue observation = LocalizedTextBlocks.GetValue(textBlock, _ => new());
         observation.Source = sourceTemplate;
-        observation.Renderer = () => string.Format(CultureInfo.CurrentCulture,
-            Translate(sourceTemplate), arguments());
+        observation.Renderer = () => Format(sourceTemplate, arguments());
         RenderLocalizedTextBlock(textBlock, observation);
     }
 

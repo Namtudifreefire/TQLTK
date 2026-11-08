@@ -149,7 +149,7 @@
                                             Binding="{Binding IsActive}"
                                             Width="Auto" MinWidth="60" />
                     <DataGridTextColumn Header="Tạo lúc"
-                                        Binding="{Binding CreatedAt, StringFormat='dd/MM/yyyy HH:mm'}"
+                                        Binding="{Binding CreatedAt, Converter={StaticResource LocalizedTextConverter}, ConverterParameter=DateTime}"
                                         Width="Auto" MinWidth="150" />
                     <DataGridTextColumn Header="ĐN cuối"
                                         Binding="{Binding LastLoginAt, Converter={StaticResource LocalizedTextConverter}, ConverterParameter=LastLoginAt}"

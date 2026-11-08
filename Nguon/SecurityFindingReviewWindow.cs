@@ -47,8 +47,8 @@ namespace PersonalInfoManager
             });
             content.Children.Add(new TextBlock
             {
-                Text = string.Format(LanguageService.Translate("Lần kiểm tra gần nhất: {0}"),
-                    current.LastCheckedUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")),
+                Text = LanguageService.Format("Lần kiểm tra gần nhất: {0}",
+                    LocalizationAuditService.FormatDateTime(current.LastCheckedUtc)),
                 Margin = new Thickness(0, 0, 0, 12),
                 Foreground = TryFindResource("TextSecondaryBrush") as Brush
             });

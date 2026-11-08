@@ -38,7 +38,6 @@ namespace PersonalInfoManager.Services
 
     public static class FileBackupService
     {
-
         public const long MaxTotalBytes = 100L * 1024 * 1024;
 
         private const int CurrentFormatVersion = 1;

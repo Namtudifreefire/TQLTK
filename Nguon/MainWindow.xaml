@@ -3,7 +3,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="TQLTK • Phát triển bởi thienthuongthienha_duyngadocton_"
         Height="700" Width="1100"
-        MinHeight="500" MinWidth="800"
+        MinHeight="420" MinWidth="680"
+        UseLayoutRounding="True" SnapsToDevicePixels="True"
         Background="{DynamicResource BackgroundBrush}"
         Style="{StaticResource SlideInWindow}"
         PreviewMouseDown="MainWindow_PreviewMouseDown">
@@ -537,7 +538,7 @@
                                         <CheckBox x:Name="chkMissingTotpOnly" Content="Thiếu TOTP" VerticalAlignment="Center"
                                                   Margin="0,0,12,6" Checked="AccountFilters_Changed" Unchecked="AccountFilters_Changed"
                                                   Foreground="{DynamicResource TextPrimaryBrush}" />
-                                        <CheckBox x:Name="chkSecurityWarningOnly" Content="Cảnh báo bảo mật" VerticalAlignment="Center"
+                                        <CheckBox x:Name="chkSecurityWarningOnly" Content="Chỉ cảnh báo bảo mật" VerticalAlignment="Center"
                                                   Margin="0,0,12,6" Checked="AccountFilters_Changed" Unchecked="AccountFilters_Changed"
                                                   Foreground="{DynamicResource TextPrimaryBrush}" />
                                     </WrapPanel>
@@ -580,7 +581,7 @@
                                                             ElementStyle="{StaticResource AccountGridText}" />
                                         <DataGridTextColumn Header="TOTP" Binding="{Binding TotpState, Converter={StaticResource LocalizedTextConverter}}" Width="90"
                                                             ElementStyle="{StaticResource AccountGridCenteredText}" />
-                                        <DataGridTextColumn Header="Cập nhật" Binding="{Binding UpdatedAt, StringFormat='dd/MM/yyyy HH:mm'}" Width="185"
+                                        <DataGridTextColumn Header="Cập nhật" Binding="{Binding UpdatedAt, Converter={StaticResource LocalizedTextConverter}, ConverterParameter=DateTime}" Width="185"
                                                             ElementStyle="{StaticResource AccountGridText}" />
                                     </DataGrid.Columns>
                                 </DataGrid>
@@ -729,7 +730,7 @@
                                     <DataGrid.Columns>
                                         <DataGridTextColumn Header="Tên tệp" Binding="{Binding Name}" Width="Auto" MinWidth="250" />
                                         <DataGridTextColumn Header="Kích thước" Binding="{Binding Length}" Width="Auto" MinWidth="150" />
-                                        <DataGridTextColumn Header="Ngày sửa" Binding="{Binding LastWriteTime, StringFormat='dd/MM/yyyy HH:mm'}" Width="Auto" MinWidth="200" />
+                                        <DataGridTextColumn Header="Ngày sửa" Binding="{Binding LastWriteTime, Converter={StaticResource LocalizedTextConverter}, ConverterParameter=DateTime}" Width="Auto" MinWidth="200" />
                                         <DataGridTextColumn Header="Đường dẫn" Binding="{Binding FullName}" Width="Auto" MinWidth="400" />
                                     </DataGrid.Columns>
                                 </DataGrid>
@@ -1147,6 +1148,103 @@
                                                 <TextBlock Text="Nạp lại từ tệp .vault, tài khoản trùng sẽ được bỏ qua." Style="{StaticResource RowDesc}" />
                                             </StackPanel>
                                         </DockPanel>
+                                    </Border>
+
+                                    <Border Style="{StaticResource SettingRow}" Margin="0,0,0,14">
+                                        <StackPanel>
+                                            <TextBlock Text="Sao lưu đầy đủ và chuyển máy" Style="{StaticResource RowTitle}" />
+                                            <TextBlock Text="Một gói mã hóa gồm vault, TOTP, tệp đính kèm, ghi chú, tệp cá nhân và tùy chọn cài đặt đã chọn. Khôi phục chỉ bổ sung, không ghi đè mục đang có." Style="{StaticResource RowDesc}" TextWrapping="Wrap" Margin="0,4,0,0" />
+                                            <WrapPanel Margin="0,10,0,0">
+                                                <Button Content="Tạo gói đầy đủ" Style="{StaticResource RowButton}" Margin="0,0,8,8" Click="MnuCreateCompleteBackup_Click" />
+                                                <Button Content="Khôi phục / chuyển máy" Style="{StaticResource RowButton}" Margin="0,0,8,8" Click="MnuRestoreCompleteBackup_Click" />
+                                                <Button Content="Duyệt / so sánh" Style="{StaticResource RowButton}" Margin="0,0,8,8" Click="MnuBackupCenter_Click" />
+                                                <Button Content="Hướng dẫn chuyển máy" Style="{StaticResource RowButton}" Margin="0,0,8,8" Click="BtnMigrationGuide_Click" />
+                                            </WrapPanel>
+                                            <WrapPanel Margin="0,10,0,0">
+                                                <CheckBox x:Name="chkCompleteBackupNotes" Content="Ghi chú riêng" IsChecked="True" Margin="0,0,18,6" />
+                                                <CheckBox x:Name="chkCompleteBackupFiles" Content="Tệp cá nhân" IsChecked="True" Margin="0,0,18,6" />
+                                                <CheckBox x:Name="chkCompleteBackupSettings" Content="Cài đặt an toàn" IsChecked="True" Margin="0,0,18,6" />
+                                            </WrapPanel>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <Border Style="{StaticResource SettingRow}" Margin="0,0,0,14">
+                                        <StackPanel>
+                                            <TextBlock Text="Sao lưu định kỳ và giữ bản đã kiểm tra" Style="{StaticResource RowTitle}" />
+                                            <TextBlock Text="Tự chạy khi ứng dụng mở và vault đã mở khóa; chỉ tạo bản mới khi dữ liệu thay đổi. Nếu sao lưu lỗi, ứng dụng sẽ thử lại sau 6 giờ." Style="{StaticResource RowDesc}" TextWrapping="Wrap" Margin="0,4,0,0" />
+                                            <TextBlock x:Name="lblPeriodicBackupStatus" Text="Sao lưu định kỳ đang tắt." Style="{StaticResource RowDesc}" TextWrapping="Wrap" Margin="0,4,0,0" />
+                                            <WrapPanel Margin="0,10,0,0" VerticalAlignment="Center">
+                                                <CheckBox x:Name="chkPeriodicBackup" Content="Bật sao lưu định kỳ" Margin="0,0,18,8" VerticalAlignment="Center" />
+                                                <StackPanel Margin="0,0,16,8">
+                                                    <TextBlock Text="Chu kỳ" Style="{StaticResource RowDesc}" />
+                                                    <ComboBox x:Name="cmbPeriodicBackupInterval" Width="145" MinHeight="36">
+                                                        <ComboBoxItem Content="Hằng ngày" Tag="24" />
+                                                        <ComboBoxItem Content="Hằng tuần" Tag="168" />
+                                                        <ComboBoxItem Content="Hằng tháng" Tag="720" />
+                                                    </ComboBox>
+                                                </StackPanel>
+                                                <StackPanel Margin="0,0,16,8">
+                                                    <TextBlock Text="Số bản tối đa" Style="{StaticResource RowDesc}" />
+                                                    <ComboBox x:Name="cmbBackupRetentionCount" Width="120" MinHeight="36">
+                                                        <ComboBoxItem Content="3 bản" Tag="3" />
+                                                        <ComboBoxItem Content="7 bản" Tag="7" />
+                                                        <ComboBoxItem Content="14 bản" Tag="14" />
+                                                        <ComboBoxItem Content="30 bản" Tag="30" />
+                                                    </ComboBox>
+                                                </StackPanel>
+                                                <StackPanel Margin="0,0,16,8">
+                                                    <TextBlock Text="Thời gian giữ" Style="{StaticResource RowDesc}" />
+                                                    <ComboBox x:Name="cmbBackupRetentionDays" Width="140" MinHeight="36">
+                                                        <ComboBoxItem Content="30 ngày" Tag="30" />
+                                                        <ComboBoxItem Content="90 ngày" Tag="90" />
+                                                        <ComboBoxItem Content="180 ngày" Tag="180" />
+                                                        <ComboBoxItem Content="365 ngày" Tag="365" />
+                                                    </ComboBox>
+                                                </StackPanel>
+                                                <StackPanel Margin="0,0,0,8">
+                                                    <TextBlock Text="Giới hạn dung lượng" Style="{StaticResource RowDesc}" />
+                                                    <ComboBox x:Name="cmbBackupStorageLimit" Width="150" MinHeight="36">
+                                                        <ComboBoxItem Content="512 MB" Tag="512" />
+                                                        <ComboBoxItem Content="1 GB" Tag="1024" />
+                                                        <ComboBoxItem Content="2 GB" Tag="2048" />
+                                                        <ComboBoxItem Content="4 GB" Tag="4096" />
+                                                    </ComboBox>
+                                                </StackPanel>
+                                            </WrapPanel>
+                                            <WrapPanel Margin="0,6,0,0">
+                                                <StackPanel Margin="0,0,16,8">
+                                                    <TextBlock Text="Giữ một bản mỗi ngày" Style="{StaticResource RowDesc}" />
+                                                    <ComboBox x:Name="cmbBackupDailyRetention" MinWidth="170" MinHeight="36">
+                                                        <ComboBoxItem Content="Tắt" Tag="0" />
+                                                        <ComboBoxItem Content="7 ngày" Tag="7" />
+                                                        <ComboBoxItem Content="14 ngày" Tag="14" />
+                                                        <ComboBoxItem Content="30 ngày" Tag="30" />
+                                                    </ComboBox>
+                                                </StackPanel>
+                                                <StackPanel Margin="0,0,16,8">
+                                                    <TextBlock Text="Giữ một bản mỗi tuần" Style="{StaticResource RowDesc}" />
+                                                    <ComboBox x:Name="cmbBackupWeeklyRetention" MinWidth="170" MinHeight="36">
+                                                        <ComboBoxItem Content="Tắt" Tag="0" />
+                                                        <ComboBoxItem Content="4 tuần" Tag="4" />
+                                                        <ComboBoxItem Content="8 tuần" Tag="8" />
+                                                        <ComboBoxItem Content="12 tuần" Tag="12" />
+                                                    </ComboBox>
+                                                </StackPanel>
+                                                <StackPanel Margin="0,0,0,8">
+                                                    <TextBlock Text="Giữ một bản mỗi tháng" Style="{StaticResource RowDesc}" />
+                                                    <ComboBox x:Name="cmbBackupMonthlyRetention" MinWidth="170" MinHeight="36">
+                                                        <ComboBoxItem Content="Tắt" Tag="0" />
+                                                        <ComboBoxItem Content="3 tháng" Tag="3" />
+                                                        <ComboBoxItem Content="6 tháng" Tag="6" />
+                                                        <ComboBoxItem Content="12 tháng" Tag="12" />
+                                                    </ComboBox>
+                                                </StackPanel>
+                                            </WrapPanel>
+                                            <TextBlock Text="Giữ thêm bản mới nhất của mỗi ngày, tuần hoặc tháng đã chọn, ngoài số bản và thời gian giữ thông thường. Khi vượt dung lượng, bản cũ chưa ghim được dọn trước, kể cả bản theo lịch. Bản ghim và bản mới nhất luôn được giữ." Style="{StaticResource RowDesc}" TextWrapping="Wrap" Margin="0,4,0,0" />
+                                            <TextBlock Text="Bản đã ghim không bị tự xóa. Hệ thống giữ bản mới nhất đã xác minh và báo nếu còn vượt giới hạn dung lượng." Style="{StaticResource RowDesc}" TextWrapping="Wrap" Margin="0,4,0,0" />
+                                            <TextBlock Text="Chính sách dọn tự động chỉ áp dụng cho các bản sao lưu định kỳ. Gói xuất thủ công được giữ nguyên cho đến khi bạn tự xóa." Style="{StaticResource RowDesc}" TextWrapping="Wrap" Margin="0,4,0,0" />
+                                            <Button Content="Lưu chính sách" Style="{StaticResource RowButton}" Click="BtnSaveBackupPolicy_Click" HorizontalAlignment="Left" Margin="0,10,0,0" />
+                                        </StackPanel>
                                     </Border>
 
                                     <Border Style="{StaticResource SettingRow}">

@@ -20,7 +20,7 @@
                 <DataGridTextColumn Header="Loại" Binding="{Binding TypeLabel, Converter={StaticResource LocalizedTextConverter}}" Width="110" />
                 <DataGridTextColumn Header="Tên" Binding="{Binding Title}" Width="190" />
                 <DataGridTextColumn Header="Thông tin" Binding="{Binding Detail}" Width="*" />
-                <DataGridTextColumn Header="Đã xóa" Binding="{Binding DeletedAt, StringFormat='dd/MM/yyyy HH:mm'}" Width="145" />
+                <DataGridTextColumn Header="Đã xóa" Binding="{Binding DeletedAt, Converter={StaticResource LocalizedTextConverter}, ConverterParameter=DateTime}" Width="145" />
                 <DataGridTextColumn Header="Còn lại" Binding="{Binding DaysRemaining, Converter={StaticResource LocalizedTextConverter}, ConverterParameter=DaysRemaining}" Width="90" />
             </DataGrid.Columns>
         </DataGrid>

@@ -62,7 +62,7 @@ public partial class AccountHistoryWindow : Window
     private sealed record HistoryView(Guid Id, string ChangedAtText, string ChangedFieldsText)
     {
         public HistoryView(AccountRevisionEntry entry) : this(entry.Id,
-            entry.ChangedAtUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss"),
+            LocalizationAuditService.FormatDateTime(entry.ChangedAtUtc, includeSeconds: true),
             string.Join(", ", entry.ChangedFields.Split('|', StringSplitOptions.RemoveEmptyEntries)
                 .Select(FieldLabel).Select(LanguageService.Translate))) { }
     }

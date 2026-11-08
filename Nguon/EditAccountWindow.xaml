@@ -4,17 +4,25 @@
         Title="Tài khoản"
         Height="820" Width="620"
         MinHeight="650" MinWidth="540"
+        UseLayoutRounding="True" SnapsToDevicePixels="True"
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResize"
         Background="{DynamicResource BackgroundBrush}"
-        Style="{StaticResource SlideInWindow}">
+        Style="{StaticResource SlideInWindow}"
+        Closing="EditAccountWindow_Closing" Closed="EditAccountWindow_Closed">
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto"
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+    <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto"
                   HorizontalScrollBarVisibility="Disabled"
                   PanningMode="VerticalOnly">
 
         <Grid Margin="35,25,35,30">
             <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
@@ -55,7 +63,8 @@
                          Height="44"
                          FontSize="14"
                          Padding="12,10"
-                         VerticalContentAlignment="Center" />
+                         VerticalContentAlignment="Center"
+                         TextChanged="FormField_TextChanged" />
             </StackPanel>
 
             <StackPanel Grid.Row="3" Margin="0,15,0,0">
@@ -64,7 +73,8 @@
                            Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,6" />
                 <TextBox x:Name="txtWebsiteUrl" Height="40" Padding="10"
                          VerticalContentAlignment="Center"
-                         ToolTip="Nhập URL http:// hoặc https:// chính thức. Chỉ so khớp chính xác hostname." />
+                         ToolTip="Nhập URL http:// hoặc https:// chính thức. Chỉ so khớp chính xác hostname."
+                         TextChanged="FormField_TextChanged" />
             </StackPanel>
 
             <Grid Grid.Row="4" Margin="0,12,0,0">
@@ -80,16 +90,19 @@
                 <StackPanel Grid.Row="0" Grid.Column="0">
                     <TextBlock Text="Thư mục" FontWeight="SemiBold" FontSize="13"
                                Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,6" />
-                    <TextBox x:Name="txtFolder" Height="38" Padding="9" VerticalContentAlignment="Center" />
+                    <TextBox x:Name="txtFolder" Height="38" Padding="9" VerticalContentAlignment="Center"
+                             TextChanged="FormField_TextChanged" />
                 </StackPanel>
                 <StackPanel Grid.Row="0" Grid.Column="2">
                     <TextBlock Text="Nhãn (phân cách bằng dấu phẩy)" FontWeight="SemiBold" FontSize="13"
                                Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,6" />
-                    <TextBox x:Name="txtTags" Height="38" Padding="9" VerticalContentAlignment="Center" />
+                    <TextBox x:Name="txtTags" Height="38" Padding="9" VerticalContentAlignment="Center"
+                             TextChanged="FormField_TextChanged" />
                 </StackPanel>
                 <CheckBox x:Name="chkFavorite" Grid.Row="1" Grid.ColumnSpan="3" Content="Đánh dấu yêu thích"
                           Margin="0,8,0,0"
-                          Foreground="{DynamicResource TextPrimaryBrush}" />
+                          Foreground="{DynamicResource TextPrimaryBrush}"
+                          Checked="FormField_CheckedChanged" Unchecked="FormField_CheckedChanged" />
             </Grid>
 
             <StackPanel Grid.Row="5" Margin="0,15,0,0">
@@ -102,7 +115,8 @@
                          Height="44"
                          FontSize="14"
                          Padding="12,10"
-                         VerticalContentAlignment="Center" />
+                         VerticalContentAlignment="Center"
+                         TextChanged="FormField_TextChanged" />
             </StackPanel>
 
             <StackPanel Grid.Row="6" Margin="0,15,0,0">
@@ -202,7 +216,22 @@
                            FontStyle="Italic" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" />
             </StackPanel>
 
-            <Grid Grid.Row="11" Margin="0,24,0,0">
+            <Border Grid.Row="11" Margin="0,16,0,0" Padding="12,10" CornerRadius="8"
+                    Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                <StackPanel>
+                    <CheckBox x:Name="chkEncryptedDraft" Content="Lưu bản nháp mã hóa để khôi phục sau sự cố"
+                              Checked="ChkEncryptedDraft_Checked" Unchecked="ChkEncryptedDraft_Unchecked"
+                              Foreground="{DynamicResource TextPrimaryBrush}" />
+                    <TextBlock x:Name="lblDraftStatus" Text="Bản nháp chỉ được lưu khi bạn bật tùy chọn này; khóa bằng tài khoản Windows hiện tại."
+                               TextWrapping="Wrap" Margin="0,5,0,0" FontSize="11"
+                               Foreground="{DynamicResource TextSecondaryBrush}" />
+                </StackPanel>
+            </Border>
+
+        </Grid>
+    </ScrollViewer>
+
+            <Grid Grid.Row="1" Margin="35,12,35,20">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="*" />
@@ -232,6 +261,5 @@
                 </Button>
             </Grid>
 
-        </Grid>
-    </ScrollViewer>
+    </Grid>
 </Window>

@@ -24,12 +24,24 @@ public sealed class LocalizedTextConverter : IValueConverter
         if (mode == "LastLoginAt")
         {
             if (value is DateTime dateTime)
-                return dateTime.ToString("dd/MM/yyyy HH:mm", CultureInfo.InvariantCulture);
+                return LocalizationAuditService.FormatDateTime(dateTime);
+            if (value is DateTimeOffset dateTimeOffset)
+                return LocalizationAuditService.FormatDateTime(dateTimeOffset);
             return LanguageService.Translate("Chưa đăng nhập");
         }
 
+        if (mode == "DateTime" && value is DateTime displayedDateTime)
+            return LocalizationAuditService.FormatDateTime(displayedDateTime);
+        if (mode == "DateTime" && value is DateTimeOffset displayedDateTimeOffset)
+            return LocalizationAuditService.FormatDateTime(displayedDateTimeOffset);
+
+        if (mode == "Date" && value is DateTime displayedDate)
+            return LocalizationAuditService.FormatDate(displayedDate);
+        if (mode == "Date" && value is DateTimeOffset displayedDateOffset)
+            return LocalizationAuditService.FormatDate(displayedDateOffset);
+
         if (mode == "DaysRemaining" && value is int days)
-            return LanguageService.IsEnglish ? $"{days} days" : $"{days} ngày";
+            return LocalizationAuditService.FormatCount(days, "day", "days", "ngày");
 
         if (mode == "BackupDetails" && value is string details)
         {

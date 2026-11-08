@@ -147,6 +147,14 @@ namespace PersonalInfoManager.Services
                 .OrderByDescending(f => f.LastWriteTime).ToList();
         }
 
+        public List<FileInfo> ListFilesReadOnly(string username)
+        {
+            string folder = GetExistingUserFolderReadOnly(username);
+            if (!Directory.Exists(folder)) return new List<FileInfo>();
+            return GetStoredFiles(new DirectoryInfo(folder)).Where(file => !IsTemporaryFile(file.Name))
+                .OrderByDescending(file => file.LastWriteTimeUtc).ToList();
+        }
+
         public (int total, int encrypted, int legacy, int invalid) GetEncryptionStatus(string username)
         {
             string userFolder = GetUserFolder(username);

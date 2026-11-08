@@ -14,8 +14,11 @@ public partial class ShareCreatedWindow : Window
         _passphrase = passphrase;
         txtLink.Text = share.Link;
         txtKey.Text = passphrase;
-        lblInfo.Text = string.Format(LanguageService.Translate("Người nhận: {0}\nCó hiệu lực đến: {1:dd/MM/yyyy HH:mm} (giờ địa phương)."),
-            share.RecipientEmail, share.Expires?.ToLocalTime() ?? DateTimeOffset.MinValue);
+        string expiration = share.Expires.HasValue
+            ? LocalizationAuditService.FormatDateTime(share.Expires.Value)
+            : LanguageService.Translate("Không rõ");
+        lblInfo.Text = LanguageService.Format("Người nhận: {0}\nCó hiệu lực đến: {1} (giờ địa phương).",
+            share.RecipientEmail, expiration);
     }
 
     private void Window_Loaded(object sender, RoutedEventArgs e) => LanguageService.ApplyToWindow(this);

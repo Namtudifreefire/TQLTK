@@ -15,10 +15,11 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <TextBlock x:Name="txtTitle" Grid.Row="0" Text="Xem trước khôi phục"
-                   FontSize="20" FontWeight="Bold" HorizontalAlignment="Center" />
+                   FontSize="20" FontWeight="Bold" HorizontalAlignment="Center" TextWrapping="Wrap" />
         <TextBlock x:Name="txtSummary" Grid.Row="1" Margin="0,8,0,14"
                    Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" />
 
@@ -35,10 +36,15 @@
             </DataGrid>
         </Border>
 
-        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+        <CheckBox x:Name="chkRestoreSettings" Grid.Row="3" Margin="0,12,0,0" Visibility="Collapsed">
+            <TextBlock Text="Áp dụng các cài đặt an toàn có trong bản sao lưu (ngôn ngữ, giao diện và thời gian khóa)."
+                       TextWrapping="Wrap" />
+        </CheckBox>
+
+        <WrapPanel Grid.Row="4" HorizontalAlignment="Right" Margin="0,16,0,0">
             <Button Content="Hủy" MinWidth="90" IsCancel="True" Style="{StaticResource OutlineButton}" />
             <Button Content="Tiếp tục khôi phục" MinWidth="160" Margin="8,0,0,0"
                     IsDefault="True" Click="BtnContinue_Click" />
-        </StackPanel>
+        </WrapPanel>
     </Grid>
 </Window>

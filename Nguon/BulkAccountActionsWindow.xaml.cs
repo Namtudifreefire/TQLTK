@@ -17,7 +17,7 @@ public partial class BulkAccountActionsWindow : Window
     public BulkAccountActionsWindow(int selectedCount)
     {
         InitializeComponent();
-        lblSelectedCount.Text = string.Format(LanguageService.Translate("Đã chọn {0} tài khoản."), selectedCount);
+        lblSelectedCount.Text = LanguageService.Format("Đã chọn {0} tài khoản.", selectedCount);
         chkApplyFolder.Checked += (_, _) => txtFolder.IsEnabled = true;
         chkApplyFolder.Unchecked += (_, _) => txtFolder.IsEnabled = false;
         chkApplyTags.Checked += (_, _) => txtTags.IsEnabled = true;

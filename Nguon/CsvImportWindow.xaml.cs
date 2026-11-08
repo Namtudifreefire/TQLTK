@@ -34,7 +34,7 @@ public partial class CsvImportWindow : Window
     {
         InitializeComponent();
         _includeAttachments = includeAttachments;
-        Title = string.Format(LanguageService.Translate("Xem trước nhập {0}"), LanguageService.Translate(sourceFormat));
+        Title = LanguageService.Format("Xem trước nhập {0}", LanguageService.Translate(sourceFormat));
         var targets = new Dictionary<string, (Guid Id, string Description)>(StringComparer.OrdinalIgnoreCase);
         foreach (var account in existing.Where(account => !account.IsDeleted))
             targets.TryAdd(BuildKey(account), (account.Id, $"{account.ServiceName} — {account.Username}"));
@@ -52,7 +52,7 @@ public partial class CsvImportWindow : Window
 
         dgPreview.ItemsSource = Items;
         lblInfo.Text = LanguageService.Translate("Xem lại từng mục trước khi nhập. Mục trùng mặc định được bỏ qua; có thể chọn ghi đè hoặc tạo bản sao cho từng mục.");
-        lblTotal.Text = string.Format(LanguageService.Translate("Tổng: {0}"), imported.Count);
+        lblTotal.Text = LanguageService.Format("Tổng: {0}", imported.Count);
         UpdateCounts();
     }
 
@@ -63,9 +63,9 @@ public partial class CsvImportWindow : Window
         int newCount = Items.Count(item => item.Action is CsvImportAction.ImportNew or CsvImportAction.ImportCopy);
         int overwriteCount = Items.Count(item => item.Action == CsvImportAction.Overwrite);
         int duplicateCount = Items.Count(item => item.IsDuplicate);
-        lblDuplicates.Text = string.Format(LanguageService.Translate("Bản trùng: {0}"), duplicateCount);
-        lblWillImport.Text = string.Format(LanguageService.Translate("Sẽ thêm: {0}"), newCount);
-        lblWillOverwrite.Text = string.Format(LanguageService.Translate("Sẽ ghi đè: {0}"), overwriteCount);
+        lblDuplicates.Text = LanguageService.Format("Bản trùng: {0}", duplicateCount);
+        lblWillImport.Text = LanguageService.Format("Sẽ thêm: {0}", newCount);
+        lblWillOverwrite.Text = LanguageService.Format("Sẽ ghi đè: {0}", overwriteCount);
     }
 
     private void BtnSelectNew_Click(object sender, RoutedEventArgs e)

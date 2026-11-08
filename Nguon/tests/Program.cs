@@ -1,8 +1,11 @@
 using System.Diagnostics;
+using System.IO;
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
+using System.Xml.Linq;
 using System.Windows.Input;
 using Microsoft.Win32;
 using PersonalInfoManager;
@@ -13,7 +16,9 @@ internal static class Program
 {
     private static int _passed;
     private static int _failed;
+    private static readonly string? TestFilter = Environment.GetEnvironmentVariable("TQLTK_REGRESSION_FILTER");
 
+    [STAThread]
     private static int Main()
     {
         if (!OperatingSystem.IsWindows())
@@ -39,11 +44,15 @@ internal static class Program
                 throw new InvalidOperationException("The app assembly is not using the isolated temporary test-data root.");
             Run("Argon2id, FIPS PBKDF2, legacy hash verification", TestPasswordHashes);
             Run("English translations for security features", TestEnglishSecurityTranslations);
+            Run("Localization keys, date and placeholder audit", TestLocalizationAudit);
+            Run("Registered translations for XAML and direct UI messages", TestUiTranslationSources);
             Run("Activity-log translations and isolated test logging", () => TestActivityLogTranslations(tempRoot));
             Run("Vault search and combined filters", TestAccountSearch);
             Run("Per-website password rules and generation", TestWebsitePasswordPolicy);
             Run("JSON and KeePass XML import safety", () => TestCredentialImport(tempRoot));
             Run("Configurable keyboard shortcut validation and persistence", TestKeyboardShortcuts);
+            Run("Responsive window sizing at 100–200 percent DPI", TestWindowLayoutScaling);
+            Run("Calendar backup retention across days, weeks, and years", TestCalendarRetention);
             string username = "regressionadmin";
             var createResult = new UserService().CreateInitialAdmin(
                 username,
@@ -82,6 +91,8 @@ internal static class Program
                     new AccountCustomField { Name = "recovery hint", Value = "synthetic value", IsSensitive = true }
                 }
             };
+
+            Run("Encrypted edit drafts stay local and round-trip safely", () => TestEditAccountDraft(username));
 
             Run("Encrypted HIBP audit persistence, staleness, and reminder timing", () => TestPwnedAudit(username, account));
 
@@ -135,6 +146,13 @@ internal static class Program
                     throw new InvalidDataException("A tampered file backup unexpectedly passed its drill.");
             });
 
+            Run("Full encrypted backup, preview guard, safe restore, and periodic policy", () =>
+                TestCompleteBackup(username, backupDirectory, backupPassphrase));
+            Run("Selective backup recovery preserves current data", () =>
+                TestSelectiveBackupRecovery(username, backupDirectory, backupPassphrase));
+            Run("Verified pinning and backup retention policy", () =>
+                TestBackupRetentionPolicy(username, backupDirectory, backupPassphrase));
+
             Run("Vault-key rotation and interrupted transaction recovery", () =>
                 TestVaultKeyRotation(username, tempRoot, backupDirectory, vaultBackupPath, backupPassphrase));
 
@@ -143,6 +161,7 @@ internal static class Program
             Run("Backup-health decisions", TestBackupHealth);
             Run("Windows lock and sleep event policies", TestAutoLockPolicies);
             Run("Vault-key rotation requires an active administrator", TestRotationAuthorization);
+            Run("Bilingual backup and editor dialogs at 100–200 percent DPI", () => UiLayoutRegression.Run(username));
             Run("Release scripts parse and reject unsigned artifacts", () => TestReleaseScripts(tempRoot));
         }
         catch (Exception ex)
@@ -274,12 +293,7 @@ internal static class Program
         var policy = new WebsitePasswordPolicy(true, 12, 20, true, false, true, true, "A7!O0");
         WebsitePasswordPolicyService.Save(websiteUrl, policy);
         WebsitePasswordPolicy loaded = WebsitePasswordPolicyService.Get("https://www.example.test/other");
-        var credentialBearingUrl = new UriBuilder(Uri.UriSchemeHttp, "example.test")
-        {
-            UserName = "test-user",
-            Password = "test-password"
-        }.Uri.AbsoluteUri;
-        if (loaded != policy || WebsitePasswordPolicyService.Get(credentialBearingUrl).Enabled)
+        if (loaded != policy || WebsitePasswordPolicyService.Get("http://user:password@example.test").Enabled)
             throw new InvalidDataException("Per-host rules did not persist or an invalid credential-bearing URL was accepted.");
 
         var options = new PasswordGeneratorOptions(16, false, false, false, false, true, false, 8, "-");
@@ -427,7 +441,8 @@ internal static class Program
             ("Tất cả thư mục", "All folders"),
             ("Tất cả nhãn", "All tags"),
             ("Thiếu TOTP", "Missing TOTP"),
-            ("Cảnh báo bảo mật", "Security warnings"),
+            ("Cảnh báo bảo mật", "Security warning"),
+            ("Chỉ cảnh báo bảo mật", "Security warnings only"),
             ("Chọn phím cho từng thao tác. Thao tác bị tắt sẽ không phản hồi với phím tắt.",
                 "Choose a shortcut for each action. Disabled actions will not respond to keyboard shortcuts."),
             ("Áp dụng quy tắc đã lưu cho website này", "Apply saved rules for this website"),
@@ -539,6 +554,14 @@ internal static class Program
         const string timestampAndUser = "[2026-11-05 18:20:01] [admin] ";
         var cases = new (string Source, string Expected)[]
         {
+            (timestampAndUser + "[CREATE_COMPLETE_BACKUP] Đã tạo gói chuyển máy: full.tqltk",
+                timestampAndUser + "[Create full backup] Created migration package: full.tqltk"),
+            (timestampAndUser + "[RESTORE_COMPLETE_BACKUP] Đã thêm 1 tài khoản, 0 ghi chú và 2 tệp.",
+                timestampAndUser + "[Restore full backup] Accounts restored: 1; private notes: 0; files: 2."),
+            (timestampAndUser + "[RECOVER_SELECTED_BACKUP_COPIES] Đã khôi phục thành bản sao 2 tài khoản, 1 ghi chú và 0 tệp.",
+                timestampAndUser + "[Recover backup entries as copies] Accounts restored: 2; private notes: 1; files: 0."),
+            (timestampAndUser + "[EDIT_DRAFT_SAVE_FAILED] Không lưu được bản nháp khi khóa phiên.",
+                timestampAndUser + "[Encrypted edit draft save failed] Could not save the edit draft when locking the session."),
             (timestampAndUser + "[VAULT_KEY_ROTATION] Đã mã hóa lại 4 tệp; giữ 1 backup dùng cụm mật khẩu.",
                 timestampAndUser + "[Vault key rotation] Re-encrypted 4 files; retained 1 passphrase-protected backup."),
             (timestampAndUser + "[VAULT_KEY_ROTATION] Đã mã hóa lại 1 tệp; giữ 0 backup dùng cụm mật khẩu.",
@@ -559,6 +582,8 @@ internal static class Program
                 timestampAndUser + "[Export CSV] Exported 2 accounts to CSV"),
             (timestampAndUser + "[AUTO_BACKUP] Khi thoát: backup.vault",
                 timestampAndUser + "[Automatic backup] On exit: backup.vault"),
+            (timestampAndUser + "[AUTO_BACKUP] Định kỳ: complete_auto_backup.tqltk",
+                timestampAndUser + "[Automatic backup] Scheduled: complete_auto_backup.tqltk"),
             (timestampAndUser + "[AUTO_THEME_SWITCH] Tự động đổi giao diện sang Sáng lúc 06:00",
                 timestampAndUser + "[Automatic theme change] Automatically switched theme to Light at 06:00"),
             (timestampAndUser + "[AUTO_THEME_SWITCH] Tự động đổi giao diện sang Tối lúc 18:00",
@@ -743,6 +768,481 @@ internal static class Program
             throw new InvalidDataException("One or more backup-health states were misclassified.");
     }
 
+    private static void TestLocalizationAudit()
+    {
+        IReadOnlyList<LocalizationAuditIssue> issues = LocalizationAuditService.Audit();
+        if (issues.Count > 0)
+            throw new InvalidDataException("Localization audit found issues: " +
+                string.Join(" | ", issues.Take(20).Select(issue => issue.Key + ": " + issue.Problem)));
+
+        string id = LocalizationAuditService.GetMessageId("Hướng dẫn chuyển máy");
+        if (LocalizationAuditService.Get(id, "en") != "Computer migration guide" ||
+            LocalizationAuditService.Get(id, "vi") != "Hướng dẫn chuyển máy" ||
+            LocalizationAuditService.Catalog.Select(item => item.Id).Distinct(StringComparer.Ordinal).Count() != LocalizationAuditService.Catalog.Count ||
+            LocalizationAuditService.AuditSources(new[] { "A missing synthetic translation" }).Count != 1)
+            throw new InvalidDataException("Message IDs, bilingual lookup, or missing-translation detection failed.");
+
+        var sampleDate = new DateTime(2026, 11, 7, 13, 5, 0, DateTimeKind.Local);
+        string viDate = LocalizationAuditService.FormatDateTime(sampleDate, "vi");
+        string enDate = LocalizationAuditService.FormatDateTime(sampleDate, "en");
+        if (string.IsNullOrWhiteSpace(viDate) || string.IsNullOrWhiteSpace(enDate) || viDate == enDate ||
+            LocalizationAuditService.FormatDate(sampleDate, "vi") == LocalizationAuditService.FormatDate(sampleDate, "en") ||
+            LocalizationAuditService.FormatCount(1, "account", "accounts", "tài khoản", "en") != "1 account" ||
+            LocalizationAuditService.FormatCount(2, "account", "accounts", "tài khoản", "en") != "2 accounts")
+            throw new InvalidDataException("English date or plural formatting is incorrect.");
+
+        DateTime unspecifiedDate = DateTime.SpecifyKind(sampleDate, DateTimeKind.Unspecified);
+        DateTime utcDate = sampleDate.ToUniversalTime();
+        if (LocalizationAuditService.FormatDateTime(unspecifiedDate, "en") != enDate ||
+            LocalizationAuditService.FormatDateTime(utcDate, "en") != enDate ||
+            string.IsNullOrWhiteSpace(LocalizationAuditService.FormatDateTime(new DateTimeOffset(sampleDate), "en")))
+            throw new InvalidDataException("Date and time formatting did not preserve local, UTC, and offset values.");
+
+        string formattedEnglish = LocalizationAuditService.FormatSource("Đã lưu {0:N0} mục.", "en", 1234);
+        string formattedVietnamese = LocalizationAuditService.FormatSource("Đã lưu {0:N0} mục.", "vi", 1234);
+        if (formattedEnglish != "Saved 1,234 entries." || formattedEnglish == formattedVietnamese)
+            throw new InvalidDataException("Formatted numbers do not follow the selected language culture.");
+        if (!LocalizationAuditService.Get("backup.migration.guide", "en").StartsWith("1. Set a dedicated backup passphrase", StringComparison.Ordinal) ||
+            !LocalizationAuditService.Get("backup.migration.guide", "vi").StartsWith("1. Đặt cụm mật khẩu", StringComparison.Ordinal))
+            throw new InvalidDataException("The migration guide is missing one of its language versions.");
+
+        if (LocalizationAuditService.FormatNamed("import.preview.count",
+                new Dictionary<string, object?>(StringComparer.Ordinal) { ["count"] = 3 }, "vi") !=
+            "Đọc được 3 mục. Chọn một mục để xem thông tin.")
+            throw new InvalidDataException("Named localization placeholders did not render correctly.");
+        if (LocalizationAuditService.FormatNamed("import.preview.count",
+                new Dictionary<string, object?>(StringComparer.Ordinal) { ["count"] = 3 }, "en") !=
+            "Found 3 entries. Select one to view its details.")
+            throw new InvalidDataException("English named localization placeholders did not render correctly.");
+
+        try
+        {
+            _ = LocalizationAuditService.Format("backup.restore.summary", 1);
+            throw new InvalidDataException("A missing format argument was not rejected.");
+        }
+        catch (FormatException) { }
+    }
+
+    private static void TestUiTranslationSources()
+    {
+        string sourceRoot = Directory.GetCurrentDirectory();
+        if (!File.Exists(Path.Combine(sourceRoot, "PersonalInfoManager.csproj"))) sourceRoot = Path.Combine(sourceRoot, "Nguon");
+        if (!File.Exists(Path.Combine(sourceRoot, "PersonalInfoManager.csproj")))
+            throw new DirectoryNotFoundException("Run the regression suite from the project or repository root to audit UI sources.");
+        var sources = new HashSet<string>(StringComparer.Ordinal);
+        var vietnamese = new Regex(@"[\u00C0-\u024F\u1E00-\u1EFF]", RegexOptions.CultureInvariant);
+        foreach (string file in Directory.EnumerateFiles(sourceRoot, "*", SearchOption.AllDirectories)
+                     .Where(file => !Regex.IsMatch(file, @"[\\/](?:bin|obj|artifacts|\.vs|\.git|tests)[\\/]", RegexOptions.IgnoreCase)))
+        {
+            if (file.EndsWith(".xaml", StringComparison.OrdinalIgnoreCase))
+            {
+                foreach (XAttribute attribute in XDocument.Load(file).Descendants().Attributes()
+                             .Where(attribute => attribute.Name.LocalName is "Text" or "Content" or "Header" or "ToolTip" or "Title"))
+                    if (!attribute.Value.StartsWith('{') && vietnamese.IsMatch(attribute.Value)) sources.Add(attribute.Value);
+            }
+            else if (file.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) &&
+                     !file.EndsWith("EnglishCatalog.cs", StringComparison.OrdinalIgnoreCase))
+            {
+                foreach (Match match in Regex.Matches(File.ReadAllText(file),
+                             "(?:LanguageService\\.(?:Translate|Format)|(?:LocalizedMessageBox|MessageBox)\\.Show)\\(\\s*(?:this,\\s*)?(\"(?:\\\\.|[^\"\\\\])*\"(?:\\s*\\+\\s*\"(?:\\\\.|[^\"\\\\])*\")*)"))
+                {
+                    string source = string.Concat(Regex.Matches(match.Groups[1].Value, "\"(?:\\\\.|[^\"\\\\])*\"")
+                        .Select(literal => JsonSerializer.Deserialize<string>(literal.Value)));
+                    if (vietnamese.IsMatch(source)) sources.Add(source);
+                }
+            }
+        }
+        var issues = LocalizationAuditService.AuditSources(sources);
+        issues = issues.Concat(LocalizationAuditService.AuditSources(new[]
+        {
+            "Được thêm", "Đã sửa", "Đã xóa", "Có trong gói", "Không có trong gói", "Luôn có", "Đã ghim", "Thông thường"
+        })).ToArray();
+        if (issues.Count > 0)
+            throw new InvalidDataException("Unregistered UI translations: " + string.Join(" | ", issues.Select(issue => issue.Key)));
+    }
+
+    private static void TestCompleteBackup(string username, string backupDirectory, string passphrase)
+    {
+        var vault = new AccountVaultService();
+        var notes = new NoteService();
+        var localFiles = new LocalFileService();
+        List<SavedAccount> originalAccounts = vault.Load(username);
+        List<Note> originalNotes = notes.Load();
+        List<FileInfo> originalFiles = localFiles.ListFiles(username);
+        if (originalAccounts.Count != 1 || originalNotes.Count != 1 || originalFiles.Count != 1)
+            throw new InvalidDataException("The isolated full-backup fixture was not in the expected state.");
+
+        string packagePath = Path.Combine(backupDirectory, "full-migration-test.tqltk");
+        var created = CompleteBackupService.Create(username, packagePath, passphrase);
+        if (!created.ok || created.info is not { AccountCount: 1, NoteCount: 1, PersonalFileCount: 1, IncludesSettings: true })
+            throw new InvalidDataException("The full encrypted package omitted expected data: " + created.message);
+        if (!CompleteBackupService.Inspect(packagePath, passphrase).ok ||
+            CompleteBackupService.Inspect(packagePath, "incorrect passphrase").ok)
+            throw new CryptographicException("The full backup verification accepted an invalid passphrase or rejected a valid package.");
+
+        string partialPackagePath = Path.Combine(backupDirectory, "partial-migration-test.tqltk");
+        var partialPackage = CompleteBackupService.Create(username, partialPackagePath, passphrase,
+            includeNotes: false, includePersonalFiles: false, includeSettings: false);
+        if (!partialPackage.ok || partialPackage.info is not { IncludesNotes: false, IncludesPersonalFiles: false, IncludesSettings: false })
+            throw new InvalidDataException("The backup did not preserve the selected component exclusions.");
+        var partialComparison = CompleteBackupService.Compare(username, partialPackagePath, passphrase,
+            partialPackagePath, passphrase);
+        if (!partialComparison.ok || partialComparison.result == null ||
+            !partialComparison.result.Entries.Any(entry => entry.Name == "Ghi chú riêng") ||
+            !partialComparison.result.Entries.Any(entry => entry.Name == "Tệp cá nhân") ||
+            !partialComparison.result.Entries.Any(entry => entry.Name == "Cài đặt an toàn"))
+            throw new InvalidDataException("Comparison did not disclose backup components that were excluded from both packages.");
+
+        var prepared = CompleteBackupService.PrepareRestore(username, packagePath, passphrase);
+        if (!prepared.ok || prepared.preview is null || prepared.preview.AccountsToAdd != 0 ||
+            prepared.preview.NotesToAdd != 0 || prepared.preview.FilesToAdd != 0)
+            throw new InvalidDataException("The full-backup preview did not recognize existing data.");
+        SavedAccount changedAccount = vault.Load(username).Single();
+        changedAccount.ServiceName += " changed after preview";
+        vault.Save(username, new List<SavedAccount> { changedAccount });
+        var stale = CompleteBackupService.Restore(username, prepared.preview, passphrase, restoreSettings: false);
+        vault.Save(username, originalAccounts.Select(account => account.Clone()).ToList());
+        if (stale.ok)
+            throw new InvalidDataException("Restore did not reject a changed local state after preview.");
+
+        vault.Save(username, new List<SavedAccount>());
+        notes.Save(new List<Note>());
+        foreach (FileInfo file in localFiles.ListFiles(username)) localFiles.DeleteFile(file.FullName);
+        var missingData = CompleteBackupService.PrepareRestore(username, packagePath, passphrase);
+        if (!missingData.ok || missingData.preview is null || missingData.preview.AccountsToAdd != 1 ||
+            missingData.preview.NotesToAdd != 1 || missingData.preview.FilesToAdd != 1)
+            throw new InvalidDataException("Restore preview did not identify missing account, note, and personal file data.");
+        var restored = CompleteBackupService.Restore(username, missingData.preview, passphrase, restoreSettings: false);
+        if (!restored.ok || restored.accountsAdded != 1 || restored.notesAdded != 1 || restored.filesAdded != 1)
+            throw new InvalidDataException("The full restore did not restore every selected data category: " + restored.message);
+        SavedAccount restoredAccount = vault.Load(username).Single();
+        if (restoredAccount.TotpSecret != "JBSWY3DPEHPK3PXP" || restoredAccount.Attachments.Count != 1 ||
+            notes.Load().Single().Content != "synthetic note content")
+            throw new InvalidDataException("The full restore lost TOTP, attachment, or encrypted-note content.");
+        FileInfo restoredFile = localFiles.ListFiles(username).Single();
+        using var restoredPlaintext = new MemoryStream();
+        localFiles.CopyToPlaintext(restoredFile.FullName, restoredPlaintext);
+        if (Encoding.UTF8.GetString(restoredPlaintext.ToArray()) != "synthetic personal file data")
+            throw new InvalidDataException("The full restore changed personal-file content.");
+
+        string? folderError = AutoBackupService.TrySetFolder(username, backupDirectory);
+        if (folderError != null) throw new IOException(folderError);
+        AutoBackupService.SetRetentionCount(username, 3);
+        AutoBackupService.SetRetentionDays(username, 30);
+        AutoBackupService.SetStorageLimitMb(username, 512);
+        AutoBackupService.SetPeriodicIntervalHours(username, 24);
+        AutoBackupService.SetPeriodicEnabled(username, true);
+        var periodic = AutoBackupService.RunPeriodicIfDue(username);
+        if (!periodic.Attempted || !periodic.Succeeded || periodic.Path is null || !File.Exists(periodic.Path))
+            throw new InvalidDataException("The scheduled full backup did not create an encrypted file: " + periodic.Message);
+        if (!CompleteBackupService.Inspect(periodic.Path, passphrase).ok)
+            throw new CryptographicException("The scheduled backup could not be verified.");
+        int previousBackupCount = AutoBackupService.ListCompleteBackups(username).Count;
+        var unchanged = AutoBackupService.RunPeriodicIfDue(username, default, DateTime.UtcNow.AddDays(2));
+        if (unchanged.Attempted || AutoBackupService.ListCompleteBackups(username).Count != previousBackupCount)
+            throw new InvalidDataException("A due scheduled backup created another copy despite unchanged data.");
+        List<SavedAccount> savedBeforeChange = vault.Load(username).Select(item => item.Clone()).ToList();
+        var changedAccounts = savedBeforeChange.Select(item => item.Clone()).ToList();
+        changedAccounts[0].Note += " synthetic scheduled-backup change";
+        vault.Save(username, changedAccounts);
+        var changedBackup = AutoBackupService.RunPeriodicIfDue(username, default, DateTime.UtcNow.AddDays(2));
+        if (!changedBackup.Attempted || !changedBackup.Succeeded || changedBackup.Path == null ||
+            AutoBackupService.ListCompleteBackups(username).Count != previousBackupCount + 1)
+            throw new InvalidDataException("A due scheduled backup did not capture changed vault data.");
+        vault.Save(username, savedBeforeChange);
+        AutoBackupService.RecordCompleteBackupFailure(username, "Synthetic temporary backup failure");
+        var retry = AutoBackupService.RunPeriodicIfDue(username, default, DateTime.UtcNow.AddHours(1));
+        if (retry.Attempted || retry.Succeeded)
+            throw new InvalidDataException("A failed scheduled backup was retried before its retry delay.");
+        var changedInfo = CompleteBackupService.Inspect(changedBackup.Path, passphrase).info!;
+        AutoBackupService.RecordCompleteBackup(username, changedBackup.Path, changedInfo);
+        using (var heldLock = new FileStream(Path.Combine(backupDirectory,
+                   ".tqltk-periodic-" + BackupCrypto.UserTag(username) + ".lock"),
+                   FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None))
+        {
+            var concurrent = AutoBackupService.RunPeriodicIfDue(username);
+            if (concurrent.Attempted) throw new InvalidOperationException("A second periodic backup ran while the first instance held the lock.");
+        }
+        if (!AutoBackupService.IsPeriodicEnabled(username) || AutoBackupService.GetRetentionCount(username) != 3 ||
+            AutoBackupService.GetRetentionDays(username) != 30 || AutoBackupService.GetStorageLimitMb(username) != 512)
+            throw new InvalidDataException("Periodic backup policy settings did not persist.");
+        AutoBackupService.SetPeriodicEnabled(username, false);
+    }
+
+    private static void TestEditAccountDraft(string username)
+    {
+        Guid accountId = Guid.NewGuid();
+        string path = EditAccountDraftService.GetDraftPath(username, accountId);
+        var draft = new EditAccountDraft
+        {
+            ServiceName = "Synthetic draft service",
+            Username = "draft@example.invalid",
+            Password = "Synthetic-draft-password-2026!",
+            Note = "draft recovery data",
+            TotpSecret = "JBSWY3DPEHPK3PXP",
+            CustomFields = { new AccountCustomField { Name = "private field", Value = "synthetic custom value", IsSensitive = true } }
+        };
+        try
+        {
+            EditAccountDraftService.Save(username, accountId, draft);
+            byte[] onDisk = File.ReadAllBytes(path);
+            try
+            {
+                string diskText = Encoding.UTF8.GetString(onDisk);
+                if (diskText.Contains(draft.Password, StringComparison.Ordinal) ||
+                    diskText.Contains(draft.Note, StringComparison.Ordinal))
+                    throw new CryptographicException("An edit draft leaked plaintext fields to disk.");
+            }
+            finally { CryptographicOperations.ZeroMemory(onDisk); }
+
+            if (!EditAccountDraftService.TryLoad(username, accountId, out EditAccountDraft? loaded, out string? error) ||
+                loaded == null || loaded.Password != draft.Password || loaded.Note != draft.Note ||
+                loaded.TotpSecret != draft.TotpSecret || loaded.CustomFields.Single().Value != "synthetic custom value")
+                throw new InvalidDataException("An encrypted edit draft did not round-trip: " + error);
+            EditAccountDraftService.Delete(username, accountId);
+            if (File.Exists(path)) throw new IOException("The edit draft was not deleted after the test.");
+        }
+        finally
+        {
+            EditAccountDraftService.Delete(username, accountId);
+            CryptographicOperations.ZeroMemory(Encoding.UTF8.GetBytes(draft.Password));
+            CryptographicOperations.ZeroMemory(Encoding.UTF8.GetBytes(draft.TotpSecret));
+        }
+    }
+
+    private static void TestSelectiveBackupRecovery(string username, string backupDirectory, string passphrase)
+    {
+        LanguageService.SetLanguage("vi");
+        var vault = new AccountVaultService();
+        var notes = new NoteService();
+        var files = new LocalFileService();
+        List<SavedAccount> baselineAccounts = vault.Load(username);
+        List<Note> baselineNotes = notes.Load();
+        FileInfo baselineFile = files.ListFiles(username).Single();
+        byte[]? baselineFileContent = null;
+        using (var original = new MemoryStream())
+        {
+            files.CopyToPlaintext(baselineFile.FullName, original);
+            baselineFileContent = original.ToArray();
+        }
+
+        string olderPath = Path.Combine(backupDirectory, "selective-older.tqltk");
+        string newerPath = Path.Combine(backupDirectory, "selective-newer.tqltk");
+        try
+        {
+            var older = CompleteBackupService.Create(username, olderPath, passphrase);
+            if (!older.ok) throw new InvalidDataException("Could not create the older selective-recovery fixture: " + older.message);
+
+            List<SavedAccount> changedAccounts = baselineAccounts.Select(account => account.Clone()).ToList();
+            string currentPassword = "Synthetic-newer-password-2026!";
+            changedAccounts[0].Password = currentPassword;
+            vault.Save(username, changedAccounts);
+
+            List<Note> changedNotes = notes.Load();
+            changedNotes[0].Content = "newer note content";
+            notes.Save(changedNotes);
+
+            files.DeleteFile(baselineFile.FullName);
+            byte[] newerFileContent = Encoding.UTF8.GetBytes("newer personal file data");
+            try
+            {
+                using var input = new MemoryStream(newerFileContent, writable: false);
+                files.ImportStream(username, baselineFile.Name, input, newerFileContent.Length);
+            }
+            finally { CryptographicOperations.ZeroMemory(newerFileContent); }
+
+            var newer = CompleteBackupService.Create(username, newerPath, passphrase);
+            if (!newer.ok) throw new InvalidDataException("Could not create the newer selective-recovery fixture: " + newer.message);
+            var comparison = CompleteBackupService.Compare(username, olderPath, passphrase, newerPath, passphrase);
+            if (!comparison.ok || comparison.result == null)
+                throw new InvalidDataException("The test backups could not be compared: " + comparison.message);
+
+            BackupComparisonEntry[] recoverable = comparison.result.Entries
+                .Where(entry => entry.Kind is BackupRecoveryItemKind.Account or BackupRecoveryItemKind.Note or BackupRecoveryItemKind.PersonalFile &&
+                    entry.OlderKey != null && entry.Status == "Đã sửa")
+                .ToArray();
+            if (recoverable.Length != 3 || recoverable.Select(entry => entry.Kind).Distinct().Count() != 3)
+                throw new InvalidDataException("The comparison did not identify the changed account, note, and file.");
+
+            BackupRecoverySelection[] selections = recoverable
+                .Select(entry => new BackupRecoverySelection(entry.Kind, entry.OlderKey!, FromOlder: true)).ToArray();
+            var recovered = CompleteBackupService.RecoverSelectedAsCopies(username, comparison.result,
+                passphrase, passphrase, selections);
+            if (!recovered.ok || recovered.accountsAdded != 1 || recovered.notesAdded != 1 || recovered.filesAdded != 1)
+                throw new InvalidDataException("Selective recovery did not add one copy of each chosen item: " + recovered.message);
+
+            List<SavedAccount> afterAccounts = vault.Load(username);
+            if (afterAccounts.Count != 2 ||
+                afterAccounts.Single(account => account.Id == baselineAccounts[0].Id).Password != currentPassword ||
+                afterAccounts.Single(account => account.Id != baselineAccounts[0].Id).Password != baselineAccounts[0].Password)
+                throw new InvalidDataException("Selective recovery overwrote the newer account or failed to add the older copy.");
+            List<Note> afterNotes = notes.Load();
+            if (afterNotes.Count != 2 || !afterNotes.Any(note => note.Content == "newer note content") ||
+                !afterNotes.Any(note => note.Content == baselineNotes[0].Content && note.Title.Contains("phục hồi", StringComparison.OrdinalIgnoreCase)))
+                throw new InvalidDataException("Selective recovery overwrote the newer note or failed to label the recovered copy.");
+
+            var fileContents = new HashSet<string>(StringComparer.Ordinal);
+            foreach (FileInfo file in files.ListFiles(username))
+            {
+                using var plaintext = new MemoryStream();
+                files.CopyToPlaintext(file.FullName, plaintext);
+                fileContents.Add(Encoding.UTF8.GetString(plaintext.ToArray()));
+            }
+            if (fileContents.Count != 2 || !fileContents.Contains(Encoding.UTF8.GetString(baselineFileContent)) ||
+                !fileContents.Contains("newer personal file data"))
+                throw new InvalidDataException("Selective recovery overwrote the newer personal file or failed to add the older copy.");
+        }
+        finally
+        {
+            vault.Save(username, baselineAccounts);
+            notes.Save(baselineNotes);
+            foreach (FileInfo file in files.ListFiles(username)) files.DeleteFile(file.FullName);
+            if (baselineFileContent != null)
+            {
+                using var original = new MemoryStream(baselineFileContent, writable: false);
+                files.ImportStream(username, baselineFile.Name, original, baselineFileContent.LongLength,
+                    baselineFile.LastWriteTimeUtc);
+                CryptographicOperations.ZeroMemory(baselineFileContent);
+            }
+        }
+    }
+
+    private static void TestBackupRetentionPolicy(string username, string backupDirectory, string passphrase)
+    {
+        string? previousFolder = AutoBackupService.GetFolder(username);
+        int previousCount = AutoBackupService.GetRetentionCount(username);
+        int previousDays = AutoBackupService.GetRetentionDays(username);
+        int previousLimit = AutoBackupService.GetStorageLimitMb(username);
+        int previousDaily = AutoBackupService.GetDailyRetention(username);
+        int previousWeekly = AutoBackupService.GetWeeklyRetention(username);
+        int previousMonthly = AutoBackupService.GetMonthlyRetention(username);
+        string testFolder = Path.Combine(backupDirectory, "retention-fixtures");
+        Directory.CreateDirectory(testFolder);
+        string sourcePackage = Path.Combine(backupDirectory, "full-migration-test.tqltk");
+        string prefix = "complete_auto_" + BackupCrypto.UserTag(username) + "_";
+        var createdPaths = new List<string>();
+        try
+        {
+            string? error = AutoBackupService.TrySetFolder(username, testFolder);
+            if (error != null) throw new IOException("Could not isolate retention fixtures: " + error);
+            AutoBackupService.SetRetentionCount(username, 14);
+            AutoBackupService.SetRetentionDays(username, 30);
+            AutoBackupService.SetStorageLimitMb(username, 512);
+            AutoBackupService.SetCalendarRetention(username, 0, 0, 0);
+
+            for (int index = 0; index < 4; index++)
+            {
+                string path = Path.Combine(testFolder, prefix + DateTime.UtcNow.AddDays(-index).ToString("yyyyMMdd_HHmmss") + "_" + index + CompleteBackupService.FileExtension);
+                File.Copy(sourcePackage, path);
+                File.SetLastWriteTimeUtc(path, index == 3 ? DateTime.UtcNow : DateTime.UtcNow.AddDays(-100 + (index * 20)));
+                createdPaths.Add(path);
+            }
+
+            string pinnedOld = createdPaths[0];
+            DateTime pinnedOldTimestamp = File.GetLastWriteTimeUtc(pinnedOld);
+            var pin = AutoBackupService.SetPinned(pinnedOld, passphrase, pinned: true);
+            if (!pin.ok || !AutoBackupService.IsPinned(pinnedOld))
+                throw new InvalidDataException("A valid backup could not be pinned after verification: " + pin.message);
+
+            byte[] validBackup = File.ReadAllBytes(pinnedOld);
+            try
+            {
+                validBackup[validBackup.Length / 2] ^= 0x01;
+                File.WriteAllBytes(pinnedOld, validBackup);
+                if (AutoBackupService.IsPinned(pinnedOld))
+                    throw new InvalidDataException("A modified backup remained marked as verified and pinned.");
+                File.Copy(sourcePackage, pinnedOld, overwrite: true);
+                File.SetLastWriteTimeUtc(pinnedOld, pinnedOldTimestamp);
+                if (!AutoBackupService.IsPinned(pinnedOld))
+                    throw new InvalidDataException("The verified backup did not regain its pin after the original content was restored.");
+            }
+            finally { CryptographicOperations.ZeroMemory(validBackup); }
+
+            AutoBackupService.PruneCompleteBackups(username);
+            if (!File.Exists(pinnedOld) || !File.Exists(createdPaths[3]) || File.Exists(createdPaths[1]) || File.Exists(createdPaths[2]))
+                throw new InvalidDataException("Age-based retention did not keep the pinned/newest backup and remove expired unpinned copies.");
+
+            AutoBackupService.SetRetentionCount(username, 3);
+            AutoBackupService.SetRetentionDays(username, 365);
+            for (int index = 4; index < 7; index++)
+            {
+                string path = Path.Combine(testFolder, prefix + DateTime.UtcNow.AddMinutes(index).ToString("yyyyMMdd_HHmmss") + "_" + index + CompleteBackupService.FileExtension);
+                File.Copy(sourcePackage, path);
+                File.SetLastWriteTimeUtc(path, DateTime.UtcNow.AddDays(-index));
+                createdPaths.Add(path);
+            }
+            AutoBackupService.PruneCompleteBackups(username);
+            if (AutoBackupService.ListCompleteBackups(username).Count != 3 || !File.Exists(pinnedOld))
+                throw new InvalidDataException("Count-based retention did not keep the configured number of backups and the pinned one.");
+
+            var secondPin = AutoBackupService.SetPinned(createdPaths[3], passphrase, pinned: true);
+            if (!secondPin.ok) throw new InvalidDataException("A second valid backup could not be pinned: " + secondPin.message);
+            for (int index = 7; index <= 8; index++)
+            {
+                string path = Path.Combine(testFolder, prefix + DateTime.UtcNow.AddSeconds(index).ToString("yyyyMMdd_HHmmss") + "_" + index + CompleteBackupService.FileExtension);
+                File.Copy(sourcePackage, path);
+                File.SetLastWriteTimeUtc(path, DateTime.UtcNow.AddSeconds(index));
+                var overflowPin = AutoBackupService.SetPinned(path, passphrase, pinned: true);
+                if (!overflowPin.ok) throw new InvalidDataException("An overflow backup could not be verified and pinned: " + overflowPin.message);
+            }
+            AutoBackupService.RetentionResult overflow = AutoBackupService.PruneCompleteBackups(username);
+            string retentionStatus = AutoBackupService.GetPeriodicStatusLine(username);
+            if (!overflow.LimitReached || string.IsNullOrWhiteSpace(overflow.Message) ||
+                !retentionStatus.Contains("warning", StringComparison.OrdinalIgnoreCase) &&
+                !retentionStatus.Contains("cảnh báo", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException("The retention policy did not report when verified pinned backups exceed configured limits.");
+
+            string calendarFolder = Path.Combine(backupDirectory, "calendar-retention-fixtures");
+            Directory.CreateDirectory(calendarFolder);
+            if (AutoBackupService.TrySetFolder(username, calendarFolder) != null)
+                throw new IOException("Could not set the calendar retention test folder.");
+            AutoBackupService.SetCalendarRetention(username, 0, 0, 3);
+            AutoBackupService.SetRetentionDays(username, 30);
+            DateTime currentMonth = new(DateTime.Now.Year, DateTime.Now.Month, 1, 12, 0, 0, DateTimeKind.Local);
+            var monthlyPaths = new List<string>();
+            for (int index = 0; index < 4; index++)
+            {
+                string path = Path.Combine(calendarFolder, prefix + "month_" + index + CompleteBackupService.FileExtension);
+                File.Copy(sourcePackage, path);
+                File.SetLastWriteTimeUtc(path, currentMonth.AddMonths(-index).ToUniversalTime());
+                monthlyPaths.Add(path);
+            }
+            AutoBackupService.RetentionResult calendarResult = AutoBackupService.PruneCompleteBackups(username);
+            if (calendarResult.LimitReached || monthlyPaths.Take(3).Any(path => !File.Exists(path)) || File.Exists(monthlyPaths[3]) ||
+                AutoBackupService.GetMonthlyRetention(username) != 3)
+                throw new InvalidDataException("Calendar retention did not keep the selected older months beyond the normal age cutoff.");
+        }
+        finally
+        {
+            AutoBackupService.TrySetFolder(username, previousFolder);
+            AutoBackupService.SetRetentionCount(username, previousCount);
+            AutoBackupService.SetRetentionDays(username, previousDays);
+            AutoBackupService.SetStorageLimitMb(username, previousLimit);
+            AutoBackupService.SetCalendarRetention(username, previousDaily, previousWeekly, previousMonthly);
+        }
+    }
+
+    private static void TestCalendarRetention()
+    {
+        static DateTime Utc(int year, int month, int day, int hour = 12) =>
+            new DateTime(year, month, day, hour, 0, 0, DateTimeKind.Local).ToUniversalTime();
+        (string Path, DateTime CreatedUtc)[] copies =
+        [
+            ("morning", Utc(2026, 11, 8, 9)), ("newest", Utc(2026, 11, 8, 15)),
+            ("yesterday", Utc(2026, 11, 7)), ("same-week", Utc(2026, 11, 3)),
+            ("last-week", Utc(2026, 10, 28)), ("same-month", Utc(2026, 10, 5)),
+            ("expired-month", Utc(2026, 9, 23)), ("future", Utc(2026, 11, 10))
+        ];
+        HashSet<string> selected = AutoBackupService.SelectCalendarRetention(copies, Utc(2026, 11, 8, 18), 2, 2, 2);
+        if (!selected.SetEquals(new[] { "newest", "yesterday", "last-week" }))
+            throw new InvalidDataException("Calendar selection did not choose the newest distinct copy in each local calendar period.");
+        var yearBoundary = AutoBackupService.SelectCalendarRetention(
+            new[] { ("december", Utc(2025, 12, 31)), ("january", Utc(2026, 1, 1)) }, Utc(2026, 1, 2), 0, 1, 2);
+        if (!yearBoundary.SetEquals(new[] { "december", "january" }) ||
+            AutoBackupService.SelectCalendarRetention(copies, Utc(2026, 11, 8), 0, 0, 0).Count != 0)
+            throw new InvalidDataException("Calendar retention failed at the year boundary or when disabled.");
+    }
+
     private static void TestAutoLockPolicies()
     {
         if (!MainWindow.ShouldLockForSessionSwitch(SessionSwitchReason.SessionLock) ||
@@ -754,6 +1254,33 @@ internal static class Program
             !MainWindow.ShouldLockForPowerMode(PowerModes.Resume) ||
             MainWindow.ShouldLockForPowerMode(PowerModes.StatusChange))
             throw new InvalidOperationException("Suspend/resume lock policy is incorrect.");
+    }
+
+    private static void TestWindowLayoutScaling()
+    {
+        foreach (double scale in new[] { 1.0, 1.25, 1.5, 2.0 })
+        {
+            var workArea = new System.Windows.Rect(0, 0, 1920 / scale, 1080 / scale);
+            WindowLayoutService.WindowFit fit = WindowLayoutService.CalculateFit(
+                width: 1100, height: 820, minWidth: 680, minHeight: 650,
+                maxWidth: double.PositiveInfinity, maxHeight: double.PositiveInfinity,
+                left: -300, top: 5000, workArea);
+
+            if (fit.Width > workArea.Width * 0.96 + 0.01 || fit.Height > workArea.Height * 0.94 + 0.01 ||
+                fit.MinWidth > fit.Width || fit.MinHeight > fit.Height || fit.Left < workArea.Left ||
+                fit.Top < workArea.Top || fit.Left + fit.Width > workArea.Right + 0.01 ||
+                fit.Top + fit.Height > workArea.Bottom + 0.01)
+                throw new InvalidDataException($"Window fit exceeded the available work area at {scale:P0} scaling.");
+        }
+
+        var compactWorkArea = new System.Windows.Rect(0, 0, 640, 360);
+        WindowLayoutService.WindowFit compactFit = WindowLayoutService.CalculateFit(
+            width: 1100, height: 820, minWidth: 680, minHeight: 650,
+            maxWidth: double.PositiveInfinity, maxHeight: double.PositiveInfinity,
+            left: 0, top: 0, compactWorkArea);
+        if (compactFit.Width >= 680 || compactFit.Height >= 360 ||
+            compactFit.MinWidth > compactFit.Width || compactFit.MinHeight > compactFit.Height)
+            throw new InvalidDataException("Window minimum sizes were not reduced on a compact high-DPI work area.");
     }
 
     private static void TestRotationAuthorization()
@@ -870,6 +1397,7 @@ internal static class Program
 
     private static void Run(string name, Action test)
     {
+        if (!string.IsNullOrWhiteSpace(TestFilter) && !name.Contains(TestFilter, StringComparison.OrdinalIgnoreCase)) return;
         try
         {
             test();
@@ -886,6 +1414,6 @@ internal static class Program
     private static int Finish()
     {
         Console.WriteLine($"Security regression result: {_passed} passed, {_failed} failed.");
-        return _failed == 0 ? 0 : 1;
+        return _failed == 0 && _passed > 0 ? 0 : 1;
     }
 }

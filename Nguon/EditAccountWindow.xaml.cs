@@ -1,9 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Windows;
 using System.Windows.Media;
+using System.Windows.Threading;
 using PersonalInfoManager.Models;
 using PersonalInfoManager.Services;
 
@@ -17,6 +20,13 @@ namespace PersonalInfoManager
         private readonly List<DeletedNoteEntry> _deletedNotes = new();
         private readonly List<AccountCustomField> _customFields = new();
         private bool _noteMovedToTrash;
+        private bool _isInitializing = true;
+        private bool _isDirty;
+        private bool _synchronizingPassword;
+        private bool _allowClose;
+        private readonly string _draftUserScope;
+        private readonly Guid? _draftAccountId;
+        private readonly DispatcherTimer _draftTimer;
 
         public SavedAccount Result { get; private set; } = new();
 
@@ -24,6 +34,10 @@ namespace PersonalInfoManager
         {
             InitializeComponent();
             _existing = existing;
+            _draftUserScope = SessionService.CurrentUser?.Username ?? Environment.UserName;
+            _draftAccountId = existing?.Id;
+            _draftTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(800) };
+            _draftTimer.Tick += DraftTimer_Tick;
 
             if (existing != null)
             {
@@ -46,28 +60,214 @@ namespace PersonalInfoManager
             }
             UpdateCustomFieldsStatus();
             UpdateTotpStatus();
-
+            _isInitializing = false;
             UpdatePasswordStrength();
-            Loaded += (_, _) => txtService.Focus();
+            Loaded += EditAccountWindow_Loaded;
+        }
+
+        private void EditAccountWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+            LanguageService.ApplyToWindow(this);
+            txtService.Focus();
+            if (!EditAccountDraftService.TryLoad(_draftUserScope, _draftAccountId, out EditAccountDraft? draft, out string? error))
+            {
+                if (!string.IsNullOrWhiteSpace(error))
+                    lblDraftStatus.Text = LanguageService.Format("Không đọc được bản nháp đã mã hóa: {0}. Tệp vẫn được giữ nguyên.", error);
+                return;
+            }
+
+            if (draft == null) return;
+            if (PersonalInfoManager.Services.LocalizedMessageBox.Show(this,
+                    "Tìm thấy bản nháp được mã hóa cho mục này. Bạn có muốn khôi phục nội dung chưa lưu không?",
+                    "Khôi phục bản nháp", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+            {
+                try
+                {
+                    ApplyDraft(draft);
+                    chkEncryptedDraft.IsChecked = true;
+                    _isDirty = true;
+                    lblDraftStatus.Text = LanguageService.Translate("Đã khôi phục bản nháp. Các thay đổi chưa được lưu vào vault.");
+                    ScheduleDraftSave();
+                }
+                catch (Exception ex)
+                {
+                    lblDraftStatus.Text = LanguageService.Format("Không thể mở bản nháp: {0}. Tệp vẫn được giữ nguyên.", ex.Message);
+                }
+            }
+            else
+            {
+                EditAccountDraftService.Delete(_draftUserScope, _draftAccountId);
+                lblDraftStatus.Text = LanguageService.Translate("Bản nháp đã bị xóa theo lựa chọn của bạn.");
+            }
+        }
+
+        private void ApplyDraft(EditAccountDraft draft)
+        {
+            TotpCredential? restoredTotp = string.IsNullOrWhiteSpace(draft.TotpSecret)
+                ? null
+                : new TotpCredential(draft.ServiceName, draft.TotpIssuer, draft.TotpSecret,
+                    draft.TotpAlgorithm, draft.TotpDigits, draft.TotpPeriodSeconds);
+            _isInitializing = true;
+            try
+            {
+                txtService.Text = draft.ServiceName;
+                txtWebsiteUrl.Text = draft.WebsiteUrl;
+                txtFolder.Text = draft.Folder;
+                txtTags.Text = draft.Tags;
+                chkFavorite.IsChecked = draft.IsFavorite;
+                txtUsername.Text = draft.Username;
+                txtPassword.Password = draft.Password;
+                txtPasswordVisible.Text = draft.Password;
+                txtNote.Text = draft.Note;
+                _deletedNotes.Clear();
+                _deletedNotes.AddRange((draft.DeletedNotes ?? new()).Select(item => item.Clone()));
+                _customFields.Clear();
+                _customFields.AddRange((draft.CustomFields ?? new()).Select(item => item.Clone()));
+                _noteMovedToTrash = draft.NoteMovedToTrash;
+                _totp = restoredTotp;
+            }
+            finally { _isInitializing = false; }
+            UpdateTotpStatus();
+            UpdateCustomFieldsStatus();
+            UpdatePasswordStrength();
+            btnDeleteNote.Visibility = _existing != null && !string.IsNullOrWhiteSpace(txtNote.Text)
+                ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        private EditAccountDraft CaptureDraft() => new()
+        {
+            ServiceName = txtService.Text,
+            WebsiteUrl = txtWebsiteUrl.Text,
+            Folder = txtFolder.Text,
+            Tags = txtTags.Text,
+            IsFavorite = chkFavorite.IsChecked == true,
+            Username = txtUsername.Text,
+            Password = _showPwd ? txtPasswordVisible.Text : txtPassword.Password,
+            Note = txtNote.Text,
+            DeletedNotes = _deletedNotes.Select(item => item.Clone()).ToList(),
+            CustomFields = _customFields.Select(item => item.Clone()).ToList(),
+            NoteMovedToTrash = _noteMovedToTrash,
+            TotpSecret = _totp?.Secret ?? "",
+            TotpIssuer = _totp?.Issuer ?? "",
+            TotpAlgorithm = _totp?.Algorithm ?? "SHA1",
+            TotpDigits = _totp?.Digits ?? 6,
+            TotpPeriodSeconds = _totp?.PeriodSeconds ?? 30
+        };
+
+        private void FormField_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e) => MarkDirty();
+        private void FormField_CheckedChanged(object sender, RoutedEventArgs e) => MarkDirty();
+
+        private void MarkDirty()
+        {
+            if (_isInitializing || _allowClose) return;
+            _isDirty = true;
+            if (chkEncryptedDraft?.IsChecked == true) ScheduleDraftSave();
+        }
+
+        private void ScheduleDraftSave()
+        {
+            _draftTimer.Stop();
+            _draftTimer.Interval = TimeSpan.FromMilliseconds(800);
+            _draftTimer.Start();
+        }
+
+        private void DraftTimer_Tick(object? sender, EventArgs e)
+        {
+            _draftTimer.Stop();
+            if (!_isDirty || chkEncryptedDraft.IsChecked != true || !IsLoaded) return;
+            try
+            {
+                EditAccountDraftService.Save(_draftUserScope, _draftAccountId, CaptureDraft());
+                lblDraftStatus.Text = LanguageService.Translate("Bản nháp được mã hóa bằng tài khoản Windows hiện tại và đã lưu trên thiết bị này.");
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or CryptographicException)
+            {
+                lblDraftStatus.Text = LanguageService.Format("Không lưu được bản nháp đã mã hóa: {0}", ex.Message);
+                _draftTimer.Interval = TimeSpan.FromSeconds(3);
+                _draftTimer.Start();
+            }
+        }
+
+        private void ChkEncryptedDraft_Checked(object sender, RoutedEventArgs e)
+        {
+            if (_isInitializing) return;
+            lblDraftStatus.Text = LanguageService.Translate("Bản nháp chỉ nằm trên thiết bị này và dùng DPAPI của tài khoản Windows hiện tại.");
+            if (_isDirty) ScheduleDraftSave();
+        }
+
+        private void ChkEncryptedDraft_Unchecked(object sender, RoutedEventArgs e)
+        {
+            if (_isInitializing) return;
+            _draftTimer.Stop();
+            EditAccountDraftService.Delete(_draftUserScope, _draftAccountId);
+            lblDraftStatus.Text = LanguageService.Translate("Đã xóa bản nháp cục bộ.");
+        }
+
+        private void EditAccountWindow_Closing(object? sender, CancelEventArgs e)
+        {
+            if (_allowClose) return;
+            if (_isDirty && PersonalInfoManager.Services.LocalizedMessageBox.Show(this,
+                    "Bạn còn thay đổi chưa lưu. Đóng cửa sổ và bỏ các thay đổi này? Bản nháp đã mã hóa cũng sẽ bị xóa.",
+                    "Thay đổi chưa lưu", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes)
+            {
+                e.Cancel = true;
+                return;
+            }
+            _allowClose = true;
+            _draftTimer.Stop();
+            EditAccountDraftService.Delete(_draftUserScope, _draftAccountId);
+        }
+
+        internal void CloseForSessionEnd()
+        {
+            _draftTimer.Stop();
+            if (_isDirty && chkEncryptedDraft.IsChecked == true)
+            {
+                try { EditAccountDraftService.Save(_draftUserScope, _draftAccountId, CaptureDraft()); }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or CryptographicException)
+                {
+                    try { ActivityLogger.Log(_draftUserScope, "EDIT_DRAFT_SAVE_FAILED", "Không lưu được bản nháp khi khóa phiên."); } catch { }
+                }
+            }
+            _allowClose = true;
+            Hide();
+            Close();
+        }
+
+        private void EditAccountWindow_Closed(object? sender, EventArgs e)
+        {
+            _draftTimer.Stop();
+            txtPassword.Clear();
+            txtPasswordVisible.Clear();
+            txtNote.Clear();
+            foreach (AccountCustomField field in _customFields) field.Value = "";
+            _customFields.Clear();
+            _deletedNotes.Clear();
+            _totp = null;
         }
 
         private void BtnTogglePwd_Click(object sender, RoutedEventArgs e)
         {
             _showPwd = !_showPwd;
-            if (_showPwd)
+            _synchronizingPassword = true;
+            try
             {
-                txtPasswordVisible.Text = txtPassword.Password;
-                txtPassword.Visibility = Visibility.Collapsed;
-                txtPasswordVisible.Visibility = Visibility.Visible;
-                btnTogglePwd.Content = "🙈";
+                if (_showPwd)
+                {
+                    txtPasswordVisible.Text = txtPassword.Password;
+                    txtPassword.Visibility = Visibility.Collapsed;
+                    txtPasswordVisible.Visibility = Visibility.Visible;
+                    btnTogglePwd.Content = "🙈";
+                }
+                else
+                {
+                    txtPassword.Password = txtPasswordVisible.Text;
+                    txtPassword.Visibility = Visibility.Visible;
+                    txtPasswordVisible.Visibility = Visibility.Collapsed;
+                    btnTogglePwd.Content = "👁️";
+                }
             }
-            else
-            {
-                txtPassword.Password = txtPasswordVisible.Text;
-                txtPassword.Visibility = Visibility.Visible;
-                txtPasswordVisible.Visibility = Visibility.Collapsed;
-                btnTogglePwd.Content = "👁️";
-            }
+            finally { _synchronizingPassword = false; }
         }
 
         private void BtnGeneratePwd_Click(object sender, RoutedEventArgs e)
@@ -81,12 +281,21 @@ namespace PersonalInfoManager
             else
                 txtPassword.Password = pwd;
 
+            MarkDirty();
             UpdatePasswordStrength();
         }
 
-        private void TxtPassword_PasswordChanged(object sender, RoutedEventArgs e) => UpdatePasswordStrength();
+        private void TxtPassword_PasswordChanged(object sender, RoutedEventArgs e)
+        {
+            if (!_synchronizingPassword) MarkDirty();
+            UpdatePasswordStrength();
+        }
 
-        private void TxtPasswordVisible_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e) => UpdatePasswordStrength();
+        private void TxtPasswordVisible_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+        {
+            if (!_synchronizingPassword) MarkDirty();
+            UpdatePasswordStrength();
+        }
 
         private void UpdatePasswordStrength()
         {
@@ -115,6 +324,7 @@ namespace PersonalInfoManager
             var dialog = new TotpSetupWindow(txtService.Text.Trim()) { Owner = this };
             if (dialog.ShowDialog() != true || dialog.Result == null) return;
             _totp = dialog.Result;
+            MarkDirty();
             UpdateTotpStatus();
         }
 
@@ -124,6 +334,7 @@ namespace PersonalInfoManager
             if (PersonalInfoManager.Services.LocalizedMessageBox.Show(this, "Xóa mã TOTP khỏi tài khoản này?", "Xóa TOTP",
                     MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
             _totp = null;
+            MarkDirty();
             UpdateTotpStatus();
         }
 
@@ -143,6 +354,7 @@ namespace PersonalInfoManager
             if (dialog.ShowDialog() != true) return;
             _customFields.Clear();
             _customFields.AddRange(dialog.Result.Select(field => field.Clone()));
+            MarkDirty();
             UpdateCustomFieldsStatus();
         }
 
@@ -165,10 +377,12 @@ namespace PersonalInfoManager
             _noteMovedToTrash = true;
             txtNote.Clear();
             btnDeleteNote.Visibility = Visibility.Collapsed;
+            MarkDirty();
         }
 
         private void TxtNote_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
         {
+            MarkDirty();
             if (btnDeleteNote == null || _existing == null) return;
             btnDeleteNote.Visibility = string.IsNullOrWhiteSpace(txtNote.Text)
                 ? Visibility.Collapsed : Visibility.Visible;
@@ -318,13 +532,16 @@ namespace PersonalInfoManager
                 };
             }
 
+            _isDirty = false;
+            _allowClose = true;
+            _draftTimer.Stop();
+            EditAccountDraftService.Delete(_draftUserScope, _draftAccountId);
             DialogResult = true;
             Close();
         }
 
         private void BtnCancel_Click(object sender, RoutedEventArgs e)
         {
-            DialogResult = false;
             Close();
         }
     }

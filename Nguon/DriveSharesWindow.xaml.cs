@@ -16,8 +16,8 @@ public partial class DriveSharesWindow : Window
         InitializeComponent();
         _shares = shares.ToList();
         dgShares.ItemsSource = _shares.Select(share => new ShareView(share,
-            share.Expires?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "Không đặt",
-            share.Created?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "Không rõ")).ToList();
+            share.Expires.HasValue ? LocalizationAuditService.FormatDateTime(share.Expires.Value) : LanguageService.Translate("Không đặt"),
+            share.Created.HasValue ? LocalizationAuditService.FormatDateTime(share.Created.Value) : LanguageService.Translate("Không rõ"))).ToList();
     }
 
     private void Window_Loaded(object sender, RoutedEventArgs e) => LanguageService.ApplyToWindow(this);

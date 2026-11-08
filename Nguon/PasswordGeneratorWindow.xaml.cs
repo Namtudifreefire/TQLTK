@@ -23,7 +23,7 @@ public partial class PasswordGeneratorWindow : Window
         else
         {
             WebsitePasswordPolicy policy = WebsitePasswordPolicyService.Get(_websiteUrl);
-            lblWebsitePolicyHost.Text = string.Format(LanguageService.Translate("Quy tắc được lưu riêng cho {0}."), _websiteHost);
+            lblWebsitePolicyHost.Text = LanguageService.Format("Quy tắc được lưu riêng cho {0}.", _websiteHost);
             txtPolicyMinLength.Text = policy.MinimumLength.ToString();
             txtPolicyMaxLength.Text = policy.MaximumLength.ToString();
             chkPolicyUpper.IsChecked = policy.RequireUppercase;
@@ -158,9 +158,7 @@ public partial class PasswordGeneratorWindow : Window
     private static int ParseNumber(string text, string label) =>
         int.TryParse(text, out int value)
             ? value
-            : throw new FormatException(string.Format(
-                LanguageService.Translate("{0} phải là số nguyên."),
-                LanguageService.Translate(label)));
+            : throw new FormatException(LanguageService.Format("{0} phải là số nguyên.", LanguageService.Translate(label)));
 
     private void BtnUse_Click(object sender, RoutedEventArgs e)
     {

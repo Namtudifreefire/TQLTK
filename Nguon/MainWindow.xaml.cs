@@ -51,6 +51,8 @@ namespace PersonalInfoManager
         private readonly DispatcherTimer _hidePasswordTimer = new() { Interval = TimeSpan.FromSeconds(AutoHidePasswordSeconds) };
 
         private readonly DispatcherTimer _searchTimer = new() { Interval = TimeSpan.FromMilliseconds(250) };
+        private readonly DispatcherTimer _periodicBackupTimer = new() { Interval = TimeSpan.FromMinutes(5) };
+        private bool _periodicBackupRunning;
         private DateTime _lastActivity = DateTime.UtcNow;
         private DateTime _lastAuthTime = DateTime.MinValue;
         private bool _isLocked = false;
@@ -73,6 +75,7 @@ namespace PersonalInfoManager
                     {
                         RefreshAccounts(updateStatus: false);
                         RefreshSecurityOverview();
+                        LoadBackupPolicyUi();
                     }
                 }
             };
@@ -112,6 +115,7 @@ namespace PersonalInfoManager
                 _searchTimer.Stop();
                 if (SessionService.IsLoggedIn) RefreshAccounts(updateStatus: false);
             };
+            _periodicBackupTimer.Tick += PeriodicBackupTimer_Tick;
 
             PreviewKeyDown += (_, e) =>
             {
@@ -131,6 +135,7 @@ namespace PersonalInfoManager
 
         private async void MainWindow_Loaded(object? sender, RoutedEventArgs e)
         {
+            FitWindowToCurrentWorkArea();
             if (!SessionService.IsLoggedIn)
             {
                 PersonalInfoManager.Services.LocalizedMessageBox.Show("Chưa đăng nhập. Vui lòng đăng nhập lại.");
@@ -152,6 +157,7 @@ namespace PersonalInfoManager
 
             BuildPages();
             LoadLockSettingsUi();
+            LoadBackupPolicyUi();
 
             navAdmin.Visibility = SessionService.IsAdmin ? Visibility.Visible : Visibility.Collapsed;
 
@@ -168,8 +174,14 @@ namespace PersonalInfoManager
             UpdateThemeIndicator();
             Update2FAMenu();
             StartAutoLock();
+            _periodicBackupTimer.Start();
 
             navAccounts.IsChecked = true;
+        }
+
+        private void FitWindowToCurrentWorkArea()
+        {
+            WindowLayoutService.FitToWorkArea(this);
         }
 
         private const double SidebarWidth = 250;
@@ -208,6 +220,9 @@ namespace PersonalInfoManager
         private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
         {
             StopAutoLock();
+            _periodicBackupTimer.Stop();
+            foreach (EditAccountWindow editor in OwnedWindows.OfType<EditAccountWindow>().ToArray())
+                editor.CloseForSessionEnd();
             try { _sessionRevocationCts.Cancel(); } catch { }
             try { ClipboardGuard.ClearNow(); } catch { }
             try { AccountVaultService.ClearCache(); } catch { }
@@ -440,19 +455,17 @@ namespace PersonalInfoManager
                 try { ActivityLogger.Log(username, "VAULT_KEY_ROTATION", $"Đã mã hóa lại {operation.result.ReencryptedFiles} tệp; giữ {operation.result.PreservedLegacyBackups} backup dùng cụm mật khẩu."); } catch { }
                 RefreshAccounts();
                 RefreshSecurityOverview();
-                string details = string.Format(LanguageService.Translate(
-                    "Đã xoay khóa và mã hóa lại {0} tệp cục bộ.\nBản phục hồi đã xác minh ({1} tài khoản): {2}\nCác backup có cụm mật khẩu vẫn độc lập; khóa cũ được lưu mã hóa để đọc bản xuất lịch sử."),
+                string details = LanguageService.Format("Đã xoay khóa và mã hóa lại {0} tệp cục bộ.\nBản phục hồi đã xác minh ({1} tài khoản): {2}\nCác backup có cụm mật khẩu vẫn độc lập; khóa cũ được lưu mã hóa để đọc bản xuất lịch sử.",
                     operation.result.ReencryptedFiles, operation.accountCount, dialog.FileName);
                 if (operation.result.PreservedLegacyBackups > 0)
-                    details += "\n" + string.Format(LanguageService.Translate("Đã giữ nguyên {0} backup dùng cụm mật khẩu."),
+                    details += "\n" + LanguageService.Format("Đã giữ nguyên {0} backup dùng cụm mật khẩu.",
                         operation.result.PreservedLegacyBackups);
                 PersonalInfoManager.Services.LocalizedMessageBox.Show(details, LanguageService.Translate("Xoay khóa hoàn tất"), MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
                 PersonalInfoManager.Services.LocalizedMessageBox.Show(
-                    string.Format(LanguageService.Translate(
-                        "Không thể hoàn tất xoay khóa. Dữ liệu gốc và nhật ký phục hồi được giữ lại; không xóa thư mục dữ liệu ứng dụng. Lần đọc tiếp theo sẽ thử tiếp tục giao dịch.\n\n{0}"),
+                    LanguageService.Format("Không thể hoàn tất xoay khóa. Dữ liệu gốc và nhật ký phục hồi được giữ lại; không xóa thư mục dữ liệu ứng dụng. Lần đọc tiếp theo sẽ thử tiếp tục giao dịch.\n\n{0}",
                         LanguageService.Translate(ex.Message)),
                     LanguageService.Translate("Xoay khóa chưa hoàn tất"), MessageBoxButton.OK, MessageBoxImage.Error);
             }
@@ -509,7 +522,15 @@ namespace PersonalInfoManager
             Application.Current.MainWindow = login;
             login.Show();
 
-            foreach (var w in others) { try { w.Close(); } catch { } }
+            foreach (var w in others)
+            {
+                try
+                {
+                    if (w is EditAccountWindow editor) editor.CloseForSessionEnd();
+                    else w.Close();
+                }
+                catch { }
+            }
             Close();
         }
 
@@ -640,7 +661,9 @@ namespace PersonalInfoManager
                     FavoriteText = a.IsFavorite ? "★" : "",
                     a.CreatedAt,
                     a.UpdatedAt,
-                    PasswordChangedText = a.PasswordChangedAt?.ToString("dd/MM/yyyy") ?? "Chưa rõ",
+                    PasswordChangedText = a.PasswordChangedAt.HasValue
+                        ? LocalizationAuditService.FormatDate(a.PasswordChangedAt.Value)
+                        : "Chưa rõ",
                     TotpState = string.IsNullOrWhiteSpace(a.TotpSecret) ? "—" : "Có",
                     _original = a
                 };
@@ -739,7 +762,7 @@ namespace PersonalInfoManager
                 "Lần kiểm tra HIBP gần nhất: {0} • đã kiểm tra {1} mật khẩu duy nhất • {2} giá trị bị lộ • {3}",
                 () => new object?[]
                 {
-                    _pwnedLastCheckedUtc.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm"),
+                    LocalizationAuditService.FormatDateTime(_pwnedLastCheckedUtc.Value),
                     _pwnedCheckedUniquePasswords,
                     _pwnedBreachedUniquePasswords,
                     LanguageService.Translate(status)
@@ -1326,7 +1349,7 @@ namespace PersonalInfoManager
 
             var risks = WebsiteDomainService.GetRiskWarnings(selected.WebsiteUrl);
             if (risks.Count > 0 && PersonalInfoManager.Services.LocalizedMessageBox.Show(this,
-                    string.Format(LanguageService.Translate("Domain {0} có dấu hiệu cần kiểm tra: {1}\n\nBạn vẫn muốn mở website này?"), host,
+                    LanguageService.Format("Domain {0} có dấu hiệu cần kiểm tra: {1}\n\nBạn vẫn muốn mở website này?", host,
                         string.Join("\n", risks.Select(LanguageService.Translate))),
                     LanguageService.Translate("Kiểm tra domain"), MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
                 return;
@@ -1334,7 +1357,7 @@ namespace PersonalInfoManager
             try { Process.Start(new ProcessStartInfo(uri.AbsoluteUri) { UseShellExecute = true }); }
             catch (Exception ex)
             {
-                PersonalInfoManager.Services.LocalizedMessageBox.Show(this, string.Format(LanguageService.Translate("Không thể mở website: {0}"), ex.Message),
+                PersonalInfoManager.Services.LocalizedMessageBox.Show(this, LanguageService.Format("Không thể mở website: {0}", ex.Message),
                     LanguageService.Translate("Lỗi"), MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
@@ -1398,7 +1421,7 @@ namespace PersonalInfoManager
             var dialog = new BulkAccountActionsWindow(selected.Count) { Owner = this };
             if (dialog.ShowDialog() != true || !EnsureActiveSession()) return;
             if (dialog.MoveToTrash && PersonalInfoManager.Services.LocalizedMessageBox.Show(this,
-                    string.Format(LanguageService.Translate("Đưa {0} tài khoản đã chọn vào thùng rác trong 30 ngày?"), selected.Count),
+                    LanguageService.Format("Đưa {0} tài khoản đã chọn vào thùng rác trong 30 ngày?", selected.Count),
                     LanguageService.Translate("Xác nhận xóa hàng loạt"), MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
                 return;
 
@@ -1482,7 +1505,7 @@ namespace PersonalInfoManager
                 return;
             }
             if (PersonalInfoManager.Services.LocalizedMessageBox.Show(this,
-                    string.Format(LanguageService.Translate("Hoàn tác lần nhập gồm {0} tài khoản? Thay đổi sau lần nhập sẽ bị từ chối để tránh mất dữ liệu."), affected.Count),
+                    LanguageService.Format("Hoàn tác lần nhập gồm {0} tài khoản? Thay đổi sau lần nhập sẽ bị từ chối để tránh mất dữ liệu.", affected.Count),
                     LanguageService.Translate("Hoàn tác nhập"), MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes || !EnsureActiveSession())
                 return;
 
@@ -1626,7 +1649,7 @@ namespace PersonalInfoManager
             txtProfileEmail.Text = u.Email;
             txtProfilePhone.Text = u.Phone;
             lblProfileRole.Text = u.Role == UserRole.Admin ? "👑 Quản trị viên" : "👤 Người dùng";
-            lblProfileCreatedAt.Text = u.CreatedAt.ToString("dd/MM/yyyy HH:mm:ss");
+            lblProfileCreatedAt.Text = LocalizationAuditService.FormatDateTime(u.CreatedAt, includeSeconds: true);
 
             try
             {
@@ -2054,7 +2077,7 @@ namespace PersonalInfoManager
                 UpdateStorageInfo();
                 ActivityLogger.Log(username, "IMPORT_CREDENTIALS", $"Thêm {added}, ghi đè {overwritten}, bỏ qua {skipped} ({parsed.Message})");
 
-                PersonalInfoManager.Services.LocalizedMessageBox.Show(this, string.Format(LanguageService.Translate("Đã thêm {0}, ghi đè {1}, bỏ qua {2} tài khoản. Có thể hoàn tác lô này bằng nút Hoàn tác nhập."), added, overwritten, skipped),
+                PersonalInfoManager.Services.LocalizedMessageBox.Show(this, LanguageService.Format("Đã thêm {0}, ghi đè {1}, bỏ qua {2} tài khoản. Có thể hoàn tác lô này bằng nút Hoàn tác nhập.", added, overwritten, skipped),
                     LanguageService.Translate("Kết quả nhập dữ liệu"), MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex) { PersonalInfoManager.Services.LocalizedMessageBox.Show(this, LanguageService.Translate("Lỗi nhập dữ liệu: ") + ex.Message, LanguageService.Translate("Lỗi"), MessageBoxButton.OK, MessageBoxImage.Error); }
@@ -2113,9 +2136,9 @@ namespace PersonalInfoManager
                     AutoThemeService.Start();
                     RegistryService.SetAutoThemeEnabled(true);
                     string currentTheme = AutoThemeService.GetCurrentThemeByTime();
-                    string message = string.Format(
-                        LanguageService.Translate("Đã bật tự động đổi giao diện theo giờ.\n\n• 06:00 - 18:00: Sáng\n• 18:00 - 06:00: Tối\n\nHiện tại ({0}): {1}"),
-                        DateTime.Now.ToString("HH:mm"), currentTheme);
+                    string message = LanguageService.Format(
+                        "Đã bật tự động đổi giao diện theo giờ.\n\n• 06:00 - 18:00: Sáng\n• 18:00 - 06:00: Tối\n\nHiện tại ({0}): {1}",
+                        DateTime.Now.ToString("HH:mm"), LanguageService.Translate(currentTheme));
                     PersonalInfoManager.Services.LocalizedMessageBox.Show(message, "Giao diện tự động");
                 }
                 else
@@ -2129,6 +2152,348 @@ namespace PersonalInfoManager
                 UpdateThemeIndicator();
             }
             catch (Exception ex) { PersonalInfoManager.Services.LocalizedMessageBox.Show($"Lỗi: {ex.Message}"); }
+        }
+
+        private void LoadBackupPolicyUi()
+        {
+            if (SessionService.CurrentUser is not { } currentUser) return;
+            string username = currentUser.Username;
+            chkPeriodicBackup.IsChecked = AutoBackupService.IsPeriodicEnabled(username);
+            SelectComboTag(cmbPeriodicBackupInterval, AutoBackupService.GetPeriodicIntervalHours(username));
+            SelectComboTag(cmbBackupRetentionCount, AutoBackupService.GetRetentionCount(username));
+            SelectComboTag(cmbBackupRetentionDays, AutoBackupService.GetRetentionDays(username));
+            SelectComboTag(cmbBackupStorageLimit, AutoBackupService.GetStorageLimitMb(username));
+            SelectComboTag(cmbBackupDailyRetention, AutoBackupService.GetDailyRetention(username));
+            SelectComboTag(cmbBackupWeeklyRetention, AutoBackupService.GetWeeklyRetention(username));
+            SelectComboTag(cmbBackupMonthlyRetention, AutoBackupService.GetMonthlyRetention(username));
+            lblPeriodicBackupStatus.Text = LanguageService.Translate(AutoBackupService.GetPeriodicStatusLine(username));
+        }
+
+        private static void SelectComboTag(ComboBox combo, int value)
+        {
+            combo.SelectedItem = combo.Items.OfType<ComboBoxItem>()
+                .FirstOrDefault(item => string.Equals(item.Tag?.ToString(), value.ToString(), StringComparison.Ordinal));
+        }
+
+        private int ReadComboTag(ComboBox combo, int fallback)
+        {
+            return combo.SelectedItem is ComboBoxItem item &&
+                   int.TryParse(item.Tag?.ToString(), out int value) ? value : fallback;
+        }
+
+        private void BtnSaveBackupPolicy_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (SessionService.CurrentUser is not { } currentUser) return;
+                string username = currentUser.Username;
+                AutoBackupService.SetPeriodicEnabled(username, chkPeriodicBackup.IsChecked == true);
+                AutoBackupService.SetPeriodicIntervalHours(username, ReadComboTag(cmbPeriodicBackupInterval, 24));
+                AutoBackupService.SetRetentionCount(username, ReadComboTag(cmbBackupRetentionCount, 7));
+                AutoBackupService.SetRetentionDays(username, ReadComboTag(cmbBackupRetentionDays, 90));
+                AutoBackupService.SetStorageLimitMb(username, ReadComboTag(cmbBackupStorageLimit, 2048));
+                AutoBackupService.SetCalendarRetention(username,
+                    ReadComboTag(cmbBackupDailyRetention, 0), ReadComboTag(cmbBackupWeeklyRetention, 0),
+                    ReadComboTag(cmbBackupMonthlyRetention, 0));
+                AutoBackupService.RetentionResult result = AutoBackupService.PruneCompleteBackups(username);
+                lblPeriodicBackupStatus.Text = LanguageService.Translate(AutoBackupService.GetPeriodicStatusLine(username));
+                if (!string.IsNullOrWhiteSpace(result.Message))
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show(this, LanguageService.Translate(result.Message),
+                        LanguageService.Translate("Chính sách đã lưu"), MessageBoxButton.OK, MessageBoxImage.Warning);
+                else
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show(this, LanguageService.Translate("Đã lưu chính sách sao lưu."),
+                        LanguageService.Translate("Thành công"), MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                PersonalInfoManager.Services.LocalizedMessageBox.Show(this,
+                    LanguageService.Format("Không lưu được chính sách sao lưu: {0}", ex.Message),
+                    LanguageService.Translate("Lỗi"), MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+
+        private async void PeriodicBackupTimer_Tick(object? sender, EventArgs e)
+        {
+            if (_periodicBackupRunning || _isLocked || !SessionService.IsLoggedIn || !EnsureActiveSession()) return;
+            string username = SessionService.CurrentUser!.Username;
+            if (!AutoBackupService.IsPeriodicEnabled(username)) return;
+            _periodicBackupRunning = true;
+            try
+            {
+                var result = await Task.Run(() => AutoBackupService.RunPeriodicIfDue(username, _sessionRevocationCts.Token),
+                    _sessionRevocationCts.Token);
+                if (_isLocked || !EnsureActiveSession()) return;
+                lblPeriodicBackupStatus.Text = LanguageService.Translate(AutoBackupService.GetPeriodicStatusLine(username));
+                if (result.Attempted && !result.Succeeded)
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show(this, LanguageService.Translate(result.Message),
+                        LanguageService.Translate("Sao lưu định kỳ thất bại"), MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception ex)
+            {
+                AutoBackupService.RecordCompleteBackupFailure(username, ex.Message);
+                lblPeriodicBackupStatus.Text = LanguageService.Translate(AutoBackupService.GetPeriodicStatusLine(username));
+            }
+            finally
+            {
+                _periodicBackupRunning = false;
+            }
+        }
+
+        private async void MnuCreateCompleteBackup_Click(object? sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (!await RequireAuthAsync("tạo gói sao lưu đầy đủ", "CREATE_COMPLETE_BACKUP_DENIED")) return;
+                string username = SessionService.CurrentUser!.Username;
+                string? passphrase = BackupCrypto.GetStoredPassphrase(username);
+                if (passphrase == null)
+                {
+                    MessageBoxResult choose = PersonalInfoManager.Services.LocalizedMessageBox.Show(this,
+                        LanguageService.Translate("Gói chuyển máy cần cụm mật khẩu để mở trên thiết bị khác. Hãy đặt cụm riêng; không dùng mật khẩu đăng nhập."),
+                        LanguageService.Translate("Cần cụm mật khẩu sao lưu"), MessageBoxButton.OKCancel, MessageBoxImage.Information);
+                    if (choose != MessageBoxResult.OK || !await SetBackupPassphraseAsync()) return;
+                    passphrase = BackupCrypto.GetStoredPassphrase(username);
+                }
+                if (string.IsNullOrEmpty(passphrase) || !EnsureActiveSession()) return;
+
+                string folder = AutoBackupService.GetFolder(username);
+                Directory.CreateDirectory(folder);
+                var dialog = new SaveFileDialog
+                {
+                    Title = "Lưu gói sao lưu đầy đủ",
+                    Filter = "Gói sao lưu TQLTK (*.tqltk)|*.tqltk",
+                    InitialDirectory = folder,
+                    FileName = $"TQLTK-Full-{DateTime.Now:yyyyMMdd-HHmmss}.tqltk",
+                    AddExtension = true,
+                    DefaultExt = ".tqltk",
+                    OverwritePrompt = true
+                };
+                LocalizedFileDialog.Apply(dialog);
+                if (dialog.ShowDialog() != true || !EnsureActiveSession()) return;
+
+                Mouse.OverrideCursor = Cursors.Wait;
+                bool includeNotes = chkCompleteBackupNotes.IsChecked == true;
+                bool includeFiles = chkCompleteBackupFiles.IsChecked == true;
+                bool includeSettings = chkCompleteBackupSettings.IsChecked == true;
+                var created = await Task.Run(() => CompleteBackupService.Create(username, dialog.FileName, passphrase,
+                    includeNotes, includeFiles, includeSettings));
+                Mouse.OverrideCursor = null;
+                if (_isLocked || !EnsureActiveSession()) return;
+                if (!created.ok || created.info == null)
+                {
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show(this, LanguageService.Translate(created.message),
+                        LanguageService.Translate("Không tạo được gói sao lưu"), MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                if (includeNotes && includeFiles && includeSettings)
+                    AutoBackupService.RecordCompleteBackup(username, dialog.FileName, created.info);
+                AutoBackupService.RetentionResult retention = AutoBackupService.PruneCompleteBackups(username);
+                lblPeriodicBackupStatus.Text = LanguageService.Translate(AutoBackupService.GetPeriodicStatusLine(username));
+                string summary = LocalizationAuditService.Format("backup.created.contents_summary",
+                    Path.GetFileName(dialog.FileName), created.info.AccountCount,
+                    created.info.NoteCount, LanguageService.Translate(created.info.IncludesNotes ? "Được sao lưu" : "Đã bỏ chọn"),
+                    created.info.PersonalFileCount, LanguageService.Translate(created.info.IncludesPersonalFiles ? "Được sao lưu" : "Đã bỏ chọn"),
+                    LanguageService.Translate(created.info.IncludesSettings ? "Được sao lưu" : "Đã bỏ chọn"));
+                summary += "\n\n" + LocalizationAuditService.Format("backup.migration.next_steps", Path.GetFileName(dialog.FileName));
+                if (!string.IsNullOrWhiteSpace(retention.Message)) summary += "\n\n" + LanguageService.Translate(retention.Message);
+                PersonalInfoManager.Services.LocalizedMessageBox.Show(this, summary,
+                    LanguageService.Translate("Sao lưu hoàn tất"), MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                if (!_isLocked) PersonalInfoManager.Services.LocalizedMessageBox.Show(this,
+                    LanguageService.Format("Không tạo được gói sao lưu: {0}", ex.Message),
+                    LanguageService.Translate("Lỗi"), MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+            finally { Mouse.OverrideCursor = null; }
+        }
+
+        private void BtnMigrationGuide_Click(object sender, RoutedEventArgs e)
+        {
+            new MigrationGuideWindow { Owner = this }.ShowDialog();
+        }
+
+        private async void MnuRestoreCompleteBackup_Click(object? sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (!await RequireAuthAsync("khôi phục gói sao lưu đầy đủ", "RESTORE_COMPLETE_BACKUP_DENIED")) return;
+                var dialog = new OpenFileDialog
+                {
+                    Title = "Chọn gói sao lưu đầy đủ",
+                    Filter = "Gói sao lưu TQLTK (*.tqltk)|*.tqltk|Tất cả tệp (*.*)|*.*",
+                    CheckFileExists = true
+                };
+                LocalizedFileDialog.Apply(dialog);
+                if (dialog.ShowDialog() == true && EnsureActiveSession())
+                    await RestoreCompleteBackupAsync(dialog.FileName);
+            }
+            catch (Exception ex)
+            {
+                if (!_isLocked) PersonalInfoManager.Services.LocalizedMessageBox.Show(this,
+                    LanguageService.Format("Không thể khôi phục gói sao lưu: {0}", ex.Message),
+                    LanguageService.Translate("Lỗi"), MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+
+        private async void MnuBackupCenter_Click(object? sender, RoutedEventArgs e)
+        {
+            if (!await RequireAuthAsync("duyệt bản sao lưu", "BACKUP_CENTER_DENIED")) return;
+            if (!EnsureActiveSession()) return;
+            string username = SessionService.CurrentUser!.Username;
+            var center = new BackupCenterWindow(username) { Owner = this };
+            if (center.ShowDialog() != true || !EnsureActiveSession()) return;
+            if (center.SelectedComparison != null && center.SelectedRecoveryItems.Count > 0)
+            {
+                await RecoverSelectedBackupsAsync(center.SelectedComparison, center.SelectedRecoveryItems);
+                return;
+            }
+            if (!string.IsNullOrWhiteSpace(center.SelectedBackupPath))
+                await RestoreCompleteBackupAsync(center.SelectedBackupPath);
+        }
+
+        private async Task RecoverSelectedBackupsAsync(BackupComparisonResult comparison,
+            IReadOnlyList<BackupRecoverySelection> selections)
+        {
+            string username = SessionService.CurrentUser!.Username;
+            string? storedPassphrase = BackupCrypto.GetStoredPassphrase(username);
+            string olderPassphrase = storedPassphrase ?? "";
+            string newerPassphrase = storedPassphrase ?? "";
+            (bool ok, string message, CompleteBackupInfo? info) olderCheck = (false, "", null);
+            (bool ok, string message, CompleteBackupInfo? info) newerCheck = (false, "", null);
+
+            for (int attempt = 0; attempt < 3; attempt++)
+            {
+                if (attempt > 0 || !olderCheck.ok)
+                {
+                    var prompt = new BackupPassphraseWindow(confirmMode: false) { Owner = this };
+                    if (prompt.ShowDialog() != true) return;
+                    olderPassphrase = prompt.Passphrase;
+                }
+                if (!EnsureActiveSession()) return;
+                olderCheck = await Task.Run(() => CompleteBackupService.Inspect(comparison.OlderPath, olderPassphrase));
+                if (!olderCheck.ok)
+                {
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show(this, LanguageService.Translate(olderCheck.message),
+                        LanguageService.Translate("Không thể xác minh bản cũ"), MessageBoxButton.OK, MessageBoxImage.Warning);
+                    continue;
+                }
+
+                if (attempt > 0 || !newerCheck.ok)
+                {
+                    var prompt = new BackupPassphraseWindow(confirmMode: false) { Owner = this };
+                    if (prompt.ShowDialog() != true) return;
+                    newerPassphrase = prompt.Passphrase;
+                }
+                if (!EnsureActiveSession()) return;
+                newerCheck = await Task.Run(() => CompleteBackupService.Inspect(comparison.NewerPath, newerPassphrase));
+                if (!newerCheck.ok)
+                {
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show(this, LanguageService.Translate(newerCheck.message),
+                        LanguageService.Translate("Không thể xác minh bản mới"), MessageBoxButton.OK, MessageBoxImage.Warning);
+                    continue;
+                }
+                break;
+            }
+
+            if (!olderCheck.ok || !newerCheck.ok || !EnsureActiveSession()) return;
+            var foreignOwners = selections
+                .Select(selection => selection.FromOlder ? olderCheck.info!.ExportedBy : newerCheck.info!.ExportedBy)
+                .Where(owner => !string.Equals(owner, username, StringComparison.OrdinalIgnoreCase))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            foreach (string owner in foreignOwners)
+                if (!ConfirmForeignOwner(owner)) return;
+
+            if (!await RequireAuthAsync("khôi phục mục từ bản sao lưu", "RECOVER_SELECTED_BACKUP_DENIED") || !EnsureActiveSession()) return;
+            Mouse.OverrideCursor = Cursors.Wait;
+            var recovered = await Task.Run(() => CompleteBackupService.RecoverSelectedAsCopies(
+                username, comparison, olderPassphrase, newerPassphrase, selections, foreignOwners.Length > 0));
+            Mouse.OverrideCursor = null;
+            if (_isLocked || !EnsureActiveSession()) return;
+            PersonalInfoManager.Services.LocalizedMessageBox.Show(this, LanguageService.Translate(recovered.message),
+                LanguageService.Translate(recovered.ok ? "Khôi phục hoàn tất" : "Khôi phục chưa hoàn tất"),
+                MessageBoxButton.OK, recovered.ok ? MessageBoxImage.Information : MessageBoxImage.Warning);
+            if (recovered.ok)
+            {
+                RefreshAccounts();
+                await RefreshFilesAsync();
+                UpdateStorageInfo();
+            }
+        }
+
+        private async Task RestoreCompleteBackupAsync(string path)
+        {
+            string username = SessionService.CurrentUser!.Username;
+            string? passphrase = BackupCrypto.GetStoredPassphrase(username);
+            (bool ok, string message, CompleteBackupPreview? preview) prepared = (false, "", null);
+            if (!string.IsNullOrWhiteSpace(passphrase))
+                prepared = await Task.Run(() => CompleteBackupService.PrepareRestore(username, path, passphrase));
+
+            if (!prepared.ok || prepared.preview == null)
+            {
+                for (int attempt = 0; attempt < 3; attempt++)
+                {
+                    var prompt = new BackupPassphraseWindow(confirmMode: false) { Owner = this };
+                    if (prompt.ShowDialog() != true) return;
+                    passphrase = prompt.Passphrase;
+                    if (!EnsureActiveSession()) return;
+                    Mouse.OverrideCursor = Cursors.Wait;
+                    prepared = await Task.Run(() => CompleteBackupService.PrepareRestore(username, path, passphrase));
+                    Mouse.OverrideCursor = null;
+                    if (prepared.ok && prepared.preview != null) break;
+                    if (attempt < 2)
+                        PersonalInfoManager.Services.LocalizedMessageBox.Show(this, LanguageService.Translate(prepared.message),
+                            LanguageService.Translate("Không thể xác minh gói"), MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+            }
+            if (!prepared.ok || prepared.preview == null || passphrase == null || !EnsureActiveSession())
+            {
+                if (!string.IsNullOrWhiteSpace(prepared.message))
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show(this, LanguageService.Translate(prepared.message),
+                        LanguageService.Translate("Không thể xem trước"), MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            bool foreignOwner = !string.Equals(prepared.preview.Info.ExportedBy, username, StringComparison.OrdinalIgnoreCase);
+            if (foreignOwner && !ConfirmForeignOwner(prepared.preview.Info.ExportedBy)) return;
+            var previewWindow = new BackupRestorePreviewWindow(
+                "Xem trước khôi phục gói đầy đủ",
+                "Nguồn: {0}\nNgười tạo: {1}\nTài khoản thêm: {2}; ghi chú thêm: {3}; tệp thêm: {4}.\nKhông ghi đè dữ liệu trùng. Cài đặt an toàn chỉ được áp dụng nếu chọn bên dưới.",
+                () => new object?[] { Path.GetFileName(path), prepared.preview.Info.ExportedBy,
+                    prepared.preview.AccountsToAdd, prepared.preview.NotesToAdd, prepared.preview.FilesToAdd },
+                prepared.preview.Items, allowSettingsRestore: prepared.preview.Info.IncludesSettings) { Owner = this };
+            if (previewWindow.ShowDialog() != true || !EnsureActiveSession()) return;
+
+            if (!await RequireAuthAsync("xác nhận khôi phục gói sao lưu", "RESTORE_COMPLETE_BACKUP_DENIED") || !EnsureActiveSession()) return;
+            bool restoreSettings = previewWindow.RestoreSettingsRequested;
+            Mouse.OverrideCursor = Cursors.Wait;
+            var restored = await Task.Run(() => CompleteBackupService.Restore(
+                username, prepared.preview, passphrase, restoreSettings, foreignOwner));
+            Mouse.OverrideCursor = null;
+            if (_isLocked || !EnsureActiveSession()) return;
+            PersonalInfoManager.Services.LocalizedMessageBox.Show(this, LanguageService.Translate(restored.message),
+                LanguageService.Translate(restored.ok ? "Khôi phục hoàn tất" : "Khôi phục chưa hoàn tất"),
+                MessageBoxButton.OK, restored.ok ? MessageBoxImage.Information : MessageBoxImage.Warning);
+            if (restored.ok)
+            {
+                RefreshAccounts();
+                await RefreshFilesAsync();
+                UpdateStorageInfo();
+                if (restoreSettings)
+                {
+                    AutoLockMinutes = RegistryService.GetAutoLockMinutes();
+                    _lockWhenMinimized = RegistryService.GetLockWhenMinimized();
+                    LoadLockSettingsUi();
+                    UpdateAutoThemeCard();
+                    UpdateThemeIndicator();
+                    cmbLanguageSettings.SelectedValue = LanguageService.CurrentCode;
+                }
+            }
         }
 
         private async void MnuExportVault_Click(object? sender, RoutedEventArgs e)
@@ -2440,7 +2805,7 @@ namespace PersonalInfoManager
                 var setup = new AccountShareSetupWindow { Owner = this };
                 if (setup.ShowDialog() != true || !EnsureActiveSession()) return;
                 if (PersonalInfoManager.Services.LocalizedMessageBox.Show(this,
-                        string.Format(LanguageService.Translate("Gói được mã hóa sẽ chứa toàn bộ tài khoản '{0}', gồm mật khẩu, TOTP, trường tùy chỉnh và tệp đính kèm. Cấp quyền đọc Drive cho {1} trong {2} ngày?"),
+                        LanguageService.Format("Gói được mã hóa sẽ chứa toàn bộ tài khoản '{0}', gồm mật khẩu, TOTP, trường tùy chỉnh và tệp đính kèm. Cấp quyền đọc Drive cho {1} trong {2} ngày?",
                             account.ServiceName, setup.RecipientEmail, setup.ExpirationDays),
                         LanguageService.Translate("Xác nhận chia sẻ thông tin nhạy cảm"), MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
                     return;
@@ -2506,7 +2871,7 @@ namespace PersonalInfoManager
                     var dialog = new DriveSharesWindow(shares) { Owner = this };
                     if (dialog.ShowDialog() != true || dialog.SelectedShare == null || !EnsureActiveSession()) return;
                     if (PersonalInfoManager.Services.LocalizedMessageBox.Show(this,
-                            string.Format(LanguageService.Translate("Thu hồi quyền Drive của {0} và chuyển gói chia sẻ vào thùng rác? Bản sao đã tải xuống vẫn có thể được giữ."), dialog.SelectedShare.RecipientEmail),
+                            LanguageService.Format("Thu hồi quyền Drive của {0} và chuyển gói chia sẻ vào thùng rác? Bản sao đã tải xuống vẫn có thể được giữ.", dialog.SelectedShare.RecipientEmail),
                             LanguageService.Translate("Thu hồi chia sẻ"), MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
                         continue;
 
@@ -2791,7 +3156,7 @@ namespace PersonalInfoManager
             {
                 Mouse.OverrideCursor = null;
                 if (!_isLocked)
-                    PersonalInfoManager.Services.LocalizedMessageBox.Show(string.Format(LanguageService.Translate("Lỗi đồng bộ: {0}"), LanguageService.Translate(ex.Message)), LanguageService.Translate("Lỗi"), MessageBoxButton.OK, MessageBoxImage.Error);
+                    PersonalInfoManager.Services.LocalizedMessageBox.Show(LanguageService.Format("Lỗi đồng bộ: {0}", LanguageService.Translate(ex.Message)), LanguageService.Translate("Lỗi"), MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
             {
@@ -2888,7 +3253,7 @@ namespace PersonalInfoManager
             catch (Exception ex)
             {
                 Mouse.OverrideCursor = null;
-                if (!_isLocked) PersonalInfoManager.Services.LocalizedMessageBox.Show(string.Format(LanguageService.Translate("Lỗi khôi phục: {0}"), LanguageService.Translate(ex.Message)), LanguageService.Translate("Lỗi"), MessageBoxButton.OK, MessageBoxImage.Error);
+                if (!_isLocked) PersonalInfoManager.Services.LocalizedMessageBox.Show(LanguageService.Format("Lỗi khôi phục: {0}", LanguageService.Translate(ex.Message)), LanguageService.Translate("Lỗi"), MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
             {
@@ -3403,20 +3768,20 @@ namespace PersonalInfoManager
                         SecurityFindingReviewState review = reviewStates[SecurityFindingReviewService.Key(account.Id, finding.Kind)];
                         string reviewText = review.Status switch
                         {
-                            SecurityFindingReviewStatus.Fixed => string.Format(
-                                LanguageService.Translate("Đã đánh dấu xử lý • kiểm tra {0}"),
-                                review.LastCheckedUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")),
-                            SecurityFindingReviewStatus.Snoozed => string.Format(
-                                LanguageService.Translate("Nhắc lại {0} • kiểm tra {1}"),
-                                review.RemindAtUtc?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "",
-                                review.LastCheckedUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")),
-                            SecurityFindingReviewStatus.Ignored => string.Format(
-                                LanguageService.Translate("Đã bỏ qua: {0} • kiểm tra {1}"),
+                            SecurityFindingReviewStatus.Fixed => LanguageService.Format(
+                                "Đã đánh dấu xử lý • kiểm tra {0}",
+                                LocalizationAuditService.FormatDateTime(review.LastCheckedUtc)),
+                            SecurityFindingReviewStatus.Snoozed => LanguageService.Format(
+                                "Nhắc lại {0} • kiểm tra {1}",
+                                review.RemindAtUtc.HasValue ? LocalizationAuditService.FormatDateTime(review.RemindAtUtc.Value) : "",
+                                LocalizationAuditService.FormatDateTime(review.LastCheckedUtc)),
+                            SecurityFindingReviewStatus.Ignored => LanguageService.Format(
+                                "Đã bỏ qua: {0} • kiểm tra {1}",
                                 review.Reason,
-                                review.LastCheckedUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")),
-                            _ => string.Format(
-                                LanguageService.Translate("Đang mở • kiểm tra {0}"),
-                                review.LastCheckedUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm"))
+                                LocalizationAuditService.FormatDateTime(review.LastCheckedUtc)),
+                            _ => LanguageService.Format(
+                                "Đang mở • kiểm tra {0}",
+                                LocalizationAuditService.FormatDateTime(review.LastCheckedUtc))
                         };
                         return new SecurityFindingViewItem(account.Id, finding.Kind, description, reviewText);
                     })
