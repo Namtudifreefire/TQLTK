@@ -7,9 +7,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text.Json;
 using PersonalInfoManager.Models;
-
 namespace PersonalInfoManager.Services;
-
 public sealed record CompleteBackupInfo(
     string ExportedBy,
     DateTime ExportedAtUtc,
@@ -25,7 +23,6 @@ public sealed record CompleteBackupInfo(
     public bool IncludesNotes { get; init; }
     public bool IncludesPersonalFiles { get; init; }
 }
-
 public sealed class CompleteBackupPreview
 {
     internal CompleteBackupPreview(string path, string fileHash, string localStateHash,
@@ -41,7 +38,6 @@ public sealed class CompleteBackupPreview
         NotesToAdd = notesToAdd;
         FilesToAdd = filesToAdd;
     }
-
     internal string Path { get; }
     internal string FileHash { get; }
     internal string LocalStateHash { get; }
@@ -51,7 +47,6 @@ public sealed class CompleteBackupPreview
     public int NotesToAdd { get; }
     public int FilesToAdd { get; }
 }
-
 public sealed record BackupComparisonResult(
     CompleteBackupInfo Older,
     CompleteBackupInfo Newer,
@@ -67,7 +62,6 @@ public sealed record BackupComparisonResult(
     public string LocalStateHash { get; init; } = "";
     public IReadOnlyList<BackupComparisonEntry> Entries { get; init; } = Array.Empty<BackupComparisonEntry>();
 }
-
 public enum BackupRecoveryItemKind
 {
     Account,
@@ -75,7 +69,6 @@ public enum BackupRecoveryItemKind
     PersonalFile,
     Settings
 }
-
 public sealed class BackupComparisonEntry
 {
     public required string Name { get; init; }
@@ -87,9 +80,7 @@ public sealed class BackupComparisonEntry
     public required IReadOnlyList<string> AvailableSources { get; init; }
     public string SelectedSource { get; set; } = "";
 }
-
 public sealed record BackupRecoverySelection(BackupRecoveryItemKind Kind, string Key, bool FromOlder);
-
 public static class CompleteBackupService
 {
     public const string FileExtension = ".tqltk";
@@ -101,13 +92,12 @@ public static class CompleteBackupService
     private const string SettingsEntry = "data/settings.json";
     private const int MaximumEntries = 10005;
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = false };
-
     private sealed class PackageManifest
     {
         public int FormatVersion { get; set; } = CurrentFormatVersion;
         public string ExportedBy { get; set; } = "";
         public DateTime ExportedAtUtc { get; set; }
-        public string AppVersion { get; set; } = "3.6.8";
+        public string AppVersion { get; set; } = global::PersonalInfoManager.Services.AppVersion.Current;
         public int AccountCount { get; set; }
         public int NoteCount { get; set; }
         public int PersonalFileCount { get; set; }
@@ -119,7 +109,6 @@ public static class CompleteBackupService
         public string SnapshotFingerprint { get; set; } = "";
         public List<PersonalFileManifest> PersonalFiles { get; set; } = new();
     }
-
     private sealed class PersonalFileManifest
     {
         public string EntryName { get; set; } = "";
@@ -128,7 +117,6 @@ public static class CompleteBackupService
         public long LastWriteTimeUtcTicks { get; set; }
         public string Sha256 { get; set; } = "";
     }
-
     private sealed class PortableSettings
     {
         public string Language { get; set; } = "vi";
@@ -138,7 +126,6 @@ public static class CompleteBackupService
         public bool AutoThemeEnabled { get; set; }
         public int PwnedPasswordReminderDays { get; set; }
     }
-
     private sealed class LoadedPackage : IDisposable
     {
         public required byte[] ArchiveBytes { get; init; }
@@ -147,10 +134,8 @@ public static class CompleteBackupService
         public required List<Note> Notes { get; init; }
         public PortableSettings? Settings { get; init; }
         public required Dictionary<string, PersonalFileManifest> Files { get; init; }
-
         public void Dispose() => CryptographicOperations.ZeroMemory(ArchiveBytes);
     }
-
     public static (bool ok, string message, CompleteBackupInfo? info) Create(
         string username, string destinationPath, string passphrase,
         bool includeNotes = true, bool includePersonalFiles = true, bool includeSettings = true,
@@ -160,7 +145,6 @@ public static class CompleteBackupService
             return (false, "Cần cụm mật khẩu sao lưu để tạo gói có thể mở trên máy khác.", null);
         if (passphrase.Length < BackupCrypto.MinPassphraseLength)
             return (false, $"Cụm mật khẩu cần ít nhất {BackupCrypto.MinPassphraseLength} ký tự.", null);
-
         byte[]? archiveBuffer = null;
         int archiveLength = 0;
         BoundedMemoryStream? archiveStream = null;
@@ -180,7 +164,6 @@ public static class CompleteBackupService
                 fileBytes = checked(fileBytes + fileService.GetPlaintextLength(file.FullName));
             if (fileBytes > FileBackupService.MaxTotalBytes)
                 return (false, $"Tệp cá nhân vượt giới hạn sao lưu {FileBackupService.FormatSize(FileBackupService.MaxTotalBytes)}.", null);
-
             PortableSettings? settings = includeSettings ? CaptureSettings() : null;
             var manifest = new PackageManifest
             {
@@ -195,12 +178,10 @@ public static class CompleteBackupService
                 IncludesSettings = includeSettings,
                 SnapshotFingerprint = snapshotFingerprint
             };
-
             long estimatedBytes = MeasureJson(accounts) + MeasureJson(notes) +
                 (settings == null ? 0 : MeasureJson(settings)) + fileBytes + 256 * 1024;
             if (estimatedBytes > MaximumArchiveBytes)
                 return (false, $"Dữ liệu quá lớn cho một gói chuyển máy ({FileBackupService.FormatSize(estimatedBytes)}). Giới hạn hiện tại là {FileBackupService.FormatSize(MaximumArchiveBytes)}.", null);
-
             archiveStream = new BoundedMemoryStream(MaximumArchiveBytes);
             {
                 using (var zip = new ZipArchive(archiveStream, ZipArchiveMode.Create, leaveOpen: true))
@@ -208,7 +189,6 @@ public static class CompleteBackupService
                     WriteJson(zip, AccountsEntry, accounts);
                     if (includeNotes) WriteJson(zip, NotesEntry, notes);
                     if (settings != null) WriteJson(zip, SettingsEntry, settings);
-
                     for (int index = 0; index < files.Count; index++)
                     {
                         cancellationToken.ThrowIfCancellationRequested();
@@ -217,7 +197,6 @@ public static class CompleteBackupService
                         var entry = zip.CreateEntry(entryName, CompressionLevel.Optimal);
                         if (file.LastWriteTimeUtc.Year is >= 1980 and <= 2107)
                             entry.LastWriteTime = file.LastWriteTimeUtc;
-
                         using var destination = entry.Open();
                         using var hashing = new HashingWriteStream(destination, leaveOpen: true);
                         fileService.CopyToPlaintext(file.FullName, hashing);
@@ -232,11 +211,9 @@ public static class CompleteBackupService
                             Sha256 = hashing.GetHash()
                         });
                     }
-
                     manifest.ArchiveBytes = estimatedBytes;
                     WriteJson(zip, ManifestEntry, manifest);
                 }
-
                 if (archiveStream.Length > MaximumArchiveBytes)
                     throw new InvalidDataException("Gói sao lưu vượt giới hạn dung lượng cho phép.");
                 if (!archiveStream.TryGetBuffer(out ArraySegment<byte> segment) || segment.Array == null)
@@ -244,11 +221,9 @@ public static class CompleteBackupService
                 archiveBuffer = segment.Array;
                 archiveLength = checked((int)archiveStream.Length);
             }
-
             cancellationToken.ThrowIfCancellationRequested();
             if (!string.Equals(snapshotFingerprint, GetCurrentStateFingerprint(username, cancellationToken), StringComparison.Ordinal))
                 throw new InvalidOperationException("Dữ liệu thay đổi trong lúc tạo bản sao lưu. Hãy thử lại sau.");
-
             cancellationToken.ThrowIfCancellationRequested();
             encrypted = BackupCrypto.EncryptBytes(archiveBuffer.AsSpan(0, archiveLength), passphrase);
             stagedPath = AtomicFileService.WriteTemporary(destinationPath, encrypted);
@@ -281,7 +256,6 @@ public static class CompleteBackupService
             if (stagedPath != null) AtomicFileService.TryDelete(stagedPath);
         }
     }
-
     public static (bool ok, string message, CompleteBackupInfo? info) Inspect(string path, string passphrase)
     {
         try
@@ -295,7 +269,6 @@ public static class CompleteBackupService
             return (false, "Không thể xác minh gói sao lưu: " + ex.Message, null);
         }
     }
-
     public static (bool ok, string message, CompleteBackupPreview? preview) PrepareRestore(
         string username, string path, string passphrase)
     {
@@ -328,7 +301,6 @@ public static class CompleteBackupService
                     exists ? "Giữ bản đang có" : "Sẽ thêm", account.Username));
                 if (!exists) addAccounts++;
             }
-
             int addNotes = 0;
             foreach (Note note in package.Notes)
             {
@@ -336,7 +308,6 @@ public static class CompleteBackupService
                 items.Add(new BackupPreviewItem(note.Title, exists ? "Giữ ghi chú đang có" : "Sẽ thêm ghi chú", ""));
                 if (!exists) addNotes++;
             }
-
             int addFiles = 0;
             foreach (PersonalFileManifest file in package.Files.Values)
             {
@@ -349,7 +320,6 @@ public static class CompleteBackupService
                     FileBackupService.FormatSize(file.Length)));
                 if (!sameContent) addFiles++;
             }
-
             var preview = new CompleteBackupPreview(Path.GetFullPath(path), HashFile(path), stateHash,
                 ToInfo(package.Manifest, new FileInfo(path).Length), items, addAccounts, addNotes, addFiles);
             return (true, "Đã xem trước. Khôi phục chỉ bổ sung mục còn thiếu, không ghi đè dữ liệu hiện tại.", preview);
@@ -359,7 +329,6 @@ public static class CompleteBackupService
             return (false, "Không thể xem trước gói sao lưu: " + ex.Message, null);
         }
     }
-
     public static (bool ok, string message, int accountsAdded, int notesAdded, int filesAdded) Restore(
         string username, CompleteBackupPreview preview, string passphrase, bool restoreSettings,
         bool allowForeignOwner = false)
@@ -378,7 +347,6 @@ public static class CompleteBackupService
         {
             if (!File.Exists(preview.Path) || !string.Equals(HashFile(preview.Path), preview.FileHash, StringComparison.Ordinal))
                 return (false, "Gói đã thay đổi sau khi xem trước. Hãy xem trước lại.", 0, 0, 0);
-
             using LoadedPackage package = Load(preview.Path, passphrase);
             if (!string.Equals(package.Manifest.ExportedBy, username, StringComparison.OrdinalIgnoreCase) && !allowForeignOwner)
                 return (false, "Gói được tạo bởi tài khoản khác. Cần xác nhận rõ trước khi nhập.", 0, 0, 0);
@@ -386,7 +354,6 @@ public static class CompleteBackupService
                 package.Manifest.NoteCount != preview.Info.NoteCount ||
                 package.Manifest.PersonalFileCount != preview.Info.PersonalFileCount)
                 return (false, "Số lượng dữ liệu không khớp bản xem trước. Hãy xem trước lại.", 0, 0, 0);
-
             using var storageLock = AesCrypto.AcquireStorageLock();
             vaultService = new AccountVaultService();
             var currentAccounts = vaultService.Load(username);
@@ -400,7 +367,6 @@ public static class CompleteBackupService
             if (!string.Equals(ComputeLocalStateHash(currentAccounts, currentNotes, currentFiles, originalSettings),
                     preview.LocalStateHash, StringComparison.Ordinal))
                 return (false, "Dữ liệu trên máy đã thay đổi sau khi xem trước. Hãy xem trước lại.", 0, 0, 0);
-
             foreach (SavedAccount incoming in package.Accounts)
             {
                 if (currentAccounts.Any(existing => existing.Id == incoming.Id || SameAccount(existing, incoming))) continue;
@@ -412,7 +378,6 @@ public static class CompleteBackupService
                 vaultService.Save(username, currentAccounts);
                 accountsSaved = true;
             }
-
             foreach (Note incoming in package.Notes)
             {
                 if (currentNotes.Any(existing => existing.Id == incoming.Id)) continue;
@@ -424,7 +389,6 @@ public static class CompleteBackupService
                 new NoteService().Save(currentNotes);
                 notesSaved = true;
             }
-
             currentFiles = fileService.ListFilesReadOnly(username);
             using var archiveStream = new MemoryStream(package.ArchiveBytes, writable: false);
             using var archive = new ZipArchive(archiveStream, ZipArchiveMode.Read);
@@ -439,14 +403,12 @@ public static class CompleteBackupService
                     using var incoming = entry.Open();
                     if (fileService.ContentEqualsReadOnly(sameName.FullName, incoming, entry.Length)) continue;
                 }
-
                 using var source = entry.Open();
                 string importedPath = fileService.ImportStream(username, file.FileName, source, entry.Length,
                     new DateTime(file.LastWriteTimeUtcTicks, DateTimeKind.Utc));
                 importedFilePaths.Add(importedPath);
                 filesAdded++;
             }
-
             if (restoreSettings && package.Settings != null)
             {
                 settingsMayHaveChanged = true;
@@ -477,7 +439,6 @@ public static class CompleteBackupService
             return (false, $"Khôi phục chưa hoàn tất: {ex.Message}\n{rollbackStatus}", 0, 0, 0);
         }
     }
-
     public static (bool ok, string message, BackupComparisonResult? result) Compare(
         string username, string olderPath, string olderPassphrase, string newerPath, string newerPassphrase)
     {
@@ -513,7 +474,6 @@ public static class CompleteBackupService
             }
             else
                 AddNonComparableCategory("Cài đặt an toàn", changes, entries);
-
             int added = changes.Count(item => item.Status == "Được thêm");
             int changed = changes.Count(item => item.Status == "Đã sửa");
             int removed = changes.Count(item => item.Status == "Đã xóa");
@@ -534,14 +494,12 @@ public static class CompleteBackupService
             return (false, "Không thể so sánh hai bản sao lưu: " + ex.Message, null);
         }
     }
-
     public static (bool ok, string message, int accountsAdded, int notesAdded, int filesAdded) RecoverSelectedAsCopies(
         string username, BackupComparisonResult comparison, string olderPassphrase, string newerPassphrase,
         IReadOnlyList<BackupRecoverySelection> selections, bool allowForeignOwner = false)
     {
         if (selections.Count == 0)
             return (false, "Chưa chọn mục cần khôi phục.", 0, 0, 0);
-
         AccountVaultService? vaultService = null;
         LocalFileService? fileService = null;
         List<SavedAccount>? originalAccounts = null;
@@ -555,7 +513,6 @@ public static class CompleteBackupService
                 !string.Equals(HashFile(comparison.OlderPath), comparison.OlderFileHash, StringComparison.Ordinal) ||
                 !string.Equals(HashFile(comparison.NewerPath), comparison.NewerFileHash, StringComparison.Ordinal))
                 return (false, "Một gói đã thay đổi sau khi so sánh. Hãy so sánh lại trước khi khôi phục.", 0, 0, 0);
-
             foreach (BackupRecoverySelection selection in selections)
             {
                 bool offered = comparison.Entries.Any(entry => entry.Kind == selection.Kind &&
@@ -565,7 +522,6 @@ public static class CompleteBackupService
                 if (!offered || selection.Kind == BackupRecoveryItemKind.Settings)
                     return (false, "Danh sách mục khôi phục không khớp với kết quả so sánh. Hãy mở lại phần so sánh.", 0, 0, 0);
             }
-
             using LoadedPackage older = Load(comparison.OlderPath, olderPassphrase);
             using LoadedPackage newer = Load(comparison.NewerPath, newerPassphrase);
             bool usesOlder = selections.Any(selection => selection.FromOlder);
@@ -573,7 +529,6 @@ public static class CompleteBackupService
             if (((usesOlder && !string.Equals(older.Manifest.ExportedBy, username, StringComparison.OrdinalIgnoreCase)) ||
                  (usesNewer && !string.Equals(newer.Manifest.ExportedBy, username, StringComparison.OrdinalIgnoreCase))) && !allowForeignOwner)
                 return (false, "Có gói được tạo bởi tài khoản khác. Cần xác nhận rõ trước khi nhập.", 0, 0, 0);
-
             using var storageLock = AesCrypto.AcquireStorageLock();
             vaultService = new AccountVaultService();
             List<SavedAccount> currentAccounts = vaultService.Load(username);
@@ -583,11 +538,9 @@ public static class CompleteBackupService
             if (!string.Equals(ComputeLocalStateHash(currentAccounts, currentNotes, currentFiles, CaptureSettings()),
                     comparison.LocalStateHash, StringComparison.Ordinal))
                 return (false, "Dữ liệu hiện tại đã thay đổi kể từ lúc so sánh. Hãy so sánh lại để bảo vệ các chỉnh sửa mới.", 0, 0, 0);
-
             originalAccounts = currentAccounts.Select(account => account.Clone()).ToList();
             originalNotes = JsonSerializer.Deserialize<List<Note>>(JsonSerializer.Serialize(currentNotes, JsonOptions), JsonOptions)
                 ?? throw new InvalidDataException("Không thể tạo bản chụp ghi chú trước khi khôi phục.");
-
             int accountsAdded = 0, notesAdded = 0, filesAdded = 0;
             string recoveredTag = LanguageService.Translate("Bản phục hồi từ sao lưu");
             CultureInfo displayCulture = LanguageService.IsEnglish ? CultureInfo.GetCultureInfo("en-US") : CultureInfo.GetCultureInfo("vi-VN");
@@ -659,7 +612,6 @@ public static class CompleteBackupService
                         throw new InvalidDataException("Loại mục khôi phục không được hỗ trợ.");
                 }
             }
-
             if (accountsAdded > 0)
             {
                 vaultService.Save(username, currentAccounts);
@@ -689,7 +641,6 @@ public static class CompleteBackupService
             return (false, LanguageService.Format("Không thể khôi phục các mục đã chọn: {0}\n{1}", ex.Message, rollbackStatus), 0, 0, 0);
         }
     }
-
     public static IReadOnlyList<FileInfo> ListBackups(string folder)
     {
         if (!Directory.Exists(folder)) return Array.Empty<FileInfo>();
@@ -697,7 +648,6 @@ public static class CompleteBackupService
             .Where(file => !file.Name.EndsWith(".tmp", StringComparison.OrdinalIgnoreCase))
             .OrderByDescending(file => file.LastWriteTimeUtc).ToArray();
     }
-
     public static string GetCurrentStateFingerprint(string username, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -706,7 +656,6 @@ public static class CompleteBackupService
         var files = new LocalFileService().ListFiles(username);
         return ComputeLocalStateHash(accounts, notes, files, CaptureSettings(), cancellationToken);
     }
-
     private static string GetCurrentStateFingerprintReadOnly(string username)
     {
         var accounts = new AccountVaultService().Load(username);
@@ -714,14 +663,12 @@ public static class CompleteBackupService
         var files = new LocalFileService().ListFilesReadOnly(username);
         return ComputeLocalStateHash(accounts, notes, files, CaptureSettings());
     }
-
     private static LoadedPackage Load(string path, string passphrase)
     {
         if (!File.Exists(path)) throw new FileNotFoundException("Không tìm thấy gói sao lưu.", path);
         var file = new FileInfo(path);
         if (file.Length <= 0 || file.Length > MaximumArchiveBytes + 128)
             throw new InvalidDataException("Gói sao lưu rỗng hoặc vượt giới hạn dung lượng.");
-
         byte[] encrypted = File.ReadAllBytes(path);
         byte[]? archiveBytes = null;
         try
@@ -729,14 +676,12 @@ public static class CompleteBackupService
             archiveBytes = BackupCrypto.DecryptBytes(encrypted, passphrase);
             if (archiveBytes.Length > MaximumArchiveBytes)
                 throw new InvalidDataException("Nội dung giải mã vượt giới hạn dung lượng.");
-
             using var stream = new MemoryStream(archiveBytes, writable: false);
             using var zip = new ZipArchive(stream, ZipArchiveMode.Read, leaveOpen: false);
             if (zip.Entries.Count is < 2 or > MaximumEntries)
                 throw new InvalidDataException("Số mục trong gói sao lưu không hợp lệ.");
             if (zip.Entries.Select(item => item.FullName).Distinct(StringComparer.Ordinal).Count() != zip.Entries.Count)
                 throw new InvalidDataException("Gói chứa tên mục trùng lặp.");
-
             PackageManifest manifest = ReadJson<PackageManifest>(zip, ManifestEntry);
             if (manifest.FormatVersion != CurrentFormatVersion || manifest.AccountCount < 0 ||
                 manifest.NoteCount < 0 || manifest.PersonalFileCount < 0 ||
@@ -745,7 +690,6 @@ public static class CompleteBackupService
                 throw new InvalidDataException("Manifest gói sao lưu không hợp lệ hoặc không được hỗ trợ.");
             if (manifest.SnapshotFingerprint.Length != 64 || !manifest.SnapshotFingerprint.All(Uri.IsHexDigit))
                 throw new InvalidDataException("Dấu kiểm tra trạng thái dữ liệu trong manifest không hợp lệ.");
-
             List<SavedAccount> accounts = ReadJson<List<SavedAccount>>(zip, AccountsEntry);
             List<Note> notes = manifest.IncludesNotes ? ReadJson<List<Note>>(zip, NotesEntry) : new();
             PortableSettings? settings = manifest.IncludesSettings ? ReadJson<PortableSettings>(zip, SettingsEntry) : null;
@@ -758,7 +702,6 @@ public static class CompleteBackupService
                 throw new InvalidDataException("Gói chứa mã tài khoản hoặc ghi chú bị trùng.");
             AccountVaultService.ValidateAttachments(accounts);
             ValidateSettings(settings);
-
             var fileManifest = manifest.PersonalFiles ?? new();
             if (!manifest.IncludesPersonalFiles && fileManifest.Count != 0)
                 throw new InvalidDataException("Manifest ghi có tệp nhưng cờ tệp cá nhân đang tắt.");
@@ -787,7 +730,6 @@ public static class CompleteBackupService
             }
             if (totalFiles != manifest.PersonalFileBytes || totalFiles > FileBackupService.MaxTotalBytes)
                 throw new InvalidDataException("Tổng dung lượng tệp cá nhân không khớp hoặc vượt giới hạn.");
-
             var allowed = new HashSet<string>(StringComparer.Ordinal)
                 { ManifestEntry, AccountsEntry };
             if (manifest.IncludesNotes) allowed.Add(NotesEntry);
@@ -795,7 +737,6 @@ public static class CompleteBackupService
             foreach (string name in files.Keys) allowed.Add(name);
             if (zip.Entries.Any(entry => !allowed.Contains(entry.FullName)))
                 throw new InvalidDataException("Gói chứa mục không được khai báo trong manifest.");
-
             byte[] owned = archiveBytes;
             archiveBytes = null;
             return new LoadedPackage
@@ -814,7 +755,6 @@ public static class CompleteBackupService
             if (archiveBytes != null) CryptographicOperations.ZeroMemory(archiveBytes);
         }
     }
-
     private static void CompareAccounts(List<SavedAccount> older, List<SavedAccount> newer,
         List<BackupPreviewItem> changes, List<BackupComparisonEntry> entries)
     {
@@ -843,7 +783,6 @@ public static class CompleteBackupService
                 BackupRecoveryItemKind.Account, item.Id.ToString("D"), null, true, false));
         }
     }
-
     private static void CompareNotes(List<Note> older, List<Note> newer,
         List<BackupPreviewItem> changes, List<BackupComparisonEntry> entries)
     {
@@ -871,7 +810,6 @@ public static class CompleteBackupService
                 BackupRecoveryItemKind.Note, item.Id.ToString("D"), null, true, false));
         }
     }
-
     private static void CompareFiles(LoadedPackage older, LoadedPackage newer,
         List<BackupPreviewItem> changes, List<BackupComparisonEntry> entries)
     {
@@ -899,7 +837,6 @@ public static class CompleteBackupService
                 BackupRecoveryItemKind.PersonalFile, item.EntryName, null, true, false));
         }
     }
-
     private static BackupComparisonEntry CreateComparisonEntry(string name, string status, string details,
         BackupRecoveryItemKind kind, string? olderKey, string? newerKey, bool canUseOlder, bool canUseNewer)
     {
@@ -919,7 +856,6 @@ public static class CompleteBackupService
             SelectedSource = none
         };
     }
-
     private static void AddNonComparableCategory(string name, List<BackupPreviewItem> changes,
         List<BackupComparisonEntry> entries)
     {
@@ -937,7 +873,6 @@ public static class CompleteBackupService
             SelectedSource = unsupported
         });
     }
-
     private static string ComputeLocalStateHash(List<SavedAccount> accounts, List<Note> notes,
         List<FileInfo> files, PortableSettings settings, CancellationToken cancellationToken = default)
     {
@@ -954,18 +889,15 @@ public static class CompleteBackupService
         }
         return Convert.ToHexString(hash.GetHashAndReset());
     }
-
     private static void Append(IncrementalHash hash, string value)
     {
         byte[] bytes = System.Text.Encoding.UTF8.GetBytes(value);
         try { hash.AppendData(bytes); hash.AppendData(new byte[] { 0 }); }
         finally { CryptographicOperations.ZeroMemory(bytes); }
     }
-
     private static bool SameAccount(SavedAccount left, SavedAccount right) =>
         string.Equals(left.ServiceName, right.ServiceName, StringComparison.OrdinalIgnoreCase) &&
         string.Equals(left.Username, right.Username, StringComparison.OrdinalIgnoreCase);
-
     private static CompleteBackupInfo ToInfo(PackageManifest manifest, long archiveBytes) => new CompleteBackupInfo(
         manifest.ExportedBy, manifest.ExportedAtUtc, manifest.AppVersion, manifest.AccountCount,
         manifest.NoteCount, manifest.PersonalFileCount, manifest.PersonalFileBytes,
@@ -974,7 +906,6 @@ public static class CompleteBackupService
         IncludesNotes = manifest.IncludesNotes,
         IncludesPersonalFiles = manifest.IncludesPersonalFiles
     };
-
     private static PortableSettings CaptureSettings() => new()
     {
         Language = RegistryService.GetLanguage(),
@@ -984,7 +915,6 @@ public static class CompleteBackupService
         AutoThemeEnabled = RegistryService.GetAutoThemeEnabled(),
         PwnedPasswordReminderDays = RegistryService.GetPwnedPasswordReminderDays()
     };
-
     private static void ValidateSettings(PortableSettings? settings)
     {
         if (settings == null) return;
@@ -993,7 +923,6 @@ public static class CompleteBackupService
             settings.PwnedPasswordReminderDays is not (0 or 30 or 90 or 180))
             throw new InvalidDataException("Cài đặt trong gói sao lưu không hợp lệ.");
     }
-
     private static void ApplySettings(PortableSettings settings)
     {
         ValidateSettings(settings);
@@ -1013,21 +942,18 @@ public static class CompleteBackupService
         else
             ApplyAppearance();
     }
-
     private static long MeasureJson<T>(T value)
     {
         using var stream = new CountingWriteStream();
         JsonSerializer.Serialize(stream, value, JsonOptions);
         return stream.Count;
     }
-
     private static void WriteJson<T>(ZipArchive zip, string name, T value)
     {
         ZipArchiveEntry entry = zip.CreateEntry(name, CompressionLevel.Optimal);
         using Stream stream = entry.Open();
         JsonSerializer.Serialize(stream, value, JsonOptions);
     }
-
     private static T ReadJson<T>(ZipArchive zip, string entryName)
     {
         ZipArchiveEntry entry = zip.GetEntry(entryName)
@@ -1037,21 +963,18 @@ public static class CompleteBackupService
         return JsonSerializer.Deserialize<T>(stream, JsonOptions)
             ?? throw new InvalidDataException($"Mục '{entryName}' không đúng định dạng.");
     }
-
     private static string HashJson<T>(T value)
     {
         byte[] bytes = JsonSerializer.SerializeToUtf8Bytes(value, JsonOptions);
         try { return Convert.ToHexString(SHA256.HashData(bytes)); }
         finally { CryptographicOperations.ZeroMemory(bytes); }
     }
-
     private static string HashFile(string path, CancellationToken cancellationToken = default)
     {
         using var stream = new FileStream(path, FileMode.Open, FileAccess.Read,
             FileShare.ReadWrite | FileShare.Delete);
         return HashStream(stream, cancellationToken);
     }
-
     private static bool FileContentEquals(byte[] archiveBytes, string entryName,
         LocalFileService service, string existingPath, long expectedLength)
     {
@@ -1062,7 +985,6 @@ public static class CompleteBackupService
         using var incoming = entry.Open();
         return service.ContentEqualsReadOnly(existingPath, incoming, expectedLength);
     }
-
     private static string HashStream(Stream stream, CancellationToken cancellationToken = default)
     {
         using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
@@ -1079,7 +1001,6 @@ public static class CompleteBackupService
         }
         finally { CryptographicOperations.ZeroMemory(buffer); }
     }
-
     private sealed class CountingWriteStream : Stream
     {
         public long Count { get; private set; }
@@ -1096,7 +1017,6 @@ public static class CompleteBackupService
         public override void Write(ReadOnlySpan<byte> buffer) => Count = checked(Count + buffer.Length);
         public override void WriteByte(byte value) => Count = checked(Count + 1);
     }
-
     private sealed class BoundedMemoryStream(long limit) : MemoryStream
     {
         private void EnsureCapacity(long additional)
@@ -1112,7 +1032,6 @@ public static class CompleteBackupService
             base.SetLength(value);
         }
     }
-
     private sealed class HashingWriteStream(Stream inner, bool leaveOpen) : Stream
     {
         private readonly IncrementalHash _hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);

@@ -1,13 +1,17 @@
 param(
-    [string]$Version = "3.6.7",
+    [string]$Version,
     [string]$CertificateThumbprint = $env:TQLTK_SIGNING_CERT_THUMBPRINT,
     [string]$TimestampUrl = "https://timestamp.digicert.com",
     [switch]$UnsignedRelease
 )
-
 $ErrorActionPreference = "Stop"
+[xml]$projectDefinition = Get-Content -LiteralPath (Join-Path $PSScriptRoot "PersonalInfoManager.csproj") -Raw
+$projectVersions = @($projectDefinition.Project.PropertyGroup.Version | Where-Object { $_ })
+if ($projectVersions.Count -ne 1) { throw "The project must define exactly one Version." }
+$projectVersion = [string]$projectVersions[0]
+if ([string]::IsNullOrWhiteSpace($Version)) { $Version = $projectVersion }
+if ($Version -ne $projectVersion) { throw "Release version must match the project Version ($projectVersion). Update the project before releasing." }
 if ($Version -notmatch '^\d+\.\d+\.\d+$') { throw "Version must use major.minor.patch format." }
-
 function Get-Sha256Hash {
     param([Parameter(Mandatory = $true)][string]$LiteralPath)
     $algorithm = [Security.Cryptography.SHA256]::Create()
@@ -19,7 +23,6 @@ function Get-Sha256Hash {
         } finally { $stream.Dispose() }
     } finally { $algorithm.Dispose() }
 }
-
 $thumbprint = ($CertificateThumbprint -replace '\s', '').ToUpperInvariant()
 $projectRoot = [IO.Path]::GetFullPath($PSScriptRoot)
 $artifactsRoot = [IO.Path]::GetFullPath((Join-Path $projectRoot "artifacts"))
@@ -31,7 +34,6 @@ if (-not $workDirectory.StartsWith($artifactsPrefix, [StringComparison]::Ordinal
     throw "Release output path escaped the project artifacts directory."
 }
 if ((Split-Path -Leaf $workDirectory) -ne $workDirectoryName) { throw "Unexpected release output directory." }
-
 $signTool = $null
 $certificate = $null
 if (-not $thumbprint -and -not $UnsignedRelease) {
@@ -56,7 +58,6 @@ if ($thumbprint) {
     }
     $timestampUri = [Uri]$TimestampUrl
     if ($timestampUri.Scheme -ne [Uri]::UriSchemeHttps) { throw "The timestamp URL must use HTTPS." }
-
     $signTool = (Get-Command signtool.exe -ErrorAction SilentlyContinue).Source
     if (-not $signTool) {
         $sdkBin = Join-Path ${env:ProgramFiles(x86)} "Windows Kits\10\bin"
@@ -68,12 +69,10 @@ if ($thumbprint) {
     }
     if (-not $signTool) { throw "SignTool was not found. Install the Windows SDK or add SignTool to PATH." }
 }
-
 $testProject = Join-Path $projectRoot "tests\PersonalInfoManager.SecurityRegression.csproj"
 if (-not (Test-Path -LiteralPath $testProject -PathType Leaf)) { throw "Security regression test project was not found." }
 & dotnet run --project $testProject --configuration Release
 if ($LASTEXITCODE -ne 0) { throw "Security regression suite failed with exit code $LASTEXITCODE." }
-
 $artifactsRootExists = Test-Path -LiteralPath $artifactsRoot -PathType Container
 if ($artifactsRootExists -and
     ((Get-Item -LiteralPath $artifactsRoot).Attributes -band [IO.FileAttributes]::ReparsePoint)) {
@@ -88,7 +87,6 @@ if (Test-Path -LiteralPath $workDirectory) { Remove-Item -LiteralPath $workDirec
 $publishDirectory = Join-Path $workDirectory "publish"
 $packageDirectory = Join-Path $workDirectory "package"
 New-Item -ItemType Directory -Path $publishDirectory, $packageDirectory -Force | Out-Null
-
 $projectFile = Join-Path $projectRoot "PersonalInfoManager.csproj"
 $publishArguments = @(
     "publish", $projectFile,
@@ -104,12 +102,10 @@ $publishArguments = @(
 )
 & dotnet @publishArguments
 if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed with exit code $LASTEXITCODE." }
-
 $executable = Join-Path $publishDirectory "PersonalInfoManager.exe"
 $license = Join-Path $projectRoot "LICENSE"
 if (-not (Test-Path -LiteralPath $executable -PathType Leaf)) { throw "Published executable was not found." }
 if (-not (Test-Path -LiteralPath $license -PathType Leaf)) { throw "LICENSE was not found." }
-
 if ($thumbprint) {
     & $signTool sign /sha1 $thumbprint /s My /fd SHA256 /tr $TimestampUrl /td SHA256 $executable
     if ($LASTEXITCODE -ne 0) { throw "Authenticode signing failed with exit code $LASTEXITCODE." }
@@ -126,17 +122,14 @@ if ($thumbprint) {
     Write-Warning "Creating an unsigned release artifact. Windows may display a publisher or SmartScreen warning."
     $signatureStatus = "Unsigned"
 }
-
 $productVersion = [Diagnostics.FileVersionInfo]::GetVersionInfo($executable).ProductVersion
 if (-not $productVersion -or $productVersion -notmatch '^([0-9]+\.[0-9]+\.[0-9]+)(?:\+[0-9A-Za-z.-]+)?$' -or $Matches[1] -ne $Version) {
     throw "Published executable product version does not match $Version."
 }
-
 Copy-Item -LiteralPath $executable -Destination (Join-Path $packageDirectory "PersonalInfoManager.exe")
 Copy-Item -LiteralPath $license -Destination (Join-Path $packageDirectory "LICENSE")
 $zipPath = Join-Path $workDirectory "PersonalInfoManager-$Version-win-x64.zip"
 Compress-Archive -Path (Join-Path $packageDirectory "*") -DestinationPath $zipPath -CompressionLevel Optimal
-
 Add-Type -AssemblyName System.IO.Compression
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $archive = [IO.Compression.ZipFile]::OpenRead($zipPath)
@@ -147,7 +140,6 @@ try {
         throw "Release ZIP contents are invalid: $($entries -join ', ')"
     }
 } finally { $archive.Dispose() }
-
 $packagedExecutable = Join-Path $packageDirectory "PersonalInfoManager.exe"
 $exeHash = Get-Sha256Hash -LiteralPath $packagedExecutable
 $zipHash = Get-Sha256Hash -LiteralPath $zipPath
@@ -173,7 +165,6 @@ $manifestHash = Get-Sha256Hash -LiteralPath $manifestPath
 $checksumPath = Join-Path $workDirectory "SHA256SUMS.txt"
 $checksumText = "$zipHash  $(Split-Path -Leaf $zipPath)`r`n$exeHash  PersonalInfoManager.exe`r`n$manifestHash  release-manifest.json`r`n"
 [IO.File]::WriteAllText($checksumPath, $checksumText, [Text.UTF8Encoding]::new($false))
-
 Write-Host "Release artifacts created under: $workDirectory"
 Write-Host "ZIP: $zipPath"
 Write-Host "Manifest: $manifestPath"

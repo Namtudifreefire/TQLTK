@@ -6,7 +6,6 @@ using System.Windows.Media.Imaging;
 using PersonalInfoManager;
 using PersonalInfoManager.Models;
 using PersonalInfoManager.Services;
-
 internal static class UiLayoutRegression
 {
     internal static void Run(string username)
@@ -36,6 +35,7 @@ internal static class UiLayoutRegression
                     entry.SelectedSource = entry.AvailableSources[0];
                     Func<Window>[] createWindows =
                     [
+                        () => new LoginWindow(),
                         () => new MigrationGuideWindow(),
                         () => new BackupCenterWindow(username),
                         () => new BackupComparisonWindow(LanguageService.Translate("Chọn mục cần lấy từ một trong hai bản. Ứng dụng sẽ thêm thành bản sao để giữ nguyên dữ liệu hiện tại."), new[] { entry }),
@@ -50,6 +50,17 @@ internal static class UiLayoutRegression
                         try
                         {
                             LanguageService.ApplyToWindow(window);
+                            if (window is LoginWindow)
+                            {
+                                var footer = (TextBlock)window.FindName("txtCopyright");
+                                foreach (string selectedLanguage in new[] { language, language == "en" ? "vi" : "en", language })
+                                {
+                                    LanguageService.SetLanguageForTesting(selectedLanguage);
+                                    LanguageService.ApplyToWindow(window);
+                                    string expected = LocalizationAuditService.FormatForLanguage("app.footer", selectedLanguage, AppVersion.Current);
+                                    if (footer.Text != expected) throw new InvalidDataException("The login footer did not update when switching languages.");
+                                }
+                            }
                             FrameworkElement content = (FrameworkElement)window.Content;
                             double width = Math.Min(double.IsFinite(window.Width) ? window.Width : 900, 1920 / scale * 0.96) - 18;
                             double height = Math.Min(double.IsFinite(window.Height) ? window.Height : 700, 1080 / scale * 0.94) - 42;
@@ -85,7 +96,6 @@ internal static class UiLayoutRegression
         }
         finally { LanguageService.SetLanguageForTesting(originalLanguage); }
     }
-
     private static void VerifyDraftPreservedOnSessionEnd()
     {
         var saved = new SavedAccount { ServiceName = "Synthetic draft close test", Username = "synthetic@example.invalid" };
@@ -99,14 +109,12 @@ internal static class UiLayoutRegression
             throw new InvalidDataException("The editor did not preserve its opted-in draft when the session ended: " + error);
         EditAccountDraftService.Delete(scope, saved.Id);
     }
-
     private static bool InsideScrollableArea(DependencyObject element, DependencyObject root)
     {
         for (DependencyObject? current = VisualTreeHelper.GetParent(element); current != null && current != root; current = VisualTreeHelper.GetParent(current))
             if (current is ScrollViewer) return true;
         return false;
     }
-
     private static IEnumerable<DependencyObject> Descendants(DependencyObject root)
     {
         for (int index = 0; index < VisualTreeHelper.GetChildrenCount(root); index++)
@@ -116,7 +124,6 @@ internal static class UiLayoutRegression
             foreach (DependencyObject descendant in Descendants(child)) yield return descendant;
         }
     }
-
     private static void SavePreview(FrameworkElement content, Brush background, string name, string language, double scale)
     {
         string folder = Path.Combine(Directory.GetCurrentDirectory(), "obj", "ui-layout-previews");

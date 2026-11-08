@@ -2,19 +2,16 @@ using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
-
 namespace PersonalInfoManager.Services;
-
 public sealed record LocalizationAuditIssue(string Key, string Problem);
 public sealed record LocalizedMessageDefinition(string Id, string Vietnamese, string English, IReadOnlyList<string> Parameters);
-
 public static class LocalizationAuditService
 {
     private sealed record Message(string Vietnamese, string English);
-
     private static readonly IReadOnlyDictionary<string, Message> Messages =
         new Dictionary<string, Message>(StringComparer.Ordinal)
         {
+            ["app.footer"] = new("Được tạo bởi 天地と月の造化 - TQLTK v{0} (BETA) | © 2026 Namtudifreefire | Giấy phép MIT", "Made by 天地と月の造化 - TQLTK v{0} (BETA) | © 2026 Namtudifreefire | MIT License"),
             ["backup.periodic.disabled"] = new("Sao lưu định kỳ đang tắt.", "Scheduled backups are off."),
             ["backup.periodic.failure"] = new("Sao lưu gần nhất thất bại: {0}", "Most recent backup failed: {0}"),
             ["backup.periodic.last_success"] = new("Sao lưu đầy đủ gần nhất: {0}.", "Most recent full backup: {0}."),
@@ -29,21 +26,17 @@ public static class LocalizationAuditService
             ["backup.created.contents_summary"] = new("Đã tạo và xác minh gói mã hóa: {0}\nTài khoản gồm mật khẩu, TOTP, tệp đính kèm và trường tùy chỉnh: {1}. Ghi chú riêng: {2} ({3}). Tệp cá nhân: {4} ({5}). Cài đặt an toàn: {6}.", "Created and verified encrypted package: {0}\nAccounts include passwords, TOTP, attachments, and custom fields: {1}. Private notes: {2} ({3}). Personal files: {4} ({5}). Safe settings: {6}."),
             ["import.preview.count"] = new("Đọc được {count} mục. Chọn một mục để xem thông tin.", "Found {count} entries. Select one to view its details.")
         };
-
     private static readonly Regex Placeholder = new(@"(?<!\{)\{(?<name>[A-Za-z_][A-Za-z0-9_]*|\d+)(?<suffix>(?:,[^{}]*)?(?::[^{}]*)?)\}(?!\})", RegexOptions.CultureInvariant);
     private static readonly Lazy<IReadOnlyDictionary<string, LocalizedMessageDefinition>> Definitions = new(BuildDefinitions);
     private static readonly Lazy<IReadOnlyDictionary<string, LocalizedMessageDefinition>> SourceDefinitions = new(() =>
         Definitions.Value.Values.ToDictionary(item => item.Vietnamese, StringComparer.Ordinal));
-
     public static IReadOnlyCollection<LocalizedMessageDefinition> Catalog => Definitions.Value.Values.ToArray();
-
     public static string GetMessageId(string source)
     {
         return SourceDefinitions.Value.TryGetValue(source, out LocalizedMessageDefinition? definition)
             ? definition.Id
             : throw new KeyNotFoundException("The UI message has no registered translation: " + source);
     }
-
     internal static bool TryTranslateKnown(string sourceOrId, string languageCode, out string translation)
     {
         LocalizedMessageDefinition? definition = Definitions.Value.GetValueOrDefault(sourceOrId)
@@ -56,7 +49,6 @@ public static class LocalizationAuditService
         translation = IsEnglish(languageCode) ? definition.English : definition.Vietnamese;
         return true;
     }
-
     private static IReadOnlyDictionary<string, LocalizedMessageDefinition> BuildDefinitions()
     {
         var definitions = new Dictionary<string, LocalizedMessageDefinition>(StringComparer.Ordinal);
@@ -74,24 +66,21 @@ public static class LocalizationAuditService
         }
         return definitions;
     }
-
     public static string Get(string key) => Get(key, LanguageService.IsEnglish);
-
     public static string Get(string key, string? languageCode) => Get(key, IsEnglish(languageCode));
-
     private static string Get(string key, bool isEnglish)
     {
         if (!Definitions.Value.TryGetValue(key, out LocalizedMessageDefinition? message))
             throw new KeyNotFoundException($"Localization key '{key}' is not registered.");
         return isEnglish ? message.English : message.Vietnamese;
     }
-
+    public static string FormatForLanguage(string key, string languageCode, params object?[] arguments) =>
+        FormatTemplate(key, Get(key, languageCode), arguments, GetCulture(languageCode));
     public static string Format(string key, params object?[] arguments)
     {
         string template = Get(key);
         return FormatTemplate(key, template, arguments, GetCulture(null));
     }
-
     public static string FormatSource(string source, string languageCode, params object?[] arguments)
     {
         ArgumentNullException.ThrowIfNull(source);
@@ -107,7 +96,6 @@ public static class LocalizationAuditService
         }
         return FormatTemplate(source, template, arguments, culture);
     }
-
     private static string FormatTemplate(string key, string template, object?[] arguments, CultureInfo culture)
     {
         string[] placeholders = GetPlaceholders(template);
@@ -117,43 +105,35 @@ public static class LocalizationAuditService
                 throw new FormatException($"Localization key '{key}' uses named placeholders and requires one named-argument dictionary.");
             return FormatNamedTemplate(key, template, namedArguments, culture);
         }
-
         ValidateArguments(key, template, arguments.Length);
         return string.Format(culture, template, arguments);
     }
-
     public static string FormatNamed(string key, IReadOnlyDictionary<string, object?> arguments, string? languageCode = null)
     {
         ArgumentNullException.ThrowIfNull(arguments);
         bool isEnglish = IsEnglish(languageCode);
         return FormatNamedTemplate(key, Get(key, isEnglish), arguments, GetCulture(languageCode));
     }
-
     public static string FormatDate(DateTime value, string? languageCode = null)
     {
         CultureInfo culture = GetCulture(languageCode);
         return NormalizeForDisplay(value).ToString("d", culture);
     }
-
     public static string FormatDateTime(DateTime value, string? languageCode = null, bool includeSeconds = false)
     {
         CultureInfo culture = GetCulture(languageCode);
         return NormalizeForDisplay(value).ToString(includeSeconds ? "G" : "g", culture);
     }
-
     public static string FormatDateTime(DateTimeOffset value, string? languageCode = null, bool includeSeconds = false) =>
         value.ToLocalTime().ToString(includeSeconds ? "G" : "g", GetCulture(languageCode));
-
     public static string FormatDate(DateTimeOffset value, string? languageCode = null) =>
         value.ToLocalTime().ToString("d", GetCulture(languageCode));
-
     private static DateTime NormalizeForDisplay(DateTime value) => value.Kind switch
     {
         DateTimeKind.Utc => value.ToLocalTime(),
         DateTimeKind.Local => value,
         _ => DateTime.SpecifyKind(value, DateTimeKind.Local)
     };
-
     public static string FormatCount(int count, string singularEnglish, string pluralEnglish, string unitVietnamese,
         string? languageCode = null)
     {
@@ -162,15 +142,12 @@ public static class LocalizationAuditService
         if (!isEnglish) return $"{count.ToString(culture)} {unitVietnamese}";
         return count.ToString(CultureInfo.GetCultureInfo("en-US")) + " " + (count == 1 ? singularEnglish : pluralEnglish);
     }
-
     private static bool IsEnglish(string? languageCode) => languageCode == null
         ? LanguageService.IsEnglish
         : string.Equals(languageCode, "en", StringComparison.OrdinalIgnoreCase);
-
     private static CultureInfo GetCulture(string? languageCode) => IsEnglish(languageCode)
         ? CultureInfo.GetCultureInfo("en-US")
         : CultureInfo.GetCultureInfo("vi-VN");
-
     public static IReadOnlyList<LocalizationAuditIssue> Audit()
     {
         var issues = new List<LocalizationAuditIssue>();
@@ -183,7 +160,6 @@ public static class LocalizationAuditService
             if (!GetPlaceholders(message.Vietnamese).SequenceEqual(GetPlaceholders(message.English)))
                 issues.Add(new(key, "Hai bản dịch không có cùng tập tham số."));
         }
-
         foreach (Message message in Messages.Values)
         {
             foreach (string template in new[] { message.Vietnamese, message.English })
@@ -197,7 +173,6 @@ public static class LocalizationAuditService
                     issues.Add(new("LocalizationKeys", "Tham số phải liên tục từ {0} và không được bỏ số."));
             }
         }
-
         foreach ((string source, string translation) in EnglishCatalog.Entries)
         {
             if (string.IsNullOrWhiteSpace(source)) issues.Add(new("EnglishCatalog", "Có khóa tiếng Việt rỗng."));
@@ -209,20 +184,16 @@ public static class LocalizationAuditService
         }
         foreach (string source in EnglishCatalog.ConflictingDuplicateSources)
             issues.Add(new(source, "Khóa bản dịch nguồn được khai báo nhiều lần với các bản dịch tiếng Anh khác nhau."));
-
         foreach (LocalizedMessageDefinition definition in Catalog)
             if (definition.Parameters.Count != GetPlaceholders(definition.English).Length)
                 issues.Add(new(definition.Id, "Số tham số mô tả không khớp bản dịch."));
-
         return issues;
     }
-
     public static IReadOnlyList<LocalizationAuditIssue> AuditSources(IEnumerable<string> sources) =>
         sources.Distinct(StringComparer.Ordinal)
             .Where(source => !TryTranslateKnown(source, "en", out _))
             .Select(source => new LocalizationAuditIssue(source, "Thiếu mã thông báo hoặc bản dịch đã đăng ký."))
             .ToArray();
-
     private static void ValidateArguments(string key, string template, int argumentCount)
     {
         int[] indexes = GetPlaceholders(template)
@@ -233,19 +204,16 @@ public static class LocalizationAuditService
         if (indexes.Any(index => index >= argumentCount) || indexes.Distinct().Count() != argumentCount)
             throw new FormatException($"Localization key '{key}' expects placeholders [{string.Join(",", indexes)}], but received {argumentCount} arguments.");
     }
-
     private static void ValidateTemplate(List<LocalizationAuditIssue> issues, string key, string template)
     {
         try { _ = string.Format(CultureInfo.InvariantCulture, NormalizeNamedPlaceholders(template), new object?[32]); }
         catch (FormatException ex) { issues.Add(new(key, "Định dạng tham số không hợp lệ: " + ex.Message)); }
     }
-
     private static string[] GetPlaceholders(string value) => Placeholder.Matches(value)
         .Select(match => match.Groups["name"].Value)
         .Distinct(StringComparer.Ordinal)
         .OrderBy(name => name, StringComparer.Ordinal)
         .ToArray();
-
     private static string NormalizeNamedPlaceholders(string template)
     {
         var indexes = new Dictionary<string, int>(StringComparer.Ordinal);
@@ -257,7 +225,6 @@ public static class LocalizationAuditService
             return "{" + index.ToString(CultureInfo.InvariantCulture) + match.Groups["suffix"].Value + "}";
         });
     }
-
     private static string FormatNamedTemplate(string key, string template,
         IReadOnlyDictionary<string, object?> arguments, CultureInfo culture)
     {
@@ -269,7 +236,6 @@ public static class LocalizationAuditService
             throw new FormatException($"Localization key '{key}' is missing named argument '{missing}'.");
         if (arguments.Keys.Any(name => !placeholders.Contains(name, StringComparer.Ordinal)))
             throw new FormatException($"Localization key '{key}' received an unregistered named argument.");
-
         return Placeholder.Replace(template, match =>
         {
             string name = match.Groups["name"].Value;

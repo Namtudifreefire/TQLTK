@@ -9,9 +9,7 @@ using System.Windows.Documents;
 using System.Windows.Data;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
-
 namespace PersonalInfoManager.Services;
-
 public static class LanguageService
 {
     private sealed class ObservedValue
@@ -21,7 +19,6 @@ public static class LanguageService
         public Func<string>? Renderer { get; set; }
         public bool IsUpdating { get; set; }
     }
-
     private static readonly ConditionalWeakTable<DependencyObject, Dictionary<DependencyProperty, ObservedValue>> Observed = new();
     private static readonly ConditionalWeakTable<TextBlock, ObservedValue> LocalizedTextBlocks = new();
     private static readonly IReadOnlyDictionary<string, string> EnglishActivityActions =
@@ -130,6 +127,7 @@ public static class LanguageService
             ["RESTORE_COMPLETE_BACKUP_FAILED"] = "Full backup restore failed",
             ["BACKUP_CENTER_DENIED"] = "Backup manager access denied",
             ["RECOVER_SELECTED_BACKUP_DENIED"] = "Selected backup recovery denied",
+            ["RECOVER_SELECTED_BACKUP_COPIES_FAILED"] = "Recover backup entries as copies failed",
             ["RECOVER_SELECTED_BACKUP_COPIES"] = "Recover backup entries as copies",
             ["EDIT_DRAFT_SAVE_FAILED"] = "Encrypted edit draft save failed"
         };
@@ -173,17 +171,12 @@ public static class LanguageService
         @"^Tự động đổi giao diện sang (?<theme>Sáng|Tối) lúc (?<time>\d{2}:\d{2})$",
         RegexOptions.CultureInvariant);
     private static string _currentCode = RegistryService.GetLanguage();
-
     public static string CurrentCode => _currentCode;
-
     public static bool IsEnglish => _currentCode == "en";
-
 #if SECURITY_TEST
     internal static void SetLanguageForTesting(string code) => _currentCode = code == "en" ? "en" : "vi";
 #endif
-
     public static string GetDisplayName(string code) => code == "en" ? "English" : "Tiếng Việt";
-
     public static void SetLanguage(string code)
     {
         string normalized = code.Equals("en", StringComparison.OrdinalIgnoreCase) ? "en" : "vi";
@@ -194,39 +187,30 @@ public static class LanguageService
         foreach (Window window in Application.Current.Windows)
             ApplyToWindow(window);
     }
-
     public static string Translate(string value)
     {
         return Translate(value, _currentCode);
     }
-
     public static string Format(string source, params object?[] arguments) =>
         LocalizationAuditService.FormatSource(source, _currentCode, arguments);
-
     public static string TranslateLogContent(string content)
     {
         return TranslateLogContent(content, _currentCode);
     }
-
     internal static string TranslateLogContent(string content, string languageCode)
     {
         if (!string.Equals(languageCode, "en", StringComparison.OrdinalIgnoreCase) || string.IsNullOrEmpty(content)) return content;
-
         string normalized = content.Replace("\r\n", "\n", StringComparison.Ordinal);
         return string.Join(Environment.NewLine, normalized.Split('\n').Select(line => TranslateLogLine(line, languageCode)));
     }
-
     private static string TranslateLogLine(string line, string languageCode)
     {
         int timestampEnd = line.IndexOf("] [", StringComparison.Ordinal);
         if (timestampEnd != 20) return Translate(line, languageCode);
-
         int usernameEnd = line.IndexOf("] [", timestampEnd + 3, StringComparison.Ordinal);
         if (usernameEnd < 0) return Translate(line, languageCode);
-
         int actionEnd = line.IndexOf("] ", usernameEnd + 3, StringComparison.Ordinal);
         if (actionEnd < 0) return Translate(line, languageCode);
-
         int detailStart = actionEnd + 2;
         string action = line[(usernameEnd + 3)..actionEnd];
         string detail = line[detailStart..];
@@ -235,7 +219,6 @@ public static class LanguageService
             : action;
         return line[..(usernameEnd + 3)] + translatedAction + line[actionEnd..detailStart] + TranslateActivityLogDetail(action, detail, languageCode);
     }
-
     private static string TranslateActivityLogDetail(string action, string detail, string languageCode)
     {
         Match match;
@@ -344,20 +327,15 @@ public static class LanguageService
                     return "Manual: " + detail["Thủ công: ".Length..];
                 break;
         }
-
         return Translate(detail, languageCode);
     }
-
     private static bool TryParseLogCount(Match match, string groupName, out int count) =>
         int.TryParse(match.Groups[groupName].Value, NumberStyles.None, CultureInfo.InvariantCulture, out count);
-
     private static string Plural(int count, string singular, string plural) => count == 1 ? singular : plural;
-
     public static string Translate(string value, string languageCode)
     {
         if (!string.Equals(languageCode, "en", StringComparison.OrdinalIgnoreCase) || string.IsNullOrEmpty(value)) return value;
         if (LocalizationAuditService.TryTranslateKnown(value, languageCode, out string translated)) return translated;
-
         int start = 0;
         while (start < value.Length && char.IsWhiteSpace(value[start])) start++;
         int end = value.Length;
@@ -368,7 +346,6 @@ public static class LanguageService
             if (EnglishCatalog.Entries.TryGetValue(content, out string? innerTranslation))
                 return string.Concat(value.AsSpan(0, start), innerTranslation, value.AsSpan(end));
         }
-
         string result = ProtectQuotedValues(value, out List<(string Token, string Value)> quotedValues);
         foreach (var pair in EnglishCatalog.Fragments.OrderByDescending(pair => pair.Key.Length))
         {
@@ -400,7 +377,6 @@ public static class LanguageService
             result = result.Replace(token, quotedValue, StringComparison.Ordinal);
         return result;
     }
-
     private static string ProtectQuotedValues(string value, out List<(string Token, string Value)> quotedValues)
     {
         quotedValues = new List<(string Token, string Value)>();
@@ -413,7 +389,6 @@ public static class LanguageService
                 result.Append(value[position++]);
                 continue;
             }
-
             int end = position + 1;
             while (end < value.Length)
             {
@@ -422,13 +397,11 @@ public static class LanguageService
                 if (end + 1 == value.Length || !char.IsLetterOrDigit(value[end + 1])) break;
                 end++;
             }
-
             if (end < 0)
             {
                 result.Append(value.AsSpan(position));
                 break;
             }
-
             result.Append('\'');
             string content = value[(position + 1)..end];
             bool hasLeadingOrTrailingWhitespace = content.Length > 0 &&
@@ -446,13 +419,10 @@ public static class LanguageService
             result.Append('\'');
             position = end + 1;
         }
-
         return result.ToString();
     }
-
     private static bool HasVietnameseCharacters(string value) => value.Any(character =>
         character is >= '\u00C0' and <= '\u024F' or >= '\u1E00' and <= '\u1EFF');
-
     private static string ReplaceAfterNumber(string value, string fragment, string replacement)
     {
         StringBuilder? result = null;
@@ -479,41 +449,34 @@ public static class LanguageService
         result.Append(value, copiedThrough, value.Length - copiedThrough);
         return result.ToString();
     }
-
     public static void HandleWindowLoaded(object sender, RoutedEventArgs e)
     {
         if (sender is Window window) ApplyToWindow(window);
     }
-
     public static void ApplyToWindow(Window window)
     {
         Visit(window, new HashSet<DependencyObject>());
         RefreshLocalizedBindings(window, new HashSet<DependencyObject>());
     }
-
     private static void RefreshLocalizedBindings(DependencyObject element, HashSet<DependencyObject> visited)
     {
         if (!visited.Add(element)) return;
-
         if (element is TextBlock textBlock &&
             BindingOperations.GetBindingExpression(textBlock, TextBlock.TextProperty) is { } binding &&
             binding.ParentBinding.Converter is LocalizedTextConverter)
         {
             binding.UpdateTarget();
         }
-
         if (element is Visual or Visual3D)
         {
             int visualChildren = VisualTreeHelper.GetChildrenCount(element);
             for (int i = 0; i < visualChildren; i++)
                 RefreshLocalizedBindings(VisualTreeHelper.GetChild(element, i), visited);
         }
-
         foreach (object child in LogicalTreeHelper.GetChildren(element))
             if (child is DependencyObject dependencyChild)
                 RefreshLocalizedBindings(dependencyChild, visited);
     }
-
     public static void SetLocalizedText(TextBlock textBlock, string sourceText)
     {
         ObservedValue observation = LocalizedTextBlocks.GetValue(textBlock, _ => new());
@@ -521,7 +484,6 @@ public static class LanguageService
         observation.Renderer = null;
         RenderLocalizedTextBlock(textBlock, observation);
     }
-
     public static void SetLocalizedKey(TextBlock textBlock, string localizationKey)
     {
         ArgumentNullException.ThrowIfNull(textBlock);
@@ -531,7 +493,13 @@ public static class LanguageService
         observation.Renderer = () => LocalizationAuditService.Get(localizationKey);
         RenderLocalizedTextBlock(textBlock, observation);
     }
-
+    public static void SetLocalizedFormattedKey(TextBlock textBlock, string key, Func<object?[]> arguments)
+    {
+        ObservedValue observation = LocalizedTextBlocks.GetValue(textBlock, _ => new());
+        observation.Source = key;
+        observation.Renderer = () => LocalizationAuditService.FormatForLanguage(key, CurrentCode, arguments());
+        RenderLocalizedTextBlock(textBlock, observation);
+    }
     public static void SetLocalizedFormattedText(
         TextBlock textBlock,
         string sourceTemplate,
@@ -542,11 +510,9 @@ public static class LanguageService
         observation.Renderer = () => Format(sourceTemplate, arguments());
         RenderLocalizedTextBlock(textBlock, observation);
     }
-
     private static void Visit(DependencyObject element, HashSet<DependencyObject> visited)
     {
         if (!visited.Add(element)) return;
-
         if (element is Window window)
             Observe(window, Window.TitleProperty, value => ((Window)value).Title, (value, text) => value.SetCurrentValue(Window.TitleProperty, text ?? ""));
         if (element is TextBlock textBlock)
@@ -586,11 +552,9 @@ public static class LanguageService
             if (frameworkElement.ToolTip is DependencyObject toolTip) Visit(toolTip, visited);
             if (frameworkElement.ContextMenu is DependencyObject contextMenu) Visit(contextMenu, visited);
         }
-
         foreach (object child in LogicalTreeHelper.GetChildren(element))
             if (child is DependencyObject dependencyChild) Visit(dependencyChild, visited);
     }
-
     private static void RenderLocalizedTextBlock(TextBlock textBlock, ObservedValue observation)
     {
         string? translated = observation.Renderer?.Invoke() ??
@@ -601,7 +565,6 @@ public static class LanguageService
         try { textBlock.SetCurrentValue(TextBlock.TextProperty, translated); }
         finally { observation.IsUpdating = false; }
     }
-
     private static void Observe(
         DependencyObject target,
         DependencyProperty property,
@@ -609,14 +572,12 @@ public static class LanguageService
         Action<DependencyObject, string?> setter)
     {
         if (BindingOperations.IsDataBound(target, property)) return;
-
         Dictionary<DependencyProperty, ObservedValue> values = Observed.GetValue(target, _ => new());
         if (!values.TryGetValue(property, out ObservedValue? observation))
         {
             string? current = getter(target);
             observation = new ObservedValue { Source = current, Rendered = current };
             values[property] = observation;
-
             DependencyPropertyDescriptor? descriptor = DependencyPropertyDescriptor.FromProperty(property, target.GetType());
             if (descriptor != null)
             {
@@ -634,10 +595,8 @@ public static class LanguageService
             if (!observation.IsUpdating && !string.Equals(current, observation.Rendered, StringComparison.Ordinal))
                 observation.Source = current;
         }
-
         Render(target, getter, setter, observation);
     }
-
     private static void OnValueChanged(
         DependencyObject target,
         Func<DependencyObject, string?> getter,
@@ -651,7 +610,6 @@ public static class LanguageService
         observation.Source = current;
         Render(target, getter, setter, observation);
     }
-
     private static void Render(
         DependencyObject target,
         Func<DependencyObject, string?> getter,
@@ -665,7 +623,6 @@ public static class LanguageService
         try { setter(target, translated); }
         finally { observation.IsUpdating = false; }
     }
-
     private static bool IsUserDataTextBlock(TextBlock textBlock) => textBlock.Name is
         "lblAvatar" or "lblUserName" or "lblMenuEmail" or "lblProfileCreatedAt" or "lblAccount";
 }
