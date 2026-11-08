@@ -4,6 +4,8 @@ Ngày đối chiếu: 2026-11-08. Baseline: `1134e7059e97dbc57052e8839c2ca20f004
 
 ## Cập nhật sau pipeline thực tế — lựa chọn áp dụng hiện tại
 
+Job tùy chọn `windows-dpapi-diagnostic` chạy thủ công trên main bằng chính tag hosted Windows đã gặp lỗi. Job có `needs: []` và `dependencies: []`, không tải report hoặc chạy app; chỉ đọc metadata tài khoản/profile và thử DPAPI bằng dữ liệu giả. `allow_failure: true` chỉ áp dụng job chẩn đoán tùy chọn này để không chặn mọi pipeline khi chưa bấm chạy; job lỗi vẫn hiển thị lỗi và không chứng minh regression đạt. Các scanner bắt buộc và bộ test Windows trên GitHub vẫn giữ yêu cầu thành công. Không thu thập token, biến môi trường đầy đủ, nội dung khóa DPAPI hoặc credential.
+
 Phần bên dưới ghi lại thiết kế và kiểm tra ban đầu. Sau khi pipeline [3041940691](https://gitlab.com/duyngadocton/TQLTK/-/pipelines/3041940691) chạy, người dùng chọn **GitHub Actions cho kiểm thử Windows, GitLab cho scanner và NuGet Audit**. Lựa chọn này thay thế kế hoạch chạy regression bằng hosted Windows của GitLab trong các mục lịch sử bên dưới.
 
 - Pipeline đó có bảy job thành công, gồm NuGet Audit trên Linux và ba scanner bắt buộc; job Windows đạt 11 nhóm rồi lỗi DPAPI `CurrentUser` khi tạo tài khoản giả, 16 nhóm sau chưa chạy. SDK 10.0.403 đã tải/cài thành công. Git Credential Manager cũng báo lỗi `wincredman` trong checkout/cleanup; lỗi quyết định của regression nằm tại `ProtectedData.Protect`, không phải cài SDK.
