@@ -269,7 +269,12 @@ internal static class Program
         var policy = new WebsitePasswordPolicy(true, 12, 20, true, false, true, true, "A7!O0");
         WebsitePasswordPolicyService.Save(websiteUrl, policy);
         WebsitePasswordPolicy loaded = WebsitePasswordPolicyService.Get("https://www.example.test/other");
-        if (loaded != policy || WebsitePasswordPolicyService.Get("http://user:password@example.test").Enabled)
+        var credentialBearingUrl = new UriBuilder(Uri.UriSchemeHttp, "example.test")
+        {
+            UserName = "test-user",
+            Password = "test-password"
+        }.Uri.AbsoluteUri;
+        if (loaded != policy || WebsitePasswordPolicyService.Get(credentialBearingUrl).Enabled)
             throw new InvalidDataException("Per-host rules did not persist or an invalid credential-bearing URL was accepted.");
         var options = new PasswordGeneratorOptions(16, false, false, false, false, true, false, 8, "-");
         string password = PasswordGeneratorService.Generate(options, loaded);
