@@ -6,6 +6,8 @@
 
 TQLTK is a local account and password manager for Windows. It stores logins in an encrypted vault on your PC, supports per-account TOTP and optional Windows Hello authentication, and can back up to your own Google Drive. The interface is available in Vietnamese and English. TQLTK is written in C# with WPF and .NET and is distributed as a portable, self-contained executable.
 
+> **v3.6.8 (BETA) — release preparation.** See the [v3.6.8 release notes](RELEASE_NOTES_v3.6.8.md) for complete encrypted backups, migration, retention, draft protection and validation updates. The latest available download is still v3.6.7; v3.6.8 assets and their checksum will be linked after publication.
+
 > The latest published build is **v3.6.7 (BETA, pre-release)**, released on November 6, 2026. Read the [release notes](https://github.com/Namtudifreefire/TQLTK/releases/tag/v3.6.7) or download [PersonalInfoManager-3.6.7-win-x64.zip](https://github.com/Namtudifreefire/TQLTK/releases/download/v3.6.7/PersonalInfoManager-3.6.7-win-x64.zip). The ZIP's SHA-256 is `39ba26a39bc3c10da9756739a58426bc1079c6daa5617cfd6ea8cdb087f5fe14`. This build is unsigned; Windows may display a publisher or SmartScreen warning.
 
 > English interface support was introduced in v3.6.6 (BETA); earlier versions are Vietnamese-only.
@@ -15,6 +17,9 @@ TQLTK is a personal project maintained by one developer. It has not been indepen
 For vulnerability reporting and the current code-signing status, see the [Security Policy](SECURITY.md).
 
 ## Features
+
+- **Complete backup center (v3.6.8):** encrypted multi-component packages, migration guidance, periodic backups while running, retention and verified pins, backup comparison and selective recovery as copies.
+- **Edit protection (v3.6.8):** unsaved-change prompts and encrypted account drafts.
 
 - **Encrypted vault:** save and search service names, usernames, passwords, website URLs and notes; organize entries with folders, tags and favorites.
 - **Custom fields:** store additional account details; sensitive fields are encrypted with the vault.
@@ -43,7 +48,7 @@ For vulnerability reporting and the current code-signing status, see the [Securi
 
 **Manual download:** download [PersonalInfoManager-3.6.7-win-x64.zip](https://github.com/Namtudifreefire/TQLTK/releases/download/v3.6.7/PersonalInfoManager-3.6.7-win-x64.zip) from the [v3.6.7 BETA release](https://github.com/Namtudifreefire/TQLTK/releases/tag/v3.6.7), extract it, then run PersonalInfoManager.exe. The ZIP contains the executable and MIT license. This build is unsigned, so Windows may show a publisher or SmartScreen warning. To remove the app, delete the extracted folder. Your data remains in %AppData%\PersonalInfoManager unless you remove it separately.
 
-**WinGet:** the initial package submission [PR #463698](https://github.com/microsoft/winget-pkgs/pull/463698) is still open and targets v3.6.4, so WinGet does not provide v3.6.7 yet. After the package is accepted and its manifest is updated, install it with:
+**WinGet:** availability depends on accepted package manifests. Check the version offered by `winget show --id Namtudifreefire.TQLTK --exact` before installing; use GitHub Releases if the required version is unavailable.
 
     winget install --id Namtudifreefire.TQLTK --exact
 
@@ -57,6 +62,7 @@ Until then, use the ZIP download above.
 - **Personal files:** files are encrypted with AES-GCM and their key is protected by Windows DPAPI for the current Windows account. Existing plaintext files are migrated atomically when the file store is opened. Before moving to another Windows account or reinstalling Windows, create a file backup protected by your backup passphrase; the local DPAPI key cannot be transferred by copying the storage folder.
 - **Legacy CBC data:** v3.6.5 rejects old CBC-encrypted vault, note and backup data because that format does not verify integrity. Make and verify a separate backup before upgrading if you may have data in that format.
 - **Backup passphrase:** backups use a key derived with PBKDF2-SHA256 (600,000 iterations) and AES-256-GCM. A forgotten passphrase cannot be recovered for restoring on another PC.
+- **Interrupted restore:** a crash or rollback failure can leave a partial import. Automatic rollback of the whole restore after a crash is not implemented. Inspect the data, preview the original backup again and retry; see [known limitations](RELEASE_NOTES_v3.6.8.md#before-updating--known-limitations).
 - **No independent audit:** do not use TQLTK as the only copy of important credentials.
 
 ## Build from source
@@ -71,6 +77,10 @@ Requires the .NET 10 SDK on Windows.
 Google Drive features need your own OAuth client. In Google Cloud Console, create an OAuth client ID of type **Desktop app**, save it as credentials.json next to PersonalInfoManager.csproj, then build. The file is embedded at build time and is git-ignored, so it is not part of this repository. Without it, the rest of the app works but Drive sync is unavailable.
 
 ## Release notes
+
+### v3.6.8 (BETA — preparing release)
+
+See the [English and Vietnamese release notes](RELEASE_NOTES_v3.6.8.md). Includes the backup center, migration, retention, draft protection, localization/layout validation and expanded backup CI tests. Read the crash/rollback limits before restoring important data.
 
 See the [Releases page](https://github.com/Namtudifreefire/TQLTK/releases) for downloadable builds and the full release history.
 
@@ -142,6 +152,8 @@ TQLTK is distributed under the [MIT License](LICENSE). Copyright © 2026 Namtudi
 
 **TQLTK** là ứng dụng quản lý tài khoản và mật khẩu chạy trên Windows. Dữ liệu tài khoản được lưu trong vault mã hóa trên máy; ứng dụng hỗ trợ TOTP cho từng tài khoản, tùy chọn Windows Hello và sao lưu lên Google Drive của chính bạn. Giao diện có tiếng Việt và tiếng Anh. Ứng dụng viết bằng C# (WPF, .NET), phát hành dạng portable và không cần cài .NET riêng.
 
+> **v3.6.8 (BETA) — đang chuẩn bị phát hành.** Xem [release notes v3.6.8](RELEASE_NOTES_v3.6.8.md) về backup mã hóa đầy đủ, chuyển máy, chính sách giữ bản sao, bảo vệ bản nháp và kiểm thử. Bản tải xuống hiện có vẫn là v3.6.7; link và checksum v3.6.8 sẽ được cập nhật sau khi phát hành.
+
 > Bản mới nhất đã phát hành là **v3.6.7 (BETA, pre-release)** vào ngày 06/11/2026. Xem [ghi chú phát hành](https://github.com/Namtudifreefire/TQLTK/releases/tag/v3.6.7) hoặc tải [PersonalInfoManager-3.6.7-win-x64.zip](https://github.com/Namtudifreefire/TQLTK/releases/download/v3.6.7/PersonalInfoManager-3.6.7-win-x64.zip). SHA-256 của ZIP: `39ba26a39bc3c10da9756739a58426bc1079c6daa5617cfd6ea8cdb087f5fe14`. Bản này chưa ký số; Windows có thể hiện cảnh báo nhà phát hành hoặc SmartScreen.
 
 > Giao diện tiếng Anh được giới thiệu từ v3.6.6 (BETA); các phiên bản trước chỉ có tiếng Việt.
@@ -151,6 +163,9 @@ TQLTK là dự án cá nhân do một nhà phát triển duy trì và chưa đư
 Xem [Chính sách bảo mật](SECURITY.md) để biết cách báo cáo lỗ hổng và trạng thái ký số hiện tại.
 
 ## Tính năng
+
+- **Trung tâm backup đầy đủ (v3.6.8):** gói mã hóa nhiều thành phần, hướng dẫn chuyển máy, sao lưu định kỳ khi app chạy, chính sách giữ bản/ghim bản đã xác minh, so sánh và khôi phục chọn lọc thành bản sao.
+- **Bảo vệ chỉnh sửa (v3.6.8):** cảnh báo thay đổi chưa lưu và bản nháp tài khoản được mã hóa.
 
 - **Vault mã hóa:** lưu và tìm kiếm dịch vụ, tên đăng nhập, mật khẩu, URL website và ghi chú; sắp xếp bằng thư mục, nhãn và mục yêu thích.
 - **Trường tùy chỉnh:** lưu thêm thông tin cho từng tài khoản; trường nhạy cảm được mã hóa cùng vault.
@@ -173,7 +188,7 @@ Xem [Chính sách bảo mật](SECURITY.md) để biết cách báo cáo lỗ h�
 
 **Tải thủ công:** tải [PersonalInfoManager-3.6.7-win-x64.zip](https://github.com/Namtudifreefire/TQLTK/releases/download/v3.6.7/PersonalInfoManager-3.6.7-win-x64.zip) từ [bản phát hành v3.6.7 BETA](https://github.com/Namtudifreefire/TQLTK/releases/tag/v3.6.7), giải nén rồi chạy PersonalInfoManager.exe. ZIP gồm file thực thi và giấy phép MIT. Bản này chưa ký số nên Windows có thể hiện cảnh báo nhà phát hành hoặc SmartScreen. Xóa thư mục đã giải nén để gỡ ứng dụng; dữ liệu trong %AppData%\PersonalInfoManager vẫn được giữ lại.
 
-**WinGet:** PR tạo gói ban đầu [#463698](https://github.com/microsoft/winget-pkgs/pull/463698) vẫn đang mở và nhắm tới v3.6.4, nên WinGet chưa cung cấp v3.6.7. Sau khi PR được chấp nhận và manifest được cập nhật, cài bằng lệnh:
+**WinGet:** phiên bản có sẵn phụ thuộc manifest đã được chấp nhận. Kiểm tra bằng `winget show --id Namtudifreefire.TQLTK --exact` trước khi cài; dùng GitHub Releases nếu chưa có bản cần tải.
 
     winget install --id Namtudifreefire.TQLTK --exact
 
@@ -192,6 +207,12 @@ Trong thời gian chờ, hãy dùng file ZIP ở trên.
 ## Ghi chú phát hành
 
 Xem [trang Releases](https://github.com/Namtudifreefire/TQLTK/releases) để tải bản phát hành và đọc lịch sử đầy đủ.
+
+### v3.6.8 (BETA — chuẩn bị phát hành)
+
+Xem [release notes Việt–Anh](RELEASE_NOTES_v3.6.8.md). Gồm trung tâm backup, chuyển máy, chính sách giữ bản sao, bảo vệ bản nháp, kiểm tra dịch/layout và các nhóm test backup CI mở rộng.
+
+**Lưu ý khôi phục gián đoạn:** crash hoặc rollback thất bại có thể để lại dữ liệu nhập một phần. Chưa tự rollback toàn bộ sau crash. Kiểm tra dữ liệu, xem trước lại backup gốc rồi chạy lại restore; giữ file backup đến khi xác nhận đủ dữ liệu.
 
 ### v3.6.7 (BETA)
 
