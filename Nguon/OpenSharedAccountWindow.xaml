@@ -1,22 +1,22 @@
 <Window x:Class="PersonalInfoManager.OpenSharedAccountWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Mở mục được chia sẻ" Height="410" Width="660" MinHeight="360" MinWidth="540"
+        Title="{DynamicResource xaml.opensharedaccountwindow.text001}" Height="410" Width="660" MinHeight="360" MinWidth="540"
         WindowStartupLocation="CenterOwner" Background="{DynamicResource BackgroundBrush}" Loaded="Window_Loaded">
     <Grid Margin="24">
         <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-        <TextBlock Grid.Row="0" Text="Mở gói chia sẻ được mã hóa" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8" />
-        <TextBlock Grid.Row="1" Text="Chọn tệp .tqltkshare đã tải từ Drive, nhập khóa do người chia sẻ gửi riêng, rồi xem trước trước khi thêm vào vault." TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,16" />
+        <TextBlock Grid.Row="0" Text="{DynamicResource xaml.opensharedaccountwindow.text002}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8" />
+        <TextBlock Grid.Row="1" Text="{DynamicResource xaml.opensharedaccountwindow.text003}" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,16" />
         <StackPanel Grid.Row="2">
-            <TextBlock Text="Tệp chia sẻ" Margin="0,0,0,6" />
-            <DockPanel><Button DockPanel.Dock="Right" Content="Chọn tệp" Click="BtnBrowse_Click" Style="{StaticResource OutlineButton}" Padding="12,6" Margin="8,0,0,0" /><TextBox x:Name="txtPath" Height="38" VerticalContentAlignment="Center" /></DockPanel>
-            <TextBlock Text="Khóa chia sẻ" Margin="0,15,0,6" />
+            <TextBlock Text="{DynamicResource xaml.opensharedaccountwindow.text004}" Margin="0,0,0,6" />
+            <DockPanel><Button DockPanel.Dock="Right" Content="{DynamicResource xaml.opensharedaccountwindow.text005}" Click="BtnBrowse_Click" Style="{StaticResource OutlineButton}" Padding="12,6" Margin="8,0,0,0" /><TextBox x:Name="txtPath" Height="38" VerticalContentAlignment="Center" /></DockPanel>
+            <TextBlock Text="{DynamicResource xaml.opensharedaccountwindow.text006}" Margin="0,15,0,6" />
             <PasswordBox x:Name="txtPassphrase" Height="38" VerticalContentAlignment="Center" />
         </StackPanel>
-        <TextBlock Grid.Row="3" Text="Gói hết hạn sẽ không được mở trong ứng dụng. Việc hết hạn hoặc thu hồi Drive không xóa bản sao đã tải xuống." TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Top" Margin="0,16,0,0" />
+        <TextBlock Grid.Row="3" Text="{DynamicResource xaml.opensharedaccountwindow.text007}" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Top" Margin="0,16,0,0" />
         <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
-            <Button Content="Hủy" Click="BtnCancel_Click" Style="{StaticResource OutlineButton}" Padding="16,8" Margin="0,0,8,0" />
-            <Button Content="Mở và xem trước" Click="BtnOpen_Click" IsDefault="True" Padding="18,8" />
+            <Button Content="{DynamicResource xaml.opensharedaccountwindow.text008}" Click="BtnCancel_Click" Style="{StaticResource OutlineButton}" Padding="16,8" Margin="0,0,8,0" />
+            <Button Content="{DynamicResource xaml.opensharedaccountwindow.text009}" Click="BtnOpen_Click" IsDefault="True" Padding="18,8" />
         </StackPanel>
     </Grid>
 </Window>

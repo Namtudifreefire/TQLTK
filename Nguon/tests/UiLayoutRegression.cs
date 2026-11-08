@@ -53,10 +53,20 @@ internal static class UiLayoutRegression
                             if (window is LoginWindow)
                             {
                                 var footer = (TextBlock)window.FindName("txtCopyright");
+                                var usernameInput = (TextBox)window.FindName("txtUsername");
+                                usernameInput.Text = "Dữ liệu người dùng — unchanged";
+                                var languageChoice = (ComboBox)window.FindName("cmbLanguageLogin");
+                                object originalChoice = languageChoice.SelectedValue;
                                 foreach (string selectedLanguage in new[] { language, language == "en" ? "vi" : "en", language })
                                 {
                                     LanguageService.SetLanguageForTesting(selectedLanguage);
                                     LanguageService.ApplyToWindow(window);
+                                    foreach (var definition in LocalizationAuditService.Catalog.Where(item => item.Id.StartsWith("xaml.", StringComparison.Ordinal)))
+                                        if (!Equals(Application.Current!.Resources[definition.Id], LocalizationAuditService.Get(definition.Id, selectedLanguage)))
+                                            throw new InvalidDataException("A XAML resource was not refreshed: " + definition.Id);
+                                    if (window.Title != LocalizationAuditService.Get("xaml.loginwindow.text001", selectedLanguage) ||
+                                        usernameInput.Text != "Dữ liệu người dùng — unchanged" || !Equals(languageChoice.SelectedValue, originalChoice))
+                                        throw new InvalidDataException("Language switching altered user input, selection, or left the window title stale.");
                                     string expected = LocalizationAuditService.FormatForLanguage("app.footer", selectedLanguage, AppVersion.Current);
                                     if (footer.Text != expected) throw new InvalidDataException("The login footer did not update when switching languages.");
                                 }

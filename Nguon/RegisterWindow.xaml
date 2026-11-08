@@ -1,18 +1,16 @@
 <Window x:Class="PersonalInfoManager.RegisterWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Đăng ký tài khoản - TQLTK"
+        Title="{DynamicResource xaml.registerwindow.text001}"
         Height="700" Width="520"
         MinHeight="600" MinWidth="480"
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResize"
         Background="{DynamicResource BackgroundBrush}"
         Style="{StaticResource SlideInWindow}">
-
     <ScrollViewer VerticalScrollBarVisibility="Auto"
                   HorizontalScrollBarVisibility="Disabled"
                   PanningMode="VerticalOnly">
-
         <Grid Margin="35,25,35,30">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
@@ -26,26 +24,23 @@
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
-
             <TextBlock x:Name="lblFormTitle"
                        Grid.Row="0"
-                       Text="📝 Đăng ký tài khoản"
+                       Text="{DynamicResource xaml.registerwindow.text002}"
                        FontSize="24"
                        FontWeight="Bold"
                        Foreground="{DynamicResource TextPrimaryBrush}"
                        HorizontalAlignment="Center"
                        Margin="0,0,0,6" />
-
             <TextBlock x:Name="lblFormDescription"
                        Grid.Row="1"
-                       Text="Tạo tài khoản mới để sử dụng TQLTK"
+                       Text="{DynamicResource xaml.registerwindow.text003}"
                        FontSize="12"
                        Foreground="{DynamicResource TextSecondaryBrush}"
                        HorizontalAlignment="Center"
                        Margin="0,0,0,25" />
-
             <StackPanel Grid.Row="2">
-                <TextBlock Text="Tên đăng nhập (*):"
+                <TextBlock Text="{DynamicResource xaml.registerwindow.text004}"
                            FontWeight="SemiBold"
                            FontSize="13"
                            Foreground="{DynamicResource TextPrimaryBrush}"
@@ -55,14 +50,13 @@
                          FontSize="14"
                          Padding="12,10"
                          VerticalContentAlignment="Center" />
-                <TextBlock Text="Từ 3 ký tự trở lên, không dấu, không khoảng trắng"
+                <TextBlock Text="{DynamicResource xaml.registerwindow.text005}"
                            FontSize="10"
                            Foreground="{DynamicResource TextSecondaryBrush}"
                            Margin="0,4,0,0" />
             </StackPanel>
-
             <StackPanel Grid.Row="3" Margin="0,15,0,0">
-                <TextBlock Text="Mật khẩu (*):"
+                <TextBlock Text="{DynamicResource xaml.registerwindow.text006}"
                            FontWeight="SemiBold"
                            FontSize="13"
                            Foreground="{DynamicResource TextPrimaryBrush}"
@@ -79,9 +73,8 @@
                            Foreground="{DynamicResource TextSecondaryBrush}"
                            Margin="0,4,0,0" />
             </StackPanel>
-
             <StackPanel Grid.Row="4" Margin="0,15,0,0">
-                <TextBlock Text="Xác nhận mật khẩu (*):"
+                <TextBlock Text="{DynamicResource xaml.registerwindow.text007}"
                            FontWeight="SemiBold"
                            FontSize="13"
                            Foreground="{DynamicResource TextPrimaryBrush}"
@@ -98,9 +91,8 @@
                            Foreground="{DynamicResource TextSecondaryBrush}"
                            Margin="0,4,0,0" />
             </StackPanel>
-
             <StackPanel Grid.Row="5" Margin="0,15,0,0">
-                <TextBlock Text="Họ tên (*):"
+                <TextBlock Text="{DynamicResource xaml.registerwindow.text008}"
                            FontWeight="SemiBold"
                            FontSize="13"
                            Foreground="{DynamicResource TextPrimaryBrush}"
@@ -111,9 +103,8 @@
                          Padding="12,10"
                          VerticalContentAlignment="Center" />
             </StackPanel>
-
             <StackPanel Grid.Row="6" Margin="0,15,0,0">
-                <TextBlock Text="Gmail:"
+                <TextBlock Text="{DynamicResource xaml.registerwindow.text009}"
                            FontWeight="SemiBold"
                            FontSize="13"
                            Foreground="{DynamicResource TextPrimaryBrush}"
@@ -123,14 +114,13 @@
                          FontSize="14"
                          Padding="12,10"
                          VerticalContentAlignment="Center" />
-                <TextBlock Text="Ví dụ: tenban@gmail.com"
+                <TextBlock Text="{DynamicResource xaml.registerwindow.text010}"
                            FontSize="10"
                            Foreground="{DynamicResource TextSecondaryBrush}"
                            Margin="0,4,0,0" />
             </StackPanel>
-
             <StackPanel Grid.Row="7" Margin="0,15,0,0">
-                <TextBlock Text="Số điện thoại:"
+                <TextBlock Text="{DynamicResource xaml.registerwindow.text011}"
                            FontWeight="SemiBold"
                            FontSize="13"
                            Foreground="{DynamicResource TextPrimaryBrush}"
@@ -141,30 +131,27 @@
                          Padding="12,10"
                          VerticalContentAlignment="Center" />
             </StackPanel>
-
             <Grid Grid.Row="8" Margin="0,30,0,0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
-
                 <Button Grid.Column="0"
                         Height="46"
                         Margin="0,0,6,0"
                         Click="BtnCancel_Click"
                         Style="{StaticResource OutlineButton}">
-                    <TextBlock Text="Hủy"
+                    <TextBlock Text="{DynamicResource xaml.registerwindow.text012}"
                                FontSize="14"
                                VerticalAlignment="Center"
                                HorizontalAlignment="Center" />
                 </Button>
-
                 <Button Grid.Column="1"
                         Height="46"
                         Margin="6,0,0,0"
                         Click="BtnRegister_Click">
                     <TextBlock x:Name="lblRegisterButton"
-                               Text="✓ Đăng ký"
+                               Text="{DynamicResource xaml.registerwindow.text013}"
                                FontSize="14"
                                FontWeight="Bold"
                                Foreground="White"
@@ -172,7 +159,6 @@
                                HorizontalAlignment="Center" />
                 </Button>
             </Grid>
-
             <TextBlock Grid.Row="9"
                        FontSize="12"
                        Foreground="{DynamicResource TextSecondaryBrush}"
@@ -182,7 +168,6 @@
                        TextAlignment="Center">
                 Đã có tài khoản? Đóng cửa sổ này để quay lại đăng nhập.
             </TextBlock>
-
         </Grid>
     </ScrollViewer>
 </Window>

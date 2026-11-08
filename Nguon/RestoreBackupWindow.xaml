@@ -1,7 +1,7 @@
 <Window x:Class="PersonalInfoManager.RestoreBackupWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Khôi phục từ Google Drive"
+        Title="{DynamicResource xaml.restorebackupwindow.text001}"
         Height="500" Width="680"
         MinHeight="380" MinWidth="560"
         WindowStartupLocation="CenterOwner"
@@ -9,9 +9,7 @@
         Background="{DynamicResource BackgroundBrush}"
         Foreground="{DynamicResource TextPrimaryBrush}"
         Style="{StaticResource SlideInWindow}">
-
     <Window.Resources>
-
         <Style x:Key="PrimaryButton" TargetType="Button"
                BasedOn="{StaticResource RoundedButton}">
             <Style.Triggers>
@@ -21,7 +19,6 @@
             </Style.Triggers>
         </Style>
     </Window.Resources>
-
     <Grid Margin="25">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -31,15 +28,12 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
-
-        <TextBlock x:Name="txtTitle" Grid.Row="0" Text="☁️ Khôi phục từ Google Drive"
+        <TextBlock x:Name="txtTitle" Grid.Row="0" Text="{DynamicResource xaml.restorebackupwindow.text002}"
                    FontSize="16" FontWeight="Bold"
                    HorizontalAlignment="Center" Margin="0,0,0,12" />
-
         <TextBlock x:Name="txtStatus" Grid.Row="1"
                    Foreground="{DynamicResource TextSecondaryBrush}"
                    FontSize="13" TextWrapping="Wrap" Margin="0,0,0,12" />
-
         <Border Grid.Row="2" Style="{StaticResource Card}" Padding="6" Margin="0">
             <DataGrid x:Name="dgBackups"
                       SelectionMode="Single"
@@ -48,37 +42,34 @@
                       SelectionChanged="DgBackups_SelectionChanged"
                       MouseDoubleClick="DgBackups_MouseDoubleClick">
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="Ngày tạo"
+                    <DataGridTextColumn Header="{DynamicResource xaml.restorebackupwindow.text003}"
                                         Binding="{Binding CreatedText, Mode=OneWay}"
                                         Width="Auto" />
-                    <DataGridTextColumn Header="Dung lượng"
+                    <DataGridTextColumn Header="{DynamicResource xaml.restorebackupwindow.text004}"
                                         Binding="{Binding SizeText, Mode=OneWay}"
                                         Width="Auto" />
-                    <DataGridTextColumn Header="Thuộc về"
+                    <DataGridTextColumn Header="{DynamicResource xaml.restorebackupwindow.text005}"
                                         Binding="{Binding OwnerText, Mode=OneWay, Converter={StaticResource LocalizedTextConverter}}"
                                         Width="Auto" />
-                    <DataGridTextColumn Header="Tên tệp"
+                    <DataGridTextColumn Header="{DynamicResource xaml.restorebackupwindow.text006}"
                                         Binding="{Binding Name, Mode=OneWay}"
                                         Width="*" />
                 </DataGrid.Columns>
             </DataGrid>
         </Border>
-
         <CheckBox x:Name="chkOthers" Grid.Row="3" Margin="0,12,0,0"
-                  Content="Hiện cả bản sao lưu của người dùng khác (khi dùng chung một tài khoản Google)"
+                  Content="{DynamicResource xaml.restorebackupwindow.text007}"
                   Checked="ChkOthers_Changed" Unchecked="ChkOthers_Changed" />
-
         <TextBlock x:Name="txtNote" Grid.Row="4"
-                   Text="Dữ liệu của bản sao lưu được nhập thêm vào tài khoản hiện tại. Tài khoản trùng sẽ được bỏ qua, dữ liệu hiện có không bị xóa."
+                   Text="{DynamicResource xaml.restorebackupwindow.text008}"
                    Foreground="{DynamicResource TextSecondaryBrush}"
                    FontSize="12" TextWrapping="Wrap" Margin="0,8,0,0" />
-
         <StackPanel Grid.Row="5" Orientation="Horizontal"
                     HorizontalAlignment="Right" Margin="0,16,0,0">
-            <Button Content="Hủy" MinWidth="90"
+            <Button Content="{DynamicResource xaml.restorebackupwindow.text009}" MinWidth="90"
                     Style="{StaticResource OutlineButton}"
                     IsCancel="True" />
-            <Button x:Name="btnRestore" Content="⬇ Khôi phục" MinWidth="130"
+            <Button x:Name="btnRestore" Content="{DynamicResource xaml.restorebackupwindow.text010}" MinWidth="130"
                     Style="{StaticResource PrimaryButton}"
                     IsDefault="True" IsEnabled="False"
                     Click="BtnRestore_Click" />

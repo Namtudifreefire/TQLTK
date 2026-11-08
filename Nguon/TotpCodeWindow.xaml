@@ -1,7 +1,7 @@
 <Window x:Class="PersonalInfoManager.TotpCodeWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Mã xác thực TOTP" Width="400" SizeToContent="Height"
+        Title="{DynamicResource xaml.totpcodewindow.text001}" Width="400" SizeToContent="Height"
         WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
         Background="{DynamicResource BackgroundBrush}"
         Closed="Window_Closed">
@@ -12,7 +12,7 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
-        <TextBlock Grid.Row="0" x:Name="lblAccount" Text="Trang web" FontSize="17" FontWeight="SemiBold"
+        <TextBlock Grid.Row="0" x:Name="lblAccount" Text="{DynamicResource xaml.totpcodewindow.text002}" FontSize="17" FontWeight="SemiBold"
                    TextAlignment="Center" TextWrapping="Wrap" Foreground="{DynamicResource TextPrimaryBrush}" />
         <TextBlock Grid.Row="1" x:Name="lblCode" Text="------" FontSize="38" FontWeight="Bold"
                    FontFamily="Consolas" TextAlignment="Center" Margin="0,15,0,4"
@@ -22,6 +22,6 @@
                        Foreground="{DynamicResource TextSecondaryBrush}" />
             <ProgressBar x:Name="barLifetime" Height="7" Margin="0,8,0,0" />
         </StackPanel>
-        <Button Grid.Row="3" Content="Sao chép mã (bộ nhớ tạm tự xóa)" Click="BtnCopy_Click" Padding="16,9" />
+        <Button Grid.Row="3" Content="{DynamicResource xaml.totpcodewindow.text003}" Click="BtnCopy_Click" Padding="16,9" />
     </Grid>
 </Window>

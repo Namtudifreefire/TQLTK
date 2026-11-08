@@ -829,7 +829,12 @@ internal static class Program
             {
                 foreach (XAttribute attribute in XDocument.Load(file).Descendants().Attributes()
                              .Where(attribute => attribute.Name.LocalName is "Text" or "Content" or "Header" or "ToolTip" or "Title"))
-                    if (!attribute.Value.StartsWith('{') && attribute.Value.Any(char.IsLetter) &&
+                    if (attribute.Value.StartsWith("{DynamicResource xaml.", StringComparison.Ordinal))
+                    {
+                        string key = attribute.Value[17..^1].Trim();
+                        foreach (string language in new[] { "vi", "en" }) _ = LocalizationAuditService.Get(key, language);
+                    }
+                    else if (!attribute.Value.StartsWith('{') && attribute.Value.Any(char.IsLetter) &&
                         !Regex.IsMatch(attribute.Value, @"^(?:Gmail:?|Windows Hello(?: \(BETA\))?|Google Drive(?: \(BETA\))?|Ctrl\+Shift\+[,A-Z]|[0-9]+ ?[KMGT]B|TQLTK)$"))
                         sources.Add(attribute.Value);
             }

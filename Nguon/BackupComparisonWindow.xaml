@@ -1,7 +1,7 @@
 <Window x:Class="PersonalInfoManager.BackupComparisonWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="So sánh bản sao lưu" Height="640" Width="1020" MinHeight="440" MinWidth="680"
+        Title="{DynamicResource xaml.backupcomparisonwindow.text001}" Height="640" Width="1020" MinHeight="440" MinWidth="680"
         UseLayoutRounding="True" SnapsToDevicePixels="True"
         WindowStartupLocation="CenterOwner" Background="{DynamicResource BackgroundBrush}"
         Foreground="{DynamicResource TextPrimaryBrush}" Loaded="Window_Loaded">
@@ -25,7 +25,7 @@
                 </Style>
             </DataGrid.RowStyle>
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Mục" Binding="{Binding Name}" Width="2*" MinWidth="160" IsReadOnly="True">
+                <DataGridTextColumn Header="{DynamicResource xaml.backupcomparisonwindow.text002}" Binding="{Binding Name}" Width="2*" MinWidth="160" IsReadOnly="True">
                     <DataGridTextColumn.ElementStyle>
                         <Style TargetType="TextBlock">
                             <Setter Property="TextTrimming" Value="CharacterEllipsis" />
@@ -33,9 +33,9 @@
                         </Style>
                     </DataGridTextColumn.ElementStyle>
                 </DataGridTextColumn>
-                <DataGridTextColumn Header="Thay đổi" Binding="{Binding Status, Converter={StaticResource LocalizedTextConverter}}" Width="140" IsReadOnly="True" />
-                <DataGridTextColumn Header="Chi tiết" Binding="{Binding Details, Converter={StaticResource LocalizedTextConverter}}" Width="2*" MinWidth="180" IsReadOnly="True" />
-                <DataGridTemplateColumn Header="Khôi phục từ" Width="170">
+                <DataGridTextColumn Header="{DynamicResource xaml.backupcomparisonwindow.text003}" Binding="{Binding Status, Converter={StaticResource LocalizedTextConverter}}" Width="140" IsReadOnly="True" />
+                <DataGridTextColumn Header="{DynamicResource xaml.backupcomparisonwindow.text004}" Binding="{Binding Details, Converter={StaticResource LocalizedTextConverter}}" Width="2*" MinWidth="180" IsReadOnly="True" />
+                <DataGridTemplateColumn Header="{DynamicResource xaml.backupcomparisonwindow.text005}" Width="170">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <ComboBox ItemsSource="{Binding AvailableSources}"
@@ -52,9 +52,9 @@
             <Button x:Name="btnRecover"
                     Click="BtnRecover_Click" Style="{StaticResource RoundedButton}"
                     Padding="16,8" Margin="0,0,8,8">
-                <TextBlock Text="Khôi phục mục đã chọn thành bản sao" Foreground="White" TextWrapping="Wrap" />
+                <TextBlock Text="{DynamicResource xaml.backupcomparisonwindow.text006}" Foreground="White" TextWrapping="Wrap" />
             </Button>
-            <Button Content="Đóng" Click="BtnClose_Click"
+            <Button Content="{DynamicResource xaml.backupcomparisonwindow.text007}" Click="BtnClose_Click"
                     Style="{StaticResource OutlineButton}" Padding="18,8" Margin="0,0,0,8" IsCancel="True" />
         </WrapPanel>
     </Grid>

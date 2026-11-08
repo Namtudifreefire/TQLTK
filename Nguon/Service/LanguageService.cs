@@ -174,15 +174,29 @@ public static class LanguageService
     public static string CurrentCode => _currentCode;
     public static bool IsEnglish => _currentCode == "en";
 #if SECURITY_TEST
-    internal static void SetLanguageForTesting(string code) => _currentCode = code == "en" ? "en" : "vi";
+    internal static void SetLanguageForTesting(string code)
+    {
+        _currentCode = code == "en" ? "en" : "vi";
+        RefreshResources();
+    }
 #endif
     public static string GetDisplayName(string code) => code == "en" ? "English" : "Tiếng Việt";
+    public static void RefreshResources()
+    {
+        if (Application.Current is not { } app) return;
+        foreach (var message in LocalizationAuditService.Catalog.Where(message => message.Id.StartsWith("xaml.", StringComparison.Ordinal)))
+        {
+            string text = LocalizationAuditService.Get(message.Id, CurrentCode);
+            if (!Equals(app.Resources[message.Id], text)) app.Resources[message.Id] = text;
+        }
+    }
     public static void SetLanguage(string code)
     {
         string normalized = code.Equals("en", StringComparison.OrdinalIgnoreCase) ? "en" : "vi";
-        if (_currentCode == normalized) return;
+        if (_currentCode == normalized) { RefreshResources(); return; }
         _currentCode = normalized;
         RegistryService.SetLanguage(normalized);
+        RefreshResources();
         if (Application.Current == null) return;
         foreach (Window window in Application.Current.Windows)
             ApplyToWindow(window);
@@ -456,6 +470,7 @@ public static class LanguageService
     }
     public static void ApplyToWindow(Window window)
     {
+        RefreshResources();
         Visit(window, new HashSet<DependencyObject>());
         RefreshLocalizedBindings(window, new HashSet<DependencyObject>());
     }
