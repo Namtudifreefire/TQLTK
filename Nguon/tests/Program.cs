@@ -728,6 +728,46 @@ internal static class Program
                 (language == "en" && (!footer.StartsWith("Made by", StringComparison.Ordinal) || !footer.EndsWith("MIT License", StringComparison.Ordinal))))
                 throw new InvalidDataException("The versioned footer is not localized correctly.");
         }
+        foreach (BackupItemStatus status in Enum.GetValues<BackupItemStatus>())
+            foreach (string language in new[] { "vi", "en" })
+                if (string.IsNullOrWhiteSpace(LocalizationAuditService.Get("backup.status." + status, language)))
+                    throw new InvalidDataException("A typed backup status is missing its label.");
+        foreach (BackupRecoverySource source in Enum.GetValues<BackupRecoverySource>())
+            foreach (string language in new[] { "vi", "en" })
+                _ = LocalizationAuditService.Get("backup.source." + source, language);
+        var choice = new BackupComparisonEntry
+        {
+            Name = "Synthetic choice", Status = BackupItemStatus.Modified, Details = "Synthetic details",
+            Kind = BackupRecoveryItemKind.Account, OlderKey = "older", NewerKey = "newer",
+            AvailableSources = new[] { BackupRecoverySource.None, BackupRecoverySource.Older, BackupRecoverySource.Newer },
+            SelectedSource = BackupRecoverySource.Older
+        };
+        string priorLanguage = LanguageService.CurrentCode;
+        try
+        {
+            foreach (string language in new[] { "vi", "en", "vi" })
+            {
+                LanguageService.SetLanguageForTesting(language);
+                foreach (BackupRecoverySource source in choice.AvailableSources)
+                {
+                    choice.SelectedSource = source;
+                    var selected = BackupComparisonWindow.GetSelectedRecoveryItems(new[] { choice });
+                    if (source == BackupRecoverySource.None ? selected.Count != 0 :
+                        selected.Count != 1 || selected[0].FromOlder != (source == BackupRecoverySource.Older) ||
+                        selected[0].Key != (source == BackupRecoverySource.Older ? "older" : "newer"))
+                        throw new InvalidDataException("Recovery choices depend on the display language.");
+                }
+            }
+            choice.SelectedSource = BackupRecoverySource.Unsupported;
+            if (BackupComparisonWindow.GetSelectedRecoveryItems(new[] { choice }).Count != 0)
+                throw new InvalidDataException("An unavailable recovery choice was accepted.");
+        }
+        finally { LanguageService.SetLanguageForTesting(priorLanguage); }
+        foreach (var message in LocalizationAuditService.Catalog.Where(item =>
+                     item.Id.StartsWith("auth.") || item.Id.StartsWith("storage.") || item.Id.StartsWith("ui.mainwindow.")))
+            foreach (string language in new[] { "vi", "en" })
+                if (LanguageService.Translate(message.Id, language) != LocalizationAuditService.Get(message.Id, language))
+                    throw new InvalidDataException("A stable message ID did not resolve in both languages.");
         IReadOnlyList<LocalizationAuditIssue> issues = LocalizationAuditService.Audit();
         if (issues.Count > 0)
             throw new InvalidDataException("Localization audit found issues: " +
@@ -1019,7 +1059,7 @@ internal static class Program
                 throw new InvalidDataException("The test backups could not be compared: " + comparison.message);
             BackupComparisonEntry[] recoverable = comparison.result.Entries
                 .Where(entry => entry.Kind is BackupRecoveryItemKind.Account or BackupRecoveryItemKind.Note or BackupRecoveryItemKind.PersonalFile &&
-                    entry.OlderKey != null && entry.Status == "Đã sửa")
+                    entry.OlderKey != null && entry.Status == BackupItemStatus.Modified)
                 .ToArray();
             if (recoverable.Length != 3 || recoverable.Select(entry => entry.Kind).Distinct().Count() != 3)
                 throw new InvalidDataException("The comparison did not identify the changed account, note, and file.");

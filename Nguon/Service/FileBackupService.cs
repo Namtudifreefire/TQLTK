@@ -7,7 +7,6 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-
 namespace PersonalInfoManager.Services
 {
     public sealed class FileRestorePreview
@@ -25,7 +24,6 @@ namespace PersonalInfoManager.Services
             LocalFingerprint = localFingerprint;
             Items = items;
         }
-
         public string Owner { get; }
         public int AddedCount { get; }
         public int SkippedCount { get; }
@@ -35,17 +33,13 @@ namespace PersonalInfoManager.Services
         internal string Fingerprint { get; }
         internal string LocalFingerprint { get; }
     }
-
     public static class FileBackupService
     {
         public const long MaxTotalBytes = 100L * 1024 * 1024;
-
         private const int CurrentFormatVersion = 1;
         private const string ManifestEntryName = "__tqltk__/manifest.json";
-
         private static readonly Regex ReservedName =
             new(@"^(CON|PRN|AUX|NUL|COM[0-9]|LPT[0-9])(\..*)?$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
-
         private sealed class ArchiveManifest
         {
             public int FormatVersion { get; set; }
@@ -54,25 +48,21 @@ namespace PersonalInfoManager.Services
             public int FileCount { get; set; }
             public long TotalBytes { get; set; }
         }
-
         public static (int count, long bytes) Summarize(string username)
         {
             var fileService = new LocalFileService();
             var files = fileService.ListFiles(username);
             return (files.Count, files.Sum(f => fileService.GetPlaintextLength(f.FullName)));
         }
-
         public static bool IsBackupFile(string path)
         {
             if (!File.Exists(path)) return false;
-
             using var input = new FileStream(path, FileMode.Open, FileAccess.Read,
                 FileShare.ReadWrite | FileShare.Delete);
             byte[] prefix = new byte[4];
             int read = input.Read(prefix, 0, prefix.Length);
             return read == prefix.Length && BackupCrypto.IsBinaryFormat(prefix);
         }
-
         public static (bool ok, string message, int count, long bytes) InspectBackup(
             string username, string sourcePath, string? passphrase = null,
             Func<string?, string?>? askPassphrase = null,
@@ -82,43 +72,35 @@ namespace PersonalInfoManager.Services
             try
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (!File.Exists(sourcePath)) return (false, "File không tồn tại.", 0, 0);
+                if (!File.Exists(sourcePath)) return (false, LocalizationAuditService.Get("backup.files.message001", "vi"), 0, 0);
                 if (new FileInfo(sourcePath).Length > MaxTotalBytes + 16L * 1024 * 1024)
-                    return (false, "File quá lớn so với một bản sao lưu File cá nhân của TQLTK.", 0, 0);
-
+                    return (false, LocalizationAuditService.Get("backup.files.message002", "vi"), 0, 0);
                 byte[] data = File.ReadAllBytes(sourcePath);
                 if (!BackupCrypto.IsBinaryFormat(data))
-                    return (false, "File này không phải bản sao lưu File cá nhân của TQLTK.", 0, 0);
-
+                    return (false, LocalizationAuditService.Get("backup.files.message003", "vi"), 0, 0);
                 zipBytes = DecryptWithPrompts(data, username, passphrase, askPassphrase);
                 if (zipBytes == null)
-                    return (false, "Chưa giải mã được bản sao lưu. Hãy kiểm tra cụm mật khẩu hoặc file.", 0, 0);
-
+                    return (false, LocalizationAuditService.Get("backup.files.message004", "vi"), 0, 0);
                 using var ms = new MemoryStream(zipBytes, writable: false);
                 using var zip = new ZipArchive(ms, ZipArchiveMode.Read);
                 var manifestEntry = zip.GetEntry(ManifestEntryName);
                 if (manifestEntry == null || manifestEntry.Length > 64 * 1024)
-                    return (false, "Bản sao lưu thiếu manifest hợp lệ của TQLTK.", 0, 0);
-
+                    return (false, LocalizationAuditService.Get("backup.files.message005", "vi"), 0, 0);
                 var entries = zip.Entries.Where(IsUserFileEntry).ToList();
                 if (entries.Count == 0)
-                    return (false, "Bản sao lưu không chứa file hợp lệ.", 0, 0);
-
+                    return (false, LocalizationAuditService.Get("backup.files.message006", "vi"), 0, 0);
                 long total = 0;
                 foreach (var entry in entries)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     total = checked(total + entry.Length);
                     if (total > MaxTotalBytes)
-                        return (false, "Bản sao lưu vượt giới hạn dung lượng cho phép.", 0, 0);
-
+                        return (false, LocalizationAuditService.Get("backup.files.message007", "vi"), 0, 0);
                     using var stream = entry.Open();
                     CopyBounded(stream, Stream.Null, entry.Length, cancellationToken);
                 }
-
                 if (!TryReadAndValidateManifest(zip, entries.Count, total, out var manifest))
-                    return (false, "Manifest không khớp số lượng hoặc dung lượng dữ liệu trong bản sao lưu.", 0, 0);
-
+                    return (false, LocalizationAuditService.Get("backup.files.message008", "vi"), 0, 0);
                 int invalid = zip.Entries.Count(e =>
                     e.Name.Length > 0 && !IsUserFileEntry(e) && e.FullName != ManifestEntryName);
                 string owner = manifest.ExportedBy.Trim();
@@ -130,7 +112,7 @@ namespace PersonalInfoManager.Services
             }
             catch (OperationCanceledException)
             {
-                return (false, "Đã hủy kiểm tra bản sao lưu.", 0, 0);
+                return (false, LocalizationAuditService.Get("backup.files.message009", "vi"), 0, 0);
             }
             catch (Exception ex)
             {
@@ -141,10 +123,8 @@ namespace PersonalInfoManager.Services
                 if (zipBytes != null) CryptographicOperations.ZeroMemory(zipBytes);
             }
         }
-
         public static string FormatSize(long bytes) =>
             bytes < 1024 * 1024 ? $"{bytes / 1024.0:0.#} KB" : $"{bytes / 1048576.0:0.#} MB";
-
         public static (bool ok, string message, int count, long bytes) DrillRestore(
             string username, string sourcePath, string? passphrase = null,
             Func<string?, string?>? askPassphrase = null,
@@ -156,18 +136,16 @@ namespace PersonalInfoManager.Services
             try
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (!File.Exists(sourcePath)) return (false, "File không tồn tại.", 0, 0);
+                if (!File.Exists(sourcePath)) return (false, LocalizationAuditService.Get("backup.files.message001", "vi"), 0, 0);
                 if (new FileInfo(sourcePath).Length > MaxTotalBytes + 16L * 1024 * 1024)
-                    return (false, "File quá lớn so với một bản sao lưu File cá nhân của TQLTK.", 0, 0);
-
+                    return (false, LocalizationAuditService.Get("backup.files.message002", "vi"), 0, 0);
                 byte[] encrypted = File.ReadAllBytes(sourcePath);
                 if (!BackupCrypto.IsBinaryFormat(encrypted))
-                    return (false, "File này không phải bản sao lưu File cá nhân của TQLTK.", 0, 0);
+                    return (false, LocalizationAuditService.Get("backup.files.message003", "vi"), 0, 0);
                 archiveBytes = DecryptWithPrompts(encrypted, username, passphrase, askPassphrase);
                 CryptographicOperations.ZeroMemory(encrypted);
                 if (archiveBytes == null)
-                    return (false, "Chưa giải mã được bản sao lưu. Hãy kiểm tra cụm mật khẩu hoặc file.", 0, 0);
-
+                    return (false, LocalizationAuditService.Get("backup.files.message004", "vi"), 0, 0);
                 using var memory = new MemoryStream(archiveBytes, writable: false);
                 using var zip = new ZipArchive(memory, ZipArchiveMode.Read);
                 var entries = zip.Entries.Where(IsUserFileEntry).ToList();
@@ -177,22 +155,20 @@ namespace PersonalInfoManager.Services
                     cancellationToken.ThrowIfCancellationRequested();
                     total = checked(total + entry.Length);
                     if (entry.Length < 0 || total > MaxTotalBytes)
-                        return (false, "Bản sao lưu vượt giới hạn dung lượng cho phép.", 0, 0);
+                        return (false, LocalizationAuditService.Get("backup.files.message007", "vi"), 0, 0);
                 }
                 if (entries.Count == 0 || !TryReadAndValidateManifest(zip, entries.Count, total, out _))
-                    return (false, "Manifest không khớp số lượng hoặc dung lượng dữ liệu trong bản sao lưu.", 0, 0);
+                    return (false, LocalizationAuditService.Get("backup.files.message008", "vi"), 0, 0);
                 if (entries.Select(entry => entry.Name).Distinct(StringComparer.OrdinalIgnoreCase).Count() != entries.Count)
-                    return (false, "Bản sao lưu có tên file trùng nhau nên không thể diễn tập an toàn.", 0, 0);
-
+                    return (false, LocalizationAuditService.Get("backup.files.message010", "vi"), 0, 0);
                 string tempRoot = Path.GetFullPath(Path.GetTempPath());
                 drillDirectory = Path.GetFullPath(Path.Combine(tempRoot, "TQLTK-Restore-Drill-" + Guid.NewGuid().ToString("N")));
                 if (!drillDirectory.StartsWith(tempRoot.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar,
                         StringComparison.OrdinalIgnoreCase))
-                    throw new IOException("Thư mục diễn tập không nằm trong thư mục tạm.");
+                    throw new IOException(LocalizationAuditService.Get("backup.files.message011", "vi"));
                 Directory.CreateDirectory(drillDirectory);
                 if ((File.GetAttributes(drillDirectory) & FileAttributes.ReparsePoint) != 0)
-                    throw new IOException("Thư mục diễn tập không được là liên kết hệ thống.");
-
+                    throw new IOException(LocalizationAuditService.Get("backup.files.message012", "vi"));
                 foreach (var entry in entries)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
@@ -207,14 +183,13 @@ namespace PersonalInfoManager.Services
                             destination, comparison, entry.Length, cancellationToken))
                         throw new InvalidDataException($"Nội dung kiểm tra sau khôi phục không khớp: {entry.Name}");
                 }
-
                 return (true,
                     $"Diễn tập thành công: đã khôi phục thử {entries.Count} file ({FormatSize(total)}) vào kho tạm được mã hóa, xác minh từng file trong {stopwatch.Elapsed.TotalSeconds:0.0} giây rồi xóa kho tạm. Kho File cá nhân thật không thay đổi.",
                     entries.Count, total);
             }
             catch (OperationCanceledException)
             {
-                return (false, "Đã hủy diễn tập khôi phục; kho thật không thay đổi.", 0, 0);
+                return (false, LocalizationAuditService.Get("backup.files.message013", "vi"), 0, 0);
             }
             catch (Exception ex)
             {
@@ -237,7 +212,6 @@ namespace PersonalInfoManager.Services
                 }
             }
         }
-
         public static (bool ok, string message, int count, long bytes) CreateArchive(
             string username, string destPath, string passphrase)
         {
@@ -246,17 +220,14 @@ namespace PersonalInfoManager.Services
                 var fileService = new LocalFileService();
                 var files = fileService.ListFiles(username);
                 if (files.Count == 0)
-                    return (false, "Kho File cá nhân đang trống, không có gì để sao lưu.", 0, 0);
-
+                    return (false, LocalizationAuditService.Get("backup.files.message014", "vi"), 0, 0);
                 long total = files.Sum(f => fileService.GetPlaintextLength(f.FullName));
                 if (total > MaxTotalBytes)
                     return (false,
                         $"Kho File cá nhân hiện là {FormatSize(total)}, vượt giới hạn sao lưu {FormatSize(MaxTotalBytes)}.\n" +
                         "Hãy xóa bớt hoặc xuất bớt file ra ngoài rồi thử lại.",
                         files.Count, total);
-
                 byte[] encrypted;
-
                 using (var ms = new MemoryStream())
                 {
                     using (var zip = new ZipArchive(ms, ZipArchiveMode.Create, leaveOpen: true))
@@ -269,21 +240,17 @@ namespace PersonalInfoManager.Services
                             FileCount = files.Count,
                             TotalBytes = total
                         };
-
                         var manifestEntry = zip.CreateEntry(ManifestEntryName, CompressionLevel.Optimal);
                         using (var s = manifestEntry.Open())
                             JsonSerializer.Serialize(s, manifest);
-
                         foreach (var f in files)
                         {
                             var entry = zip.CreateEntry(f.Name, CompressionLevel.Optimal);
                             if (f.LastWriteTime.Year is >= 1980 and <= 2107) entry.LastWriteTime = f.LastWriteTime;
-
                             using var dst = entry.Open();
                             fileService.CopyToPlaintext(f.FullName, dst);
                         }
                     }
-
                     byte[] buffer = ms.GetBuffer();
                     try
                     {
@@ -294,7 +261,6 @@ namespace PersonalInfoManager.Services
                         CryptographicOperations.ZeroMemory(buffer);
                     }
                 }
-
                 string stagedPath;
                 try
                 {
@@ -310,7 +276,6 @@ namespace PersonalInfoManager.Services
                     var verification = InspectBackup(username, stagedPath, passphrase);
                     if (!verification.ok)
                         throw new InvalidDataException("Bản sao lưu tạo mới không qua kiểm tra: " + verification.message);
-
                     AtomicFileService.PromoteTemporary(stagedPath, destPath);
                 }
                 finally
@@ -325,7 +290,6 @@ namespace PersonalInfoManager.Services
                 return (false, $"Lỗi: {ex.Message}", 0, 0);
             }
         }
-
         public static (bool ok, string message, FileRestorePreview? preview) PreviewRestore(
             string username, string sourcePath, string? passphrase = null,
             Func<string?, string?>? askPassphrase = null,
@@ -335,47 +299,39 @@ namespace PersonalInfoManager.Services
             try
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (!File.Exists(sourcePath)) return (false, "File không tồn tại.", null);
+                if (!File.Exists(sourcePath)) return (false, LocalizationAuditService.Get("backup.files.message001", "vi"), null);
                 if (new FileInfo(sourcePath).Length > MaxTotalBytes + 16L * 1024 * 1024)
-                    return (false, "File quá lớn so với một bản sao lưu File cá nhân của TQLTK.", null);
-
+                    return (false, LocalizationAuditService.Get("backup.files.message002", "vi"), null);
                 byte[] data = File.ReadAllBytes(sourcePath);
                 if (!BackupCrypto.IsBinaryFormat(data))
-                    return (false, "File này không phải bản sao lưu File cá nhân của TQLTK.", null);
-
+                    return (false, LocalizationAuditService.Get("backup.files.message003", "vi"), null);
                 byte[] fingerprintBytes = SHA256.HashData(data);
                 string fingerprint;
                 try { fingerprint = Convert.ToHexString(fingerprintBytes); }
                 finally { CryptographicOperations.ZeroMemory(fingerprintBytes); }
-
                 zipBytes = DecryptWithPrompts(data, username, passphrase, askPassphrase);
                 if (zipBytes == null)
-                    return (false, "Chưa giải mã được bản sao lưu. Hãy kiểm tra cụm mật khẩu hoặc file.", null);
-
+                    return (false, LocalizationAuditService.Get("backup.files.message004", "vi"), null);
                 using var ms = new MemoryStream(zipBytes, writable: false);
                 using var zip = new ZipArchive(ms, ZipArchiveMode.Read);
                 var manifestEntry = zip.GetEntry(ManifestEntryName);
                 if (manifestEntry == null || manifestEntry.Length > 64 * 1024)
-                    return (false, "Bản sao lưu thiếu manifest hợp lệ của TQLTK.", null);
-
+                    return (false, LocalizationAuditService.Get("backup.files.message005", "vi"), null);
                 var entries = zip.Entries.Where(IsUserFileEntry).ToList();
                 int invalid = zip.Entries.Count(entry =>
                     entry.Name.Length > 0 && !IsUserFileEntry(entry) && entry.FullName != ManifestEntryName);
                 if (entries.Count == 0)
-                    return (false, "Bản sao lưu không chứa file hợp lệ.", null);
-
+                    return (false, LocalizationAuditService.Get("backup.files.message006", "vi"), null);
                 long totalBytes = 0;
                 foreach (var entry in entries)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     totalBytes = checked(totalBytes + entry.Length);
                     if (entry.Length < 0 || totalBytes > MaxTotalBytes)
-                        return (false, "Bản sao lưu vượt giới hạn dung lượng cho phép.", null);
+                        return (false, LocalizationAuditService.Get("backup.files.message007", "vi"), null);
                 }
-
                 if (!TryReadAndValidateManifest(zip, entries.Count, totalBytes, out _))
-                    return (false, "Manifest không khớp số lượng hoặc dung lượng dữ liệu trong bản sao lưu.", null);
-
+                    return (false, LocalizationAuditService.Get("backup.files.message008", "vi"), null);
                 var fileService = new LocalFileService();
                 string folder = fileService.GetExistingUserFolderReadOnly(username);
                 string localFingerprint = ComputeFolderFingerprint(folder, cancellationToken);
@@ -388,16 +344,13 @@ namespace PersonalInfoManager.Services
                 var items = new List<BackupPreviewItem>(entries.Count);
                 int added = 0;
                 int skipped = 0;
-
                 foreach (var entry in entries)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     using (var validationStream = entry.Open())
                         CopyBounded(validationStream, Stream.Null, entry.Length, cancellationToken);
-
                     string destinationName = entry.Name;
                     bool isSame = false;
-
                     if (names.Contains(entry.Name))
                     {
                         if (plannedEntries.TryGetValue(entry.Name, out var priorEntry))
@@ -421,40 +374,35 @@ namespace PersonalInfoManager.Services
                             }
                         }
                     }
-
                     if (isSame)
                     {
                         skipped++;
-                        items.Add(new BackupPreviewItem(entry.Name, "Bỏ qua trùng", "Nội dung đã có"));
+                        items.Add(new BackupPreviewItem(entry.Name, BackupItemStatus.SkipDuplicate, "Nội dung đã có"));
                         continue;
                     }
-
                     if (names.Contains(destinationName))
                         destinationName = GetUniqueName(entry.Name, names);
-
                     names.Add(destinationName);
                     plannedEntries[destinationName] = entry;
                     added++;
                     items.Add(new BackupPreviewItem(
                         destinationName,
-                        "Sẽ khôi phục",
+                        BackupItemStatus.Restore,
                         string.Equals(destinationName, entry.Name, StringComparison.OrdinalIgnoreCase)
                             ? FormatSize(entry.Length)
                             : $"Tên gốc: {entry.Name} • {FormatSize(entry.Length)}"));
                 }
-
                 string currentLocalFingerprint = ComputeFolderFingerprint(folder, cancellationToken);
                 if (!string.Equals(localFingerprint, currentLocalFingerprint, StringComparison.Ordinal))
-                    return (false, "Kho File đã thay đổi trong lúc xem trước. Hãy thử lại.", null);
-
+                    return (false, LocalizationAuditService.Get("backup.files.message015", "vi"), null);
                 string owner = ReadOwner(zip);
-                return (true, "Đã giải mã và xem trước bản sao lưu; kho chưa bị thay đổi.",
+                return (true, LocalizationAuditService.Get("backup.files.message016", "vi"),
                     new FileRestorePreview(owner, added, skipped, totalBytes, invalid,
                         fingerprint, localFingerprint, items));
             }
             catch (OperationCanceledException)
             {
-                return (false, "Đã hủy xem trước bản sao lưu.", null);
+                return (false, LocalizationAuditService.Get("backup.files.message017", "vi"), null);
             }
             catch (Exception ex)
             {
@@ -465,7 +413,6 @@ namespace PersonalInfoManager.Services
                 if (zipBytes != null) CryptographicOperations.ZeroMemory(zipBytes);
             }
         }
-
         public static (bool ok, string message, int added, int skipped) RestoreFromFile(
             string username, string sourcePath, string? passphrase = null,
             Func<string?, string?>? askPassphrase = null,
@@ -476,21 +423,16 @@ namespace PersonalInfoManager.Services
         {
             byte[]? zipBytes = null;
             int added = 0, skipped = 0;
-
             try
             {
                 cancellationToken.ThrowIfCancellationRequested();
-
                 if (!File.Exists(sourcePath))
-                    return (false, "File không tồn tại.", 0, 0);
-
+                    return (false, LocalizationAuditService.Get("backup.files.message001", "vi"), 0, 0);
                 if (new FileInfo(sourcePath).Length > MaxTotalBytes + 16L * 1024 * 1024)
-                    return (false, "File quá lớn so với một bản sao lưu File cá nhân của TQLTK.", 0, 0);
-
+                    return (false, LocalizationAuditService.Get("backup.files.message002", "vi"), 0, 0);
                 byte[] data = File.ReadAllBytes(sourcePath);
                 if (!BackupCrypto.IsBinaryFormat(data))
-                    return (false, "File này không phải bản sao lưu File cá nhân của TQLTK.", 0, 0);
-
+                    return (false, LocalizationAuditService.Get("backup.files.message003", "vi"), 0, 0);
                 if (expectedFingerprint != null)
                 {
                     byte[] fingerprintBytes = SHA256.HashData(data);
@@ -498,51 +440,40 @@ namespace PersonalInfoManager.Services
                     {
                         string currentFingerprint = Convert.ToHexString(fingerprintBytes);
                         if (!string.Equals(currentFingerprint, expectedFingerprint, StringComparison.Ordinal))
-                            return (false, "File sao lưu đã thay đổi sau khi xem trước. Hãy xem trước lại.", 0, 0);
+                            return (false, LocalizationAuditService.Get("backup.files.message018", "vi"), 0, 0);
                     }
                     finally { CryptographicOperations.ZeroMemory(fingerprintBytes); }
                 }
-
                 zipBytes = DecryptWithPrompts(data, username, passphrase, askPassphrase);
                 if (zipBytes == null)
-                    return (false, "Đã hủy: chưa nhập đúng cụm mật khẩu sao lưu.", 0, 0);
-
+                    return (false, LocalizationAuditService.Get("backup.files.message019", "vi"), 0, 0);
                 using var ms = new MemoryStream(zipBytes, writable: false);
                 using var zip = new ZipArchive(ms, ZipArchiveMode.Read);
                 if (zip.GetEntry(ManifestEntryName) == null)
-                    return (false, "Bản sao lưu thiếu manifest của TQLTK.", 0, 0);
-
+                    return (false, LocalizationAuditService.Get("backup.files.message020", "vi"), 0, 0);
                 string owner = ReadOwner(zip);
                 bool foreignOwner = owner.Length > 0 &&
                                     !string.Equals(owner, username, StringComparison.OrdinalIgnoreCase);
-
                 if (foreignOwner && (confirmForeignOwner == null || !confirmForeignOwner(owner)))
                     return (false,
                         $"Đã hủy khôi phục: bản sao lưu này thuộc về người dùng '{owner}', không phải '{username}'.", 0, 0);
-
                 var fileService = new LocalFileService();
                 string readOnlyFolder = fileService.GetExistingUserFolderReadOnly(username);
                 if (expectedLocalFingerprint != null &&
                     !string.Equals(ComputeFolderFingerprint(readOnlyFolder, cancellationToken),
                         expectedLocalFingerprint, StringComparison.Ordinal))
-                    return (false, "Kho File đã thay đổi sau khi xem trước. Hãy xem trước lại.", 0, 0);
-
+                    return (false, LocalizationAuditService.Get("backup.files.message021", "vi"), 0, 0);
                 var entries = zip.Entries.Where(IsUserFileEntry).ToList();
                 int invalid = zip.Entries.Count(e =>
                     e.Name.Length > 0 && !IsUserFileEntry(e) && e.FullName != ManifestEntryName);
-
                 if (entries.Count == 0)
-                    return (false, "Bản sao lưu không chứa file nào để khôi phục.", 0, 0);
-
+                    return (false, LocalizationAuditService.Get("backup.files.message022", "vi"), 0, 0);
                 if (entries.Sum(e => e.Length) > MaxTotalBytes)
-                    return (false, "Bản sao lưu có dung lượng lớn bất thường nên bị từ chối.", 0, 0);
-
+                    return (false, LocalizationAuditService.Get("backup.files.message023", "vi"), 0, 0);
                 string userFolder = fileService.GetUserFolder(username);
-
                 foreach (var entry in entries)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-
                     string existing = Path.Combine(userFolder, entry.Name);
                     if (File.Exists(existing))
                     {
@@ -553,18 +484,15 @@ namespace PersonalInfoManager.Services
                             continue;
                         }
                     }
-
                     cancellationToken.ThrowIfCancellationRequested();
                     using var source = entry.Open();
                     fileService.ImportStream(username, entry.Name, source, entry.Length,
                         entry.LastWriteTime.UtcDateTime, cancellationToken);
                     added++;
                 }
-
                 string msg = $"Đã khôi phục {added} file.";
                 if (skipped > 0) msg += $"\nBỏ qua {skipped} file trùng (cùng tên và cùng nội dung).";
                 if (invalid > 0) msg += $"\nBỏ qua {invalid} mục có tên không hợp lệ.";
-
                 return (true, msg, added, skipped);
             }
             catch (OperationCanceledException)
@@ -586,33 +514,25 @@ namespace PersonalInfoManager.Services
                 if (zipBytes != null) CryptographicOperations.ZeroMemory(zipBytes);
             }
         }
-
         private static byte[]? DecryptWithPrompts(
             byte[] data, string username, string? passphrase, Func<string?, string?>? askPassphrase)
         {
             string? candidate = passphrase ?? BackupCrypto.GetStoredPassphrase(username);
-
             if (candidate != null && TryDecrypt(data, candidate, out byte[]? plain))
                 return plain;
-
             string? error = candidate == null
                 ? null
                 : "Cụm mật khẩu đang lưu trên máy này không mở được bản sao lưu này.";
-
             for (int attempt = 0; attempt < 3 && askPassphrase != null; attempt++)
             {
                 string? typed = askPassphrase(error);
                 if (typed == null) return null;
-
                 if (TryDecrypt(data, typed, out byte[]? typedPlain))
                     return typedPlain;
-
                 error = "Cụm mật khẩu không đúng hoặc file bị hỏng. Hãy thử lại.";
             }
-
             return null;
         }
-
         private static bool TryDecrypt(byte[] data, string passphrase, out byte[]? plain)
         {
             try
@@ -626,14 +546,12 @@ namespace PersonalInfoManager.Services
                 return false;
             }
         }
-
         private static string ReadOwner(ZipArchive zip)
         {
             try
             {
                 var entry = zip.GetEntry(ManifestEntryName);
                 if (entry == null) return "";
-
                 using var s = entry.Open();
                 return JsonSerializer.Deserialize<ArchiveManifest>(s)?.ExportedBy.Trim() ?? "";
             }
@@ -642,7 +560,6 @@ namespace PersonalInfoManager.Services
                 return "";
             }
         }
-
         private static bool TryReadAndValidateManifest(
             ZipArchive zip, int entryCount, long totalBytes, out ArchiveManifest manifest)
         {
@@ -651,14 +568,12 @@ namespace PersonalInfoManager.Services
             {
                 var entry = zip.GetEntry(ManifestEntryName);
                 if (entry == null || entry.Length is < 1 or > 64 * 1024) return false;
-
                 using var stream = entry.Open();
                 var parsed = JsonSerializer.Deserialize<ArchiveManifest>(stream);
                 if (parsed == null || parsed.FormatVersion != CurrentFormatVersion ||
                     parsed.FileCount != entryCount || parsed.TotalBytes != totalBytes ||
                     string.IsNullOrWhiteSpace(parsed.ExportedBy))
                     return false;
-
                 manifest = parsed;
                 return true;
             }
@@ -667,7 +582,6 @@ namespace PersonalInfoManager.Services
                 return false;
             }
         }
-
         private static string GetUniqueName(string originalName, HashSet<string> existingNames)
         {
             string stem = Path.GetFileNameWithoutExtension(originalName);
@@ -680,7 +594,6 @@ namespace PersonalInfoManager.Services
             } while (existingNames.Contains(candidate));
             return candidate;
         }
-
         private static bool StreamsEqual(
             Stream first, long firstLength, Stream second, long secondLength,
             CancellationToken cancellationToken)
@@ -695,7 +608,6 @@ namespace PersonalInfoManager.Services
                     CopyBounded(second, Stream.Null, secondLength, cancellationToken);
                     return false;
                 }
-
                 long remaining = firstLength;
                 bool equal = true;
                 while (remaining > 0)
@@ -710,9 +622,8 @@ namespace PersonalInfoManager.Services
                     CryptographicOperations.ZeroMemory(secondBuffer.AsSpan(0, count));
                     remaining -= count;
                 }
-
                 if (first.ReadByte() != -1 || second.ReadByte() != -1)
-                    throw new InvalidDataException("Nội dung file nén dài hơn dung lượng đã khai báo.");
+                    throw new InvalidDataException(LocalizationAuditService.Get("backup.files.message024", "vi"));
                 return equal;
             }
             finally
@@ -721,7 +632,6 @@ namespace PersonalInfoManager.Services
                 CryptographicOperations.ZeroMemory(secondBuffer);
             }
         }
-
         private static string ComputeFolderFingerprint(string folder, CancellationToken cancellationToken)
         {
             using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
@@ -762,16 +672,13 @@ namespace PersonalInfoManager.Services
                 }
                 finally { CryptographicOperations.ZeroMemory(buffer); }
             }
-
             byte[] digest = hash.GetHashAndReset();
             try { return Convert.ToHexString(digest); }
             finally { CryptographicOperations.ZeroMemory(digest); }
         }
-
         private static bool IsUserFileEntry(ZipArchiveEntry e)
         {
             string name = e.Name;
-
             return name.Length > 0
                    && e.FullName == name
                    && name != "." && name != ".."
@@ -779,7 +686,6 @@ namespace PersonalInfoManager.Services
                    && !name.EndsWith('.') && !name.EndsWith(' ')
                    && !ReservedName.IsMatch(name);
         }
-
         private static void CopyBounded(
             Stream src, Stream dst, long maxBytes, CancellationToken cancellationToken = default)
         {
@@ -793,18 +699,16 @@ namespace PersonalInfoManager.Services
                     cancellationToken.ThrowIfCancellationRequested();
                     total += read;
                     if (total > maxBytes)
-                        throw new InvalidDataException("Một file trong bản sao lưu lớn hơn dung lượng đã khai báo.");
-
+                        throw new InvalidDataException(LocalizationAuditService.Get("backup.files.message025", "vi"));
                     dst.Write(buffer, 0, read);
                 }
                 if (total != maxBytes)
-                    throw new InvalidDataException("Một file trong bản sao lưu ngắn hơn dung lượng đã khai báo.");
+                    throw new InvalidDataException(LocalizationAuditService.Get("backup.files.message026", "vi"));
             }
             finally
             {
                 CryptographicOperations.ZeroMemory(buffer);
             }
         }
-
     }
 }

@@ -72,13 +72,13 @@ public enum BackupRecoveryItemKind
 public sealed class BackupComparisonEntry
 {
     public required string Name { get; init; }
-    public required string Status { get; init; }
+    public required BackupItemStatus Status { get; init; }
     public required string Details { get; init; }
     public required BackupRecoveryItemKind Kind { get; init; }
     public string? OlderKey { get; init; }
     public string? NewerKey { get; init; }
-    public required IReadOnlyList<string> AvailableSources { get; init; }
-    public string SelectedSource { get; set; } = "";
+    public required IReadOnlyList<BackupRecoverySource> AvailableSources { get; init; }
+    public BackupRecoverySource SelectedSource { get; set; } = BackupRecoverySource.None;
 }
 public sealed record BackupRecoverySelection(BackupRecoveryItemKind Kind, string Key, bool FromOlder);
 public static class CompleteBackupService
@@ -238,7 +238,7 @@ public static class CompleteBackupService
             AtomicFileService.PromoteTemporary(stagedPath, destinationPath);
             stagedPath = null;
             try { ActivityLogger.Log(username, "CREATE_COMPLETE_BACKUP", $"Đã tạo gói chuyển máy: {Path.GetFileName(destinationPath)}"); } catch { }
-            return (true, "Đã tạo và xác minh gói sao lưu đầy đủ.", ToInfo(manifest, new FileInfo(destinationPath).Length));
+            return (true, LocalizationAuditService.Get("backup.complete.message001", "vi"), ToInfo(manifest, new FileInfo(destinationPath).Length));
         }
         catch (OperationCanceledException)
         {
@@ -281,31 +281,31 @@ public static class CompleteBackupService
             var currentFiles = localService.ListFilesReadOnly(username);
             string stateHash = ComputeLocalStateHash(currentAccounts, currentNotes, currentFiles, CaptureSettings());
             var items = new List<BackupPreviewItem>();
-            items.Add(new BackupPreviewItem("Tài khoản, TOTP, tệp đính kèm và trường tùy chỉnh", "Luôn có",
+            items.Add(new BackupPreviewItem("Tài khoản, TOTP, tệp đính kèm và trường tùy chỉnh", BackupItemStatus.AlwaysIncluded,
                 LanguageService.Format("{0} tài khoản; mỗi mục giữ thông tin đăng nhập, TOTP, tệp đính kèm, trường tùy chỉnh và lịch sử.", package.Accounts.Count)));
-            items.Add(new BackupPreviewItem("Ghi chú riêng", package.Manifest.IncludesNotes ? "Có trong gói" : "Không có trong gói",
+            items.Add(new BackupPreviewItem("Ghi chú riêng", package.Manifest.IncludesNotes ? BackupItemStatus.Included : BackupItemStatus.Excluded,
                 package.Manifest.IncludesNotes
                     ? LanguageService.Format("{0} ghi chú riêng.", package.Notes.Count)
                     : LanguageService.Translate("Bạn đã bỏ chọn ghi chú riêng khi tạo gói.")));
-            items.Add(new BackupPreviewItem("Tệp cá nhân", package.Manifest.IncludesPersonalFiles ? "Có trong gói" : "Không có trong gói",
+            items.Add(new BackupPreviewItem("Tệp cá nhân", package.Manifest.IncludesPersonalFiles ? BackupItemStatus.Included : BackupItemStatus.Excluded,
                 package.Manifest.IncludesPersonalFiles
                     ? LanguageService.Format("{0} tệp, tổng dung lượng {1}.", package.Manifest.PersonalFileCount, FileBackupService.FormatSize(package.Manifest.PersonalFileBytes))
                     : LanguageService.Translate("Bạn đã bỏ chọn tệp cá nhân khi tạo gói.")));
-            items.Add(new BackupPreviewItem("Cài đặt an toàn", package.Manifest.IncludesSettings ? "Có trong gói" : "Không có trong gói",
+            items.Add(new BackupPreviewItem("Cài đặt an toàn", package.Manifest.IncludesSettings ? BackupItemStatus.Included : BackupItemStatus.Excluded,
                 LanguageService.Translate("Chỉ gồm ngôn ngữ, giao diện và một số tùy chọn khóa; không gồm thông tin đăng nhập, 2FA hay Windows Hello.")));
             int addAccounts = 0;
             foreach (SavedAccount account in package.Accounts)
             {
                 bool exists = currentAccounts.Any(item => item.Id == account.Id || SameAccount(item, account));
                 items.Add(new BackupPreviewItem(account.ServiceName,
-                    exists ? "Giữ bản đang có" : "Sẽ thêm", account.Username));
+                    exists ? BackupItemStatus.KeepExisting : BackupItemStatus.AddAccount, account.Username));
                 if (!exists) addAccounts++;
             }
             int addNotes = 0;
             foreach (Note note in package.Notes)
             {
                 bool exists = currentNotes.Any(item => item.Id == note.Id);
-                items.Add(new BackupPreviewItem(note.Title, exists ? "Giữ ghi chú đang có" : "Sẽ thêm ghi chú", ""));
+                items.Add(new BackupPreviewItem(note.Title, exists ? BackupItemStatus.KeepNote : BackupItemStatus.AddNote, ""));
                 if (!exists) addNotes++;
             }
             int addFiles = 0;
@@ -316,13 +316,13 @@ public static class CompleteBackupService
                 bool sameContent = existing != null && FileContentEquals(package.ArchiveBytes,
                     file.EntryName, localService, existing.FullName, file.Length);
                 items.Add(new BackupPreviewItem(file.FileName,
-                    sameContent ? "Bỏ qua tệp trùng" : existing != null ? "Sẽ thêm bản sao có tên mới" : "Sẽ thêm tệp",
+                    sameContent ? BackupItemStatus.SkipDuplicateFile : existing != null ? BackupItemStatus.AddRenamedCopy : BackupItemStatus.AddFile,
                     FileBackupService.FormatSize(file.Length)));
                 if (!sameContent) addFiles++;
             }
             var preview = new CompleteBackupPreview(Path.GetFullPath(path), HashFile(path), stateHash,
                 ToInfo(package.Manifest, new FileInfo(path).Length), items, addAccounts, addNotes, addFiles);
-            return (true, "Đã xem trước. Khôi phục chỉ bổ sung mục còn thiếu, không ghi đè dữ liệu hiện tại.", preview);
+            return (true, LocalizationAuditService.Get("backup.complete.message002", "vi"), preview);
         }
         catch (Exception ex)
         {
@@ -346,10 +346,10 @@ public static class CompleteBackupService
         try
         {
             if (!File.Exists(preview.Path) || !string.Equals(HashFile(preview.Path), preview.FileHash, StringComparison.Ordinal))
-                return (false, "Gói đã thay đổi sau khi xem trước. Hãy xem trước lại.", 0, 0, 0);
+                return (false, LocalizationAuditService.Get("backup.complete.message003", "vi"), 0, 0, 0);
             using LoadedPackage package = Load(preview.Path, passphrase);
             if (!string.Equals(package.Manifest.ExportedBy, username, StringComparison.OrdinalIgnoreCase) && !allowForeignOwner)
-                return (false, "Gói được tạo bởi tài khoản khác. Cần xác nhận rõ trước khi nhập.", 0, 0, 0);
+                return (false, LocalizationAuditService.Get("backup.complete.message004", "vi"), 0, 0, 0);
             if (package.Manifest.AccountCount != preview.Info.AccountCount ||
                 package.Manifest.NoteCount != preview.Info.NoteCount ||
                 package.Manifest.PersonalFileCount != preview.Info.PersonalFileCount)
@@ -366,7 +366,7 @@ public static class CompleteBackupService
             var currentFiles = fileService.ListFilesReadOnly(username);
             if (!string.Equals(ComputeLocalStateHash(currentAccounts, currentNotes, currentFiles, originalSettings),
                     preview.LocalStateHash, StringComparison.Ordinal))
-                return (false, "Dữ liệu trên máy đã thay đổi sau khi xem trước. Hãy xem trước lại.", 0, 0, 0);
+                return (false, LocalizationAuditService.Get("backup.complete.message005", "vi"), 0, 0, 0);
             foreach (SavedAccount incoming in package.Accounts)
             {
                 if (currentAccounts.Any(existing => existing.Id == incoming.Id || SameAccount(existing, incoming))) continue;
@@ -461,22 +461,22 @@ public static class CompleteBackupService
                 !string.Equals(JsonSerializer.Serialize(older.Settings, JsonOptions),
                     JsonSerializer.Serialize(newer.Settings, JsonOptions), StringComparison.Ordinal))
             {
-                changes.Add(new BackupPreviewItem("Cài đặt an toàn", "Đã thay đổi", "Ngôn ngữ, giao diện hoặc tùy chọn khóa."));
+                changes.Add(new BackupPreviewItem("Cài đặt an toàn", BackupItemStatus.Changed, "Ngôn ngữ, giao diện hoặc tùy chọn khóa."));
                 entries.Add(new BackupComparisonEntry
                 {
                     Name = "Cài đặt an toàn",
-                    Status = "Đã thay đổi",
+                    Status = BackupItemStatus.Changed,
                     Details = "Ngôn ngữ, giao diện hoặc tùy chọn khóa. Chỉ khôi phục qua khôi phục toàn gói.",
                     Kind = BackupRecoveryItemKind.Settings,
-                    AvailableSources = new[] { LanguageService.Translate("Không hỗ trợ khôi phục riêng") },
-                    SelectedSource = LanguageService.Translate("Không hỗ trợ khôi phục riêng")
+                    AvailableSources = new[] { BackupRecoverySource.Unsupported },
+                    SelectedSource = BackupRecoverySource.Unsupported
                 });
             }
             else
                 AddNonComparableCategory("Cài đặt an toàn", changes, entries);
-            int added = changes.Count(item => item.Status == "Được thêm");
-            int changed = changes.Count(item => item.Status == "Đã sửa");
-            int removed = changes.Count(item => item.Status == "Đã xóa");
+            int added = changes.Count(item => item.Status == BackupItemStatus.Added);
+            int changed = changes.Count(item => item.Status == BackupItemStatus.Modified);
+            int removed = changes.Count(item => item.Status == BackupItemStatus.Removed);
             return (true, $"So sánh xong: thêm {added}, sửa {changed}, xóa {removed}. Bản mới không tự áp dụng thay đổi.",
                 new BackupComparisonResult(ToInfo(older.Manifest, new FileInfo(olderPath).Length),
                     ToInfo(newer.Manifest, new FileInfo(newerPath).Length), changes, added, changed, removed)
@@ -499,7 +499,7 @@ public static class CompleteBackupService
         IReadOnlyList<BackupRecoverySelection> selections, bool allowForeignOwner = false)
     {
         if (selections.Count == 0)
-            return (false, "Chưa chọn mục cần khôi phục.", 0, 0, 0);
+            return (false, LocalizationAuditService.Get("backup.complete.message006", "vi"), 0, 0, 0);
         AccountVaultService? vaultService = null;
         LocalFileService? fileService = null;
         List<SavedAccount>? originalAccounts = null;
@@ -512,7 +512,7 @@ public static class CompleteBackupService
             if (!File.Exists(comparison.OlderPath) || !File.Exists(comparison.NewerPath) ||
                 !string.Equals(HashFile(comparison.OlderPath), comparison.OlderFileHash, StringComparison.Ordinal) ||
                 !string.Equals(HashFile(comparison.NewerPath), comparison.NewerFileHash, StringComparison.Ordinal))
-                return (false, "Một gói đã thay đổi sau khi so sánh. Hãy so sánh lại trước khi khôi phục.", 0, 0, 0);
+                return (false, LocalizationAuditService.Get("backup.complete.message007", "vi"), 0, 0, 0);
             foreach (BackupRecoverySelection selection in selections)
             {
                 bool offered = comparison.Entries.Any(entry => entry.Kind == selection.Kind &&
@@ -520,7 +520,7 @@ public static class CompleteBackupService
                         ? string.Equals(entry.OlderKey, selection.Key, StringComparison.Ordinal)
                         : string.Equals(entry.NewerKey, selection.Key, StringComparison.Ordinal)));
                 if (!offered || selection.Kind == BackupRecoveryItemKind.Settings)
-                    return (false, "Danh sách mục khôi phục không khớp với kết quả so sánh. Hãy mở lại phần so sánh.", 0, 0, 0);
+                    return (false, LocalizationAuditService.Get("backup.complete.message008", "vi"), 0, 0, 0);
             }
             using LoadedPackage older = Load(comparison.OlderPath, olderPassphrase);
             using LoadedPackage newer = Load(comparison.NewerPath, newerPassphrase);
@@ -528,7 +528,7 @@ public static class CompleteBackupService
             bool usesNewer = selections.Any(selection => !selection.FromOlder);
             if (((usesOlder && !string.Equals(older.Manifest.ExportedBy, username, StringComparison.OrdinalIgnoreCase)) ||
                  (usesNewer && !string.Equals(newer.Manifest.ExportedBy, username, StringComparison.OrdinalIgnoreCase))) && !allowForeignOwner)
-                return (false, "Có gói được tạo bởi tài khoản khác. Cần xác nhận rõ trước khi nhập.", 0, 0, 0);
+                return (false, LocalizationAuditService.Get("backup.complete.message009", "vi"), 0, 0, 0);
             using var storageLock = AesCrypto.AcquireStorageLock();
             vaultService = new AccountVaultService();
             List<SavedAccount> currentAccounts = vaultService.Load(username);
@@ -537,7 +537,7 @@ public static class CompleteBackupService
             List<FileInfo> currentFiles = fileService.ListFilesReadOnly(username);
             if (!string.Equals(ComputeLocalStateHash(currentAccounts, currentNotes, currentFiles, CaptureSettings()),
                     comparison.LocalStateHash, StringComparison.Ordinal))
-                return (false, "Dữ liệu hiện tại đã thay đổi kể từ lúc so sánh. Hãy so sánh lại để bảo vệ các chỉnh sửa mới.", 0, 0, 0);
+                return (false, LocalizationAuditService.Get("backup.complete.message010", "vi"), 0, 0, 0);
             originalAccounts = currentAccounts.Select(account => account.Clone()).ToList();
             originalNotes = JsonSerializer.Deserialize<List<Note>>(JsonSerializer.Serialize(currentNotes, JsonOptions), JsonOptions)
                 ?? throw new InvalidDataException("Không thể tạo bản chụp ghi chú trước khi khôi phục.");
@@ -553,9 +553,9 @@ public static class CompleteBackupService
                     case BackupRecoveryItemKind.Account:
                     {
                         if (!Guid.TryParse(selection.Key, out Guid id))
-                            throw new InvalidDataException("Mã tài khoản được chọn không hợp lệ.");
+                            throw new InvalidDataException(LocalizationAuditService.Get("backup.complete.message011", "vi"));
                         SavedAccount original = source.Accounts.FirstOrDefault(account => account.Id == id)
-                            ?? throw new InvalidDataException("Không tìm thấy tài khoản đã chọn trong bản sao lưu.");
+                            ?? throw new InvalidDataException(LocalizationAuditService.Get("backup.complete.message012", "vi"));
                         SavedAccount copy = original.Clone();
                         copy.Id = Guid.NewGuid();
                         copy.CreatedAt = DateTime.Now;
@@ -580,9 +580,9 @@ public static class CompleteBackupService
                     case BackupRecoveryItemKind.Note:
                     {
                         if (!Guid.TryParse(selection.Key, out Guid id))
-                            throw new InvalidDataException("Mã ghi chú được chọn không hợp lệ.");
+                            throw new InvalidDataException(LocalizationAuditService.Get("backup.complete.message013", "vi"));
                         Note original = source.Notes.FirstOrDefault(note => note.Id == id)
-                            ?? throw new InvalidDataException("Không tìm thấy ghi chú đã chọn trong bản sao lưu.");
+                            ?? throw new InvalidDataException(LocalizationAuditService.Get("backup.complete.message014", "vi"));
                         currentNotes.Add(new Note
                         {
                             Id = Guid.NewGuid(),
@@ -597,11 +597,11 @@ public static class CompleteBackupService
                     case BackupRecoveryItemKind.PersonalFile:
                     {
                         if (!source.Files.TryGetValue(selection.Key, out PersonalFileManifest? file))
-                            throw new InvalidDataException("Không tìm thấy tệp đã chọn trong bản sao lưu.");
+                            throw new InvalidDataException(LocalizationAuditService.Get("backup.complete.message015", "vi"));
                         using var archiveStream = new MemoryStream(source.ArchiveBytes, writable: false);
                         using var archive = new ZipArchive(archiveStream, ZipArchiveMode.Read);
                         ZipArchiveEntry entry = archive.GetEntry(file.EntryName)
-                            ?? throw new InvalidDataException("Thiếu tệp đã chọn trong gói sao lưu.");
+                            ?? throw new InvalidDataException(LocalizationAuditService.Get("backup.complete.message016", "vi"));
                         using Stream content = entry.Open();
                         importedPaths.Add(fileService.ImportStream(username, file.FileName, content,
                             file.Length, new DateTime(file.LastWriteTimeUtcTicks, DateTimeKind.Utc)));
@@ -609,7 +609,7 @@ public static class CompleteBackupService
                         break;
                     }
                     default:
-                        throw new InvalidDataException("Loại mục khôi phục không được hỗ trợ.");
+                        throw new InvalidDataException(LocalizationAuditService.Get("backup.complete.message017", "vi"));
                 }
             }
             if (accountsAdded > 0)
@@ -764,22 +764,22 @@ public static class CompleteBackupService
         {
             if (!oldMap.TryGetValue(item.Id, out var prior))
             {
-                changes.Add(new BackupPreviewItem(item.ServiceName, "Được thêm", item.Username));
-                entries.Add(CreateComparisonEntry(item.ServiceName, "Được thêm", item.Username,
+                changes.Add(new BackupPreviewItem(item.ServiceName, BackupItemStatus.Added, item.Username));
+                entries.Add(CreateComparisonEntry(item.ServiceName, BackupItemStatus.Added, item.Username,
                     BackupRecoveryItemKind.Account, null, item.Id.ToString("D"), false, true));
                 continue;
             }
             if (!string.Equals(HashJson(prior), HashJson(item), StringComparison.Ordinal))
             {
-                changes.Add(new BackupPreviewItem(item.ServiceName, "Đã sửa", item.Username));
-                entries.Add(CreateComparisonEntry(item.ServiceName, "Đã sửa", item.Username,
+                changes.Add(new BackupPreviewItem(item.ServiceName, BackupItemStatus.Modified, item.Username));
+                entries.Add(CreateComparisonEntry(item.ServiceName, BackupItemStatus.Modified, item.Username,
                     BackupRecoveryItemKind.Account, prior.Id.ToString("D"), item.Id.ToString("D"), true, true));
             }
         }
         foreach (var item in older.Where(item => !newMap.ContainsKey(item.Id)))
         {
-            changes.Add(new BackupPreviewItem(item.ServiceName, "Đã xóa", item.Username));
-            entries.Add(CreateComparisonEntry(item.ServiceName, "Đã xóa", item.Username,
+            changes.Add(new BackupPreviewItem(item.ServiceName, BackupItemStatus.Removed, item.Username));
+            entries.Add(CreateComparisonEntry(item.ServiceName, BackupItemStatus.Removed, item.Username,
                 BackupRecoveryItemKind.Account, item.Id.ToString("D"), null, true, false));
         }
     }
@@ -792,21 +792,21 @@ public static class CompleteBackupService
         {
             if (!oldMap.TryGetValue(item.Id, out var prior))
             {
-                changes.Add(new BackupPreviewItem(item.Title, "Được thêm", "Ghi chú riêng"));
-                entries.Add(CreateComparisonEntry(item.Title, "Được thêm", "Ghi chú riêng",
+                changes.Add(new BackupPreviewItem(item.Title, BackupItemStatus.Added, "Ghi chú riêng"));
+                entries.Add(CreateComparisonEntry(item.Title, BackupItemStatus.Added, "Ghi chú riêng",
                     BackupRecoveryItemKind.Note, null, item.Id.ToString("D"), false, true));
             }
             else if (!string.Equals(HashJson(prior), HashJson(item), StringComparison.Ordinal))
             {
-                changes.Add(new BackupPreviewItem(item.Title, "Đã sửa", "Ghi chú riêng"));
-                entries.Add(CreateComparisonEntry(item.Title, "Đã sửa", "Ghi chú riêng",
+                changes.Add(new BackupPreviewItem(item.Title, BackupItemStatus.Modified, "Ghi chú riêng"));
+                entries.Add(CreateComparisonEntry(item.Title, BackupItemStatus.Modified, "Ghi chú riêng",
                     BackupRecoveryItemKind.Note, prior.Id.ToString("D"), item.Id.ToString("D"), true, true));
             }
         }
         foreach (var item in older.Where(item => !newMap.ContainsKey(item.Id)))
         {
-            changes.Add(new BackupPreviewItem(item.Title, "Đã xóa", "Ghi chú riêng"));
-            entries.Add(CreateComparisonEntry(item.Title, "Đã xóa", "Ghi chú riêng",
+            changes.Add(new BackupPreviewItem(item.Title, BackupItemStatus.Removed, "Ghi chú riêng"));
+            entries.Add(CreateComparisonEntry(item.Title, BackupItemStatus.Removed, "Ghi chú riêng",
                 BackupRecoveryItemKind.Note, item.Id.ToString("D"), null, true, false));
         }
     }
@@ -819,31 +819,31 @@ public static class CompleteBackupService
         {
             if (!oldByName.TryGetValue(item.FileName, out var prior))
             {
-                changes.Add(new BackupPreviewItem(item.FileName, "Được thêm", "Tệp cá nhân"));
-                entries.Add(CreateComparisonEntry(item.FileName, "Được thêm", "Tệp cá nhân",
+                changes.Add(new BackupPreviewItem(item.FileName, BackupItemStatus.Added, "Tệp cá nhân"));
+                entries.Add(CreateComparisonEntry(item.FileName, BackupItemStatus.Added, "Tệp cá nhân",
                     BackupRecoveryItemKind.PersonalFile, null, item.EntryName, false, true));
             }
             else if (!string.Equals(prior.Sha256, item.Sha256, StringComparison.OrdinalIgnoreCase))
             {
-                changes.Add(new BackupPreviewItem(item.FileName, "Đã sửa", "Tệp cá nhân"));
-                entries.Add(CreateComparisonEntry(item.FileName, "Đã sửa", "Tệp cá nhân",
+                changes.Add(new BackupPreviewItem(item.FileName, BackupItemStatus.Modified, "Tệp cá nhân"));
+                entries.Add(CreateComparisonEntry(item.FileName, BackupItemStatus.Modified, "Tệp cá nhân",
                     BackupRecoveryItemKind.PersonalFile, prior.EntryName, item.EntryName, true, true));
             }
         }
         foreach (var item in older.Files.Values.Where(item => !newByName.ContainsKey(item.FileName)))
         {
-            changes.Add(new BackupPreviewItem(item.FileName, "Đã xóa", "Tệp cá nhân"));
-            entries.Add(CreateComparisonEntry(item.FileName, "Đã xóa", "Tệp cá nhân",
+            changes.Add(new BackupPreviewItem(item.FileName, BackupItemStatus.Removed, "Tệp cá nhân"));
+            entries.Add(CreateComparisonEntry(item.FileName, BackupItemStatus.Removed, "Tệp cá nhân",
                 BackupRecoveryItemKind.PersonalFile, item.EntryName, null, true, false));
         }
     }
-    private static BackupComparisonEntry CreateComparisonEntry(string name, string status, string details,
+    private static BackupComparisonEntry CreateComparisonEntry(string name, BackupItemStatus status, string details,
         BackupRecoveryItemKind kind, string? olderKey, string? newerKey, bool canUseOlder, bool canUseNewer)
     {
-        string none = LanguageService.Translate("Không khôi phục");
-        var sources = new List<string> { none };
-        if (canUseOlder) sources.Add(LanguageService.Translate("Bản sao lưu cũ"));
-        if (canUseNewer) sources.Add(LanguageService.Translate("Bản sao lưu mới"));
+        var none = BackupRecoverySource.None;
+        var sources = new List<BackupRecoverySource> { none };
+        if (canUseOlder) sources.Add(BackupRecoverySource.Older);
+        if (canUseNewer) sources.Add(BackupRecoverySource.Newer);
         return new BackupComparisonEntry
         {
             Name = name,
@@ -859,10 +859,10 @@ public static class CompleteBackupService
     private static void AddNonComparableCategory(string name, List<BackupPreviewItem> changes,
         List<BackupComparisonEntry> entries)
     {
-        const string status = "Không so sánh được";
+        const BackupItemStatus status = BackupItemStatus.NotComparable;
         string details = LanguageService.Translate("Một trong hai gói không có thành phần này nên không thể xác định mục đã thêm hoặc xóa.");
         changes.Add(new BackupPreviewItem(name, status, details));
-        string unsupported = LanguageService.Translate("Không hỗ trợ khôi phục riêng");
+        var unsupported = BackupRecoverySource.Unsupported;
         entries.Add(new BackupComparisonEntry
         {
             Name = name,

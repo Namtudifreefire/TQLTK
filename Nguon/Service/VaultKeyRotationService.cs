@@ -5,21 +5,17 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-
 namespace PersonalInfoManager.Services
 {
     public sealed record VaultKeyRotationResult(int ReencryptedFiles, int PreservedLegacyBackups);
-
     public static class VaultKeyRotationService
     {
         private const string JournalName = "key-rotation.journal";
         private static readonly byte[] JournalEntropy = Encoding.UTF8.GetBytes("TQLTK.VaultKeyRotation.v1");
-
 #if SECURITY_TEST
         internal static Action<string>? TestCheckpoint { get; set; }
         internal static bool PreserveJournalAfterTestFailure { get; set; }
 #endif
-
         private sealed class RotationJournal
         {
             public string Phase { get; set; } = "prepared";
@@ -28,7 +24,6 @@ namespace PersonalInfoManager.Services
             public string NewProtectedKey { get; set; } = "";
             public List<RotationFile> Files { get; set; } = new();
         }
-
         private sealed class RotationFile
         {
             public string Destination { get; set; } = "";
@@ -37,22 +32,18 @@ namespace PersonalInfoManager.Services
             public string OriginalHash { get; set; } = "";
             public string NewHash { get; set; } = "";
         }
-
         public static VaultKeyRotationResult Rotate(string username) => RotateCore(username, null);
-
         internal static VaultKeyRotationResult RotateForTesting(
             string username, IReadOnlyCollection<string> backupDirectories) =>
             RotateCore(username, backupDirectories);
-
         private static VaultKeyRotationResult RotateCore(
             string username, IReadOnlyCollection<string>? backupDirectories)
         {
-            if (string.IsNullOrWhiteSpace(username)) throw new ArgumentException("Tài khoản không hợp lệ.", nameof(username));
+            if (string.IsNullOrWhiteSpace(username)) throw new ArgumentException(LocalizationAuditService.Get("storage.rotation.message001", "vi"), nameof(username));
             using var storageLock = AesCrypto.AcquireStorageLock();
             string root = AesCrypto.StorageDirectory;
             Directory.CreateDirectory(root);
             RecoverIfNeeded(root);
-
             byte[] oldKey = AesCrypto.GetOrCreateKeyUnderLock();
             byte[] newKey = RandomNumberGenerator.GetBytes(32);
             var journal = new RotationJournal
@@ -64,7 +55,6 @@ namespace PersonalInfoManager.Services
             string journalPath = Path.Combine(root, JournalName);
             bool journalWritten = false;
             int legacyBackups = 0;
-
             try
             {
                 byte[] protectedNewKey = Convert.FromBase64String(journal.NewProtectedKey);
@@ -73,7 +63,6 @@ namespace PersonalInfoManager.Services
                 WriteJournal(journalPath, journal);
                 journalWritten = true;
                 WriteHistoricalKey(root, oldKey);
-
                 foreach (string candidate in FindRotationCandidates(root, username, backupDirectories).Distinct(StringComparer.OrdinalIgnoreCase))
                 {
                     if (!File.Exists(candidate)) continue;
@@ -88,7 +77,6 @@ namespace PersonalInfoManager.Services
                     if (!AesCrypto.IsAuthenticatedV2Format(encrypted))
                         throw new CryptographicException(
                             $"Không thể xoay khóa an toàn vì '{Path.GetFileName(candidate)}' không dùng định dạng AES-GCM được hỗ trợ. File vẫn được giữ nguyên.");
-
                     string plaintext = AesCrypto.DecryptWithAvailableKeysUnderLock(
                         encrypted.Trim().Substring("v2:".Length), oldKey);
                     byte[] newEncrypted = AesCrypto.EncryptWithKey(newKey, plaintext);
@@ -114,7 +102,7 @@ namespace PersonalInfoManager.Services
                         }
                         string stagedText = Encoding.UTF8.GetString(newEncrypted);
                         if (!string.Equals(AesCrypto.DecryptWithKey(newKey, stagedText), plaintext, StringComparison.Ordinal))
-                            throw new CryptographicException("Xác minh dữ liệu sau khi mã hóa lại thất bại.");
+                            throw new CryptographicException(LocalizationAuditService.Get("storage.rotation.message002", "vi"));
                         File.Copy(candidate, recovery, overwrite: false);
                         record.NewHash = HashBytes(newEncrypted);
                         WriteJournal(journalPath, journal);
@@ -124,7 +112,6 @@ namespace PersonalInfoManager.Services
                         CryptographicOperations.ZeroMemory(newEncrypted);
                     }
                 }
-
                 journal.Phase = "prepared";
                 WriteJournal(journalPath, journal);
                 ReachCheckpoint("prepared");
@@ -150,7 +137,6 @@ namespace PersonalInfoManager.Services
                 CryptographicOperations.ZeroMemory(newKey);
             }
         }
-
         internal static void RecoverIfNeeded(string root)
         {
             string path = Path.Combine(root, JournalName);
@@ -158,7 +144,6 @@ namespace PersonalInfoManager.Services
             RotationJournal journal = ReadJournal(path);
             CompleteRotation(root, journal);
         }
-
         private static IEnumerable<string> FindRotationCandidates(
             string root, string username, IReadOnlyCollection<string>? backupDirectories)
         {
@@ -166,10 +151,8 @@ namespace PersonalInfoManager.Services
                 yield return path;
             foreach (string path in Directory.EnumerateFiles(root, "vault_*.dat.bak", SearchOption.TopDirectoryOnly))
                 yield return path;
-
             string notes = Path.Combine(root, "notes.json");
             if (File.Exists(notes)) yield return notes;
-
             IEnumerable<string> folders;
             if (backupDirectories != null)
             {
@@ -183,18 +166,16 @@ namespace PersonalInfoManager.Services
                 folders = usernames.Select(AutoBackupService.GetFolder)
                     .Distinct(StringComparer.OrdinalIgnoreCase);
             }
-
             foreach (string backupFolder in folders)
             {
                 string fullFolder = Path.GetFullPath(backupFolder);
                 if (!Directory.Exists(fullFolder)) continue;
                 if ((File.GetAttributes(fullFolder) & FileAttributes.ReparsePoint) != 0)
-                    throw new IOException("Không xoay bản sao lưu nằm trong thư mục liên kết hệ thống.");
+                    throw new IOException(LocalizationAuditService.Get("storage.rotation.message003", "vi"));
                 foreach (string path in Directory.EnumerateFiles(fullFolder, "*.vault", SearchOption.TopDirectoryOnly))
                     yield return path;
             }
         }
-
         private static void WriteHistoricalKey(string root, byte[] oldKey)
         {
             string directory = Path.Combine(root, "key-history");
@@ -204,7 +185,6 @@ namespace PersonalInfoManager.Services
             try { AtomicFileService.WriteAllBytes(destination, protectedKey); }
             finally { CryptographicOperations.ZeroMemory(protectedKey); }
         }
-
         private static void CompleteRotation(string root, RotationJournal journal)
         {
             if (journal.Phase == "staging")
@@ -213,14 +193,12 @@ namespace PersonalInfoManager.Services
                 AtomicFileService.TryDelete(Path.Combine(root, JournalName));
                 return;
             }
-
             if (journal.Phase == "complete")
             {
                 Cleanup(journal);
                 AtomicFileService.TryDelete(Path.Combine(root, JournalName));
                 return;
             }
-
             foreach (RotationFile file in journal.Files)
             {
                 string actualHash = File.Exists(file.Destination) ? HashFile(file.Destination) : "";
@@ -232,7 +210,6 @@ namespace PersonalInfoManager.Services
                     throw new IOException($"Thiếu bản đã mã hóa để phục hồi '{Path.GetFileName(file.Destination)}'. File gốc vẫn được giữ nguyên.");
                 if (!File.Exists(file.RecoveryCopy) || !string.Equals(HashFile(file.RecoveryCopy), file.OriginalHash, StringComparison.Ordinal))
                     throw new IOException($"Thiếu bản phục hồi trước khi xoay khóa cho '{Path.GetFileName(file.Destination)}'.");
-
                 string replacement = Path.Combine(Path.GetDirectoryName(file.Destination)!, ".tqltk-rotation-commit-" + Guid.NewGuid().ToString("N") + ".tmp");
                 try
                 {
@@ -245,7 +222,6 @@ namespace PersonalInfoManager.Services
                 }
                 finally { AtomicFileService.TryDelete(replacement); }
             }
-
             byte[] protectedKey = Convert.FromBase64String(journal.NewProtectedKey);
             try
             {
@@ -253,19 +229,17 @@ namespace PersonalInfoManager.Services
                 if (!string.Equals(currentHash, journal.NewKeyHash, StringComparison.Ordinal))
                 {
                     if (!string.Equals(currentHash, journal.OldKeyHash, StringComparison.Ordinal))
-                        throw new IOException("Phục hồi xoay khóa bị dừng vì key.dat đã đổi ngoài giao dịch. Dữ liệu và nhật ký được giữ nguyên.");
+                        throw new IOException(LocalizationAuditService.Get("storage.rotation.message004", "vi"));
                     AtomicFileService.WriteAllBytes(AesCrypto.StorageKeyFile, protectedKey);
                     ReachCheckpoint("key-replaced");
                 }
             }
             finally { CryptographicOperations.ZeroMemory(protectedKey); }
-
             journal.Phase = "complete";
             WriteJournal(Path.Combine(root, JournalName), journal);
             Cleanup(journal);
             AtomicFileService.TryDelete(Path.Combine(root, JournalName));
         }
-
         private static void WriteJournal(string path, RotationJournal journal)
         {
             byte[] json = JsonSerializer.SerializeToUtf8Bytes(journal);
@@ -277,7 +251,6 @@ namespace PersonalInfoManager.Services
                 CryptographicOperations.ZeroMemory(protectedData);
             }
         }
-
         private static RotationJournal ReadJournal(string path)
         {
             byte[] protectedData = File.ReadAllBytes(path);
@@ -286,7 +259,7 @@ namespace PersonalInfoManager.Services
             {
                 json = ProtectedData.Unprotect(protectedData, JournalEntropy, DataProtectionScope.CurrentUser);
                 return JsonSerializer.Deserialize<RotationJournal>(json)
-                    ?? throw new CryptographicException("Journal xoay khóa không hợp lệ.");
+                    ?? throw new CryptographicException(LocalizationAuditService.Get("storage.rotation.message005", "vi"));
             }
             finally
             {
@@ -294,17 +267,14 @@ namespace PersonalInfoManager.Services
                 if (json != null) CryptographicOperations.ZeroMemory(json);
             }
         }
-
         private static string HashFile(string path) => Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path)));
         private static string HashBytes(byte[] bytes) => Convert.ToHexString(SHA256.HashData(bytes));
-
         private static void ReachCheckpoint(string name)
         {
 #if SECURITY_TEST
             TestCheckpoint?.Invoke(name);
 #endif
         }
-
         private static void Cleanup(RotationJournal journal)
         {
             foreach (RotationFile file in journal.Files)

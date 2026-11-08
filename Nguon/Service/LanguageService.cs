@@ -334,8 +334,9 @@ public static class LanguageService
     private static string Plural(int count, string singular, string plural) => count == 1 ? singular : plural;
     public static string Translate(string value, string languageCode)
     {
-        if (!string.Equals(languageCode, "en", StringComparison.OrdinalIgnoreCase) || string.IsNullOrEmpty(value)) return value;
+        if (string.IsNullOrEmpty(value)) return value;
         if (LocalizationAuditService.TryTranslateKnown(value, languageCode, out string translated)) return translated;
+        if (!string.Equals(languageCode, "en", StringComparison.OrdinalIgnoreCase)) return value;
         int start = 0;
         while (start < value.Length && char.IsWhiteSpace(value[start])) start++;
         int end = value.Length;

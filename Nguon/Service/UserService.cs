@@ -8,29 +8,23 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using PersonalInfoManager.Models;
-
 namespace PersonalInfoManager.Services
 {
-
     public class UsersFileUnreadableException : Exception
     {
         public UsersFileUnreadableException(string message, Exception? inner = null)
             : base(message, inner) { }
     }
-
     public class UserService
     {
         private static readonly object Sync = new();
         private static readonly JsonSerializerOptions JsonOpts = new() { WriteIndented = true };
         private static readonly byte[] UsersEntropy = Encoding.UTF8.GetBytes("TQLTK.Users.v1");
         private const string ProtectedUsersPrefix = "TQLTK.USERS.v1:";
-
         private readonly string _usersFile = Path.Combine(
             ApplicationDataPath.Root,
             "PersonalInfoManager", "users.json");
-
         private const string LegacyDefaultAdminPassword = "admin123";
-
         private bool RequireAdmin(out string message)
         {
             var current = SessionService.CurrentUser;
@@ -47,11 +41,9 @@ namespace PersonalInfoManager.Services
                     }
                 }
             }
-
             message = "Từ chối thao tác: chỉ quản trị viên đang hoạt động mới được phép thực hiện.";
             return false;
         }
-
         private bool CanManageProfile(Guid targetUserId, out string message)
         {
             var current = SessionService.CurrentUser;
@@ -69,11 +61,9 @@ namespace PersonalInfoManager.Services
                     }
                 }
             }
-
             message = "Từ chối thao tác: chỉ được sửa hồ sơ của chính mình hoặc hồ sơ khác khi là quản trị viên đang hoạt động.";
             return false;
         }
-
         private bool IsCurrentActiveUser(Guid userId, out string message)
         {
             var current = SessionService.CurrentUser;
@@ -89,17 +79,12 @@ namespace PersonalInfoManager.Services
                     }
                 }
             }
-
             message = "Từ chối thao tác: chỉ người dùng đang hoạt động mới được thay đổi thiết lập đăng nhập của chính mình.";
             return false;
         }
-
         public const int MaxFailedAttempts = 5;
-
         public static readonly TimeSpan LockoutDuration = TimeSpan.FromMinutes(5);
-
         public static readonly TimeSpan MaximumLockoutDuration = TimeSpan.FromMinutes(60);
-
         private static TimeSpan GetLockoutDuration(int lockoutLevel)
         {
             if (lockoutLevel >= 4) return MaximumLockoutDuration;
@@ -107,9 +92,7 @@ namespace PersonalInfoManager.Services
             TimeSpan duration = TimeSpan.FromTicks(LockoutDuration.Ticks * multiplier);
             return duration > MaximumLockoutDuration ? MaximumLockoutDuration : duration;
         }
-
         private List<User> _users = new();
-
         public UserService()
         {
             lock (Sync)
@@ -117,7 +100,6 @@ namespace PersonalInfoManager.Services
                 Reload();
             }
         }
-
         private void Reload()
         {
             lock (Sync)
@@ -127,27 +109,22 @@ namespace PersonalInfoManager.Services
                     Save();
             }
         }
-
         private List<User> ReadUsers(out bool needsProtection)
         {
             needsProtection = false;
             if (!File.Exists(_usersFile)) return new List<User>();
-
             var main = TryParse(_usersFile, out Exception? mainError, out bool mainNeedsProtection);
             if (main != null)
             {
                 needsProtection = mainNeedsProtection;
                 return main;
             }
-
             var bak = TryParse(_usersFile + ".bak", out _);
             if (bak != null)
             {
-
                 needsProtection = true;
                 return bak;
             }
-
             try
             {
                 File.Copy(_usersFile,
@@ -155,7 +132,6 @@ namespace PersonalInfoManager.Services
                     overwrite: true);
             }
             catch { }
-
             throw new UsersFileUnreadableException(
                 "Không đọc được danh sách tài khoản (users.json) và cũng không có bản dự phòng dùng được.\n\n" +
                 "Ứng dụng KHÔNG tự tạo lại tài khoản admin mặc định để tránh ghi đè dữ liệu cũ.\n" +
@@ -165,24 +141,20 @@ namespace PersonalInfoManager.Services
                 (mainError != null ? "Chi tiết: " + mainError.Message : ""),
                 mainError);
         }
-
         private static List<User>? TryParse(string file, out Exception? error)
             => TryParse(file, out error, out _);
-
         private static List<User>? TryParse(
             string file, out Exception? error, out bool needsProtection)
         {
             error = null;
             needsProtection = false;
             if (!File.Exists(file)) return null;
-
             string stored = File.ReadAllText(file);
             if (string.IsNullOrWhiteSpace(stored))
             {
                 error = new InvalidDataException("File trống.");
                 return null;
             }
-
             try
             {
                 string json;
@@ -200,11 +172,9 @@ namespace PersonalInfoManager.Services
                 }
                 else
                 {
-
                     json = stored;
                     needsProtection = true;
                 }
-
                 return JsonSerializer.Deserialize<List<User>>(json);
             }
             catch (Exception ex) when (
@@ -214,36 +184,29 @@ namespace PersonalInfoManager.Services
                 return null;
             }
         }
-
         private void Save()
         {
             lock (Sync)
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(_usersFile)!);
-
                 if (File.Exists(_usersFile))
                 {
                     var previous = TryParse(_usersFile, out _);
                     if (previous != null)
                     {
-
                         WriteProtectedUsersFile(_usersFile + ".bak", previous);
                     }
                     else
                     {
-
                         File.Copy(_usersFile,
                             _usersFile + ".corrupt-" + DateTime.Now.ToString("yyyyMMddHHmmssfff") + "-" + Guid.NewGuid().ToString("N"),
                             overwrite: true);
-
                         WriteProtectedUsersFile(_usersFile + ".bak", _users);
                     }
                 }
-
                 WriteProtectedUsersFile(_usersFile, _users);
             }
         }
-
         private static void WriteProtectedUsersFile(string path, List<User> users)
         {
             string json = JsonSerializer.Serialize(users, JsonOpts);
@@ -262,13 +225,10 @@ namespace PersonalInfoManager.Services
                 if (encrypted != null) CryptographicOperations.ZeroMemory(encrypted);
             }
         }
-
         private User? FindByUsernameCore(string username)
             => _users.FirstOrDefault(u =>
                 string.Equals(u.Username, username, StringComparison.OrdinalIgnoreCase));
-
         private User? FindByIdCore(Guid id) => _users.FirstOrDefault(u => u.Id == id);
-
         private bool EmailExistsCore(string email, Guid? excludeUserId = null)
         {
             if (string.IsNullOrWhiteSpace(email)) return false;
@@ -277,7 +237,6 @@ namespace PersonalInfoManager.Services
                 !string.IsNullOrEmpty(u.Email) &&
                 string.Equals(u.Email, email, StringComparison.OrdinalIgnoreCase));
         }
-
         public IReadOnlyList<User> GetAll()
         {
             lock (Sync)
@@ -298,7 +257,6 @@ namespace PersonalInfoManager.Services
                 }).ToList().AsReadOnly();
             }
         }
-
         public User? FindByUsername(string username)
         {
             lock (Sync)
@@ -307,7 +265,6 @@ namespace PersonalInfoManager.Services
                 return FindByUsernameCore(username);
             }
         }
-
         public User? FindById(Guid id)
         {
             lock (Sync)
@@ -316,9 +273,7 @@ namespace PersonalInfoManager.Services
                 return FindByIdCore(id);
             }
         }
-
         public bool UsernameExists(string username) => FindByUsername(username) != null;
-
         public bool HasAnyUsers()
         {
             lock (Sync)
@@ -327,7 +282,6 @@ namespace PersonalInfoManager.Services
                 return _users.Count > 0;
             }
         }
-
         internal IReadOnlyList<string> GetUsernamesForSecurityMigration()
         {
             lock (Sync)
@@ -336,7 +290,6 @@ namespace PersonalInfoManager.Services
                 return _users.Select(user => user.Username).ToList().AsReadOnly();
             }
         }
-
         internal bool HasLegacyStoragePathCollision(
             Guid userId, string username, LegacyUserStorageKind storageKind)
         {
@@ -351,7 +304,6 @@ namespace PersonalInfoManager.Services
                 return UserStorageIdentity.HasLegacyPathCollision(user, _users, storageKind);
             }
         }
-
         public bool EmailExists(string email, Guid? excludeUserId = null)
         {
             lock (Sync)
@@ -360,45 +312,35 @@ namespace PersonalInfoManager.Services
                 return EmailExistsCore(email, excludeUserId);
             }
         }
-
         private static bool IsValidEmail(string email)
         {
             if (string.IsNullOrWhiteSpace(email)) return true;
             return Regex.IsMatch(email, @"^[^@\s]+@[^@\s]+\.[^@\s]+$");
         }
-
         private static bool IsValidUsername(string username)
             => !string.IsNullOrWhiteSpace(username) &&
                 username == username.Trim() &&
                 username.Length is >= 3 and <= 64 &&
                 !username.Any(char.IsControl);
-
         private static int MinimumPasswordLength(bool twoFactorEnabled)
             => twoFactorEnabled ? 8 : 15;
-
         private static bool IsValidPassword(string password, bool twoFactorEnabled)
             => !string.IsNullOrWhiteSpace(password) &&
                 password.Length >= MinimumPasswordLength(twoFactorEnabled);
-
         private static string PasswordLengthMessage(bool twoFactorEnabled)
             => $"Mật khẩu phải từ {MinimumPasswordLength(twoFactorEnabled)} ký tự trở lên.";
-
         public int GetMinimumPasswordLength(string username)
         {
             var user = FindByUsername(username);
             return MinimumPasswordLength(user?.TwoFactorEnabled == true);
         }
-
         private static bool IsDefaultPassword(string password)
             => password == LegacyDefaultAdminPassword;
-
         private const string DefaultPasswordMessage =
             "Không được dùng mật khẩu mặc định. Hãy chọn mật khẩu khác.";
-
         private const string LegacyStorageMessage =
             "Tên đăng nhập này còn dữ liệu cũ chưa thể gắn an toàn với tài khoản. " +
             "Dữ liệu cũ được giữ nguyên; hãy dùng tên khác hoặc khôi phục dữ liệu sau khi xác định đúng chủ sở hữu.";
-
         private IDisposable AcquireCrossProcessAuthenticationLock()
         {
             string identity = Path.GetFullPath(_usersFile)
@@ -409,16 +351,13 @@ namespace PersonalInfoManager.Services
                 initiallyOwned: false,
                 name: @"Local\TQLTK.UserAuthentication." + Convert.ToHexString(identityHash));
             CryptographicOperations.ZeroMemory(identityHash);
-
             try
             {
                 bool acquired = false;
                 try { acquired = mutex.WaitOne(TimeSpan.FromSeconds(30)); }
                 catch (AbandonedMutexException) { acquired = true; }
-
                 if (!acquired)
-                    throw new TimeoutException("Hết thời gian chờ khóa dữ liệu đăng nhập.");
-
+                    throw new TimeoutException(LocalizationAuditService.Get("auth.user.message001", "vi"));
                 return new AuthenticationMutexLease(mutex);
             }
             catch
@@ -427,14 +366,11 @@ namespace PersonalInfoManager.Services
                 throw;
             }
         }
-
         private sealed class AuthenticationMutexLease : IDisposable
         {
             private readonly Mutex _mutex;
             private bool _disposed;
-
             public AuthenticationMutexLease(Mutex mutex) => _mutex = mutex;
-
             public void Dispose()
             {
                 if (_disposed) return;
@@ -443,13 +379,11 @@ namespace PersonalInfoManager.Services
                 finally { _mutex.Dispose(); }
             }
         }
-
         public (bool ok, string message) CreateUser(
             string username, string password, UserRole role)
         {
             return CreateUserFull(username, password, role, username, "", "");
         }
-
         public (bool ok, string message) CreateInitialAdmin(
             string username, string password, string fullName, string email, string phone)
         {
@@ -457,10 +391,9 @@ namespace PersonalInfoManager.Services
             {
                 Reload();
                 if (_users.Count != 0)
-                    return (false, "Tài khoản đầu tiên đã được tạo. Hãy đăng ký tài khoản người dùng thông thường.");
-
+                    return (false, LocalizationAuditService.Get("auth.user.message002", "vi"));
                 if (!IsValidUsername(username))
-                    return (false, "Tên đăng nhập phải dài từ 3 đến 64 ký tự và không chứa ký tự điều khiển.");
+                    return (false, LocalizationAuditService.Get("auth.user.message003", "vi"));
                 if (!IsValidPassword(password, twoFactorEnabled: false))
                     return (false, PasswordLengthMessage(twoFactorEnabled: false));
                 if (IsDefaultPassword(password))
@@ -469,10 +402,9 @@ namespace PersonalInfoManager.Services
                     Path.GetDirectoryName(_usersFile)!, username))
                     return (false, LegacyStorageMessage);
                 if (string.IsNullOrWhiteSpace(fullName))
-                    return (false, "Họ tên không được để trống.");
+                    return (false, LocalizationAuditService.Get("auth.user.message004", "vi"));
                 if (!IsValidEmail(email))
-                    return (false, "Email không hợp lệ.");
-
+                    return (false, LocalizationAuditService.Get("auth.user.message005", "vi"));
                 var admin = new User
                 {
                     Username = username.Trim(),
@@ -482,12 +414,11 @@ namespace PersonalInfoManager.Services
                     Email = email.Trim(),
                     Phone = phone.Trim()
                 };
-
                 _users.Add(admin);
                 try
                 {
                     Save();
-                    return (true, "Đã tạo tài khoản quản trị viên đầu tiên.");
+                    return (true, LocalizationAuditService.Get("auth.user.message006", "vi"));
                 }
                 catch (Exception ex)
                 {
@@ -500,7 +431,6 @@ namespace PersonalInfoManager.Services
                 }
             }
         }
-
         public (bool ok, string message) CreateUserFull(
             string username, string password, UserRole role,
             string fullName, string email, string phone)
@@ -509,32 +439,23 @@ namespace PersonalInfoManager.Services
             {
                 if (!RequireAdmin(out string denied)) return (false, denied);
                 Reload();
-
                 if (!IsValidUsername(username))
-                    return (false, "Tên đăng nhập phải dài từ 3 đến 64 ký tự và không chứa ký tự điều khiển.");
-
+                    return (false, LocalizationAuditService.Get("auth.user.message003", "vi"));
                 if (!IsValidPassword(password, twoFactorEnabled: false))
                     return (false, PasswordLengthMessage(twoFactorEnabled: false));
-
                 if (IsDefaultPassword(password))
                     return (false, DefaultPasswordMessage);
-
                 if (string.IsNullOrWhiteSpace(fullName))
-                    return (false, "Họ tên không được để trống.");
-
+                    return (false, LocalizationAuditService.Get("auth.user.message004", "vi"));
                 if (FindByUsernameCore(username) != null)
-                    return (false, "Tên đăng nhập đã tồn tại.");
-
+                    return (false, LocalizationAuditService.Get("auth.user.message007", "vi"));
                 if (UserStorageIdentity.HasLegacyDataForUsername(
                     Path.GetDirectoryName(_usersFile)!, username))
                     return (false, LegacyStorageMessage);
-
                 if (!IsValidEmail(email))
-                    return (false, "Email không hợp lệ.");
-
+                    return (false, LocalizationAuditService.Get("auth.user.message005", "vi"));
                 if (EmailExistsCore(email))
-                    return (false, "Email đã được sử dụng.");
-
+                    return (false, LocalizationAuditService.Get("auth.user.message008", "vi"));
                 _users.Add(new User
                 {
                     Username = username.Trim(),
@@ -545,10 +466,9 @@ namespace PersonalInfoManager.Services
                     Phone = phone.Trim()
                 });
                 Save();
-                return (true, "Tạo tài khoản thành công.");
+                return (true, LocalizationAuditService.Get("auth.user.message009", "vi"));
             }
         }
-
         public (bool ok, string message, User? user) Authenticate(
             string username, string password)
         {
@@ -563,20 +483,16 @@ namespace PersonalInfoManager.Services
                     ex is WaitHandleCannotBeOpenedException)
                 {
                     return (false,
-                        "Không thể khóa dữ liệu đăng nhập giữa các tiến trình; yêu cầu đăng nhập bị từ chối để bảo vệ tài khoản.",
+                        LocalizationAuditService.Get("auth.user.message010", "vi"),
                         null);
                 }
-
                 using var processLockScope = processLock;
                 Reload();
-
                 var user = FindByUsernameCore(username);
                 if (user == null)
-                    return (false, "Tài khoản không tồn tại.", null);
-
+                    return (false, LocalizationAuditService.Get("auth.user.message011", "vi"), null);
                 if (!user.IsActive)
-                    return (false, "Tài khoản đã bị khóa.", null);
-
+                    return (false, LocalizationAuditService.Get("auth.user.message012", "vi"), null);
                 if (user.LockedUntil is { } until)
                 {
                     if (until > DateTime.Now)
@@ -586,15 +502,12 @@ namespace PersonalInfoManager.Services
                             $"Nhập sai mật khẩu quá nhiều lần. Tài khoản bị khóa tạm thời, hãy thử lại sau khoảng {mins} phút.",
                             null);
                     }
-
                     user.LockedUntil = null;
                     user.FailedLoginCount = 0;
                 }
-
                 if (!PasswordHasher.Verify(password, user.PasswordHash))
                 {
                     user.FailedLoginCount++;
-
                     if (user.FailedLoginCount >= MaxFailedAttempts)
                     {
                         int lockoutLevel = Math.Clamp(user.LockoutLevel, 0, 4);
@@ -607,106 +520,85 @@ namespace PersonalInfoManager.Services
                             $"Sai mật khẩu {MaxFailedAttempts} lần liên tiếp. Tài khoản bị khóa tạm thời {lockout.TotalMinutes:0} phút.",
                             null);
                     }
-
                     Save();
                     int left = MaxFailedAttempts - user.FailedLoginCount;
                     return (false,
                         $"Sai mật khẩu. Còn {left} lần thử trước khi bị khóa tạm thời.",
                         null);
                 }
-
                 if (IsDefaultPassword(password))
                     return (false,
-                        "Mật khẩu mặc định cũ đã bị vô hiệu hóa. Hãy dùng Windows Hello nếu đã bật " +
+                        LocalizationAuditService.Get("auth.user.message013", "vi") +
                         "hoặc nhờ một quản trị viên khác đặt lại mật khẩu.",
                         null);
-
                 if (UserStorageIdentity.HasAmbiguousLegacyData(
                     user, _users, Path.GetDirectoryName(_usersFile)!))
                     return (false,
                         "Dữ liệu cũ của tài khoản trùng đường dẫn với tài khoản khác nên đăng nhập bị từ chối. " +
                         "Các file vẫn được giữ nguyên để có thể khôi phục an toàn.",
                         null);
-
                 user.FailedLoginCount = 0;
                 user.LockedUntil = null;
                 user.LockoutLevel = 0;
-
                 if (PasswordHasher.NeedsRehash(user.PasswordHash))
                     user.PasswordHash = PasswordHasher.Hash(password);
-
                 if (password.Length < MinimumPasswordLength(user.TwoFactorEnabled))
                     user.MustChangePassword = true;
-
                 user.LastLoginAt = DateTime.Now;
                 Save();
-                return (true, "Đăng nhập thành công.", user);
+                return (true, LocalizationAuditService.Get("auth.user.message014", "vi"), user);
             }
         }
-
         public (bool ok, string message) ChangePassword(
             string username, string oldPwd, string newPwd)
         {
             lock (Sync)
             {
                 Reload();
-
                 var user = FindByUsernameCore(username);
                 if (user == null)
                     return (false, "Không tìm thấy user.");
-
                 if (!IsCurrentActiveUser(user.Id, out string denied))
                     return (false, denied);
-
                 if (!PasswordHasher.Verify(oldPwd, user.PasswordHash))
-                    return (false, "Mật khẩu cũ không đúng.");
-
+                    return (false, LocalizationAuditService.Get("auth.user.message015", "vi"));
                 if (!IsValidPassword(newPwd, user.TwoFactorEnabled))
                     return (false, PasswordLengthMessage(user.TwoFactorEnabled));
-
                 if (IsDefaultPassword(newPwd))
                     return (false, DefaultPasswordMessage);
-
                 if (oldPwd == newPwd)
-                    return (false, "Mật khẩu mới phải khác mật khẩu cũ.");
-
+                    return (false, LocalizationAuditService.Get("auth.user.message016", "vi"));
                 user.PasswordHash = PasswordHasher.Hash(newPwd);
                 user.MustChangePassword = false;
                 user.FailedLoginCount = 0;
                 user.LockedUntil = null;
                 user.LockoutLevel = 0;
                 Save();
-                return (true, "Đổi mật khẩu thành công.");
+                return (true, LocalizationAuditService.Get("auth.user.message017", "vi"));
             }
         }
-
         public (bool ok, string message) ResetPassword(Guid userId, string newPassword)
         {
             lock (Sync)
             {
                 if (!RequireAdmin(out string denied)) return (false, denied);
                 Reload();
-
                 var user = FindByIdCore(userId);
                 if (user == null)
                     return (false, "Không tìm thấy user.");
-
                 if (!IsValidPassword(newPassword, user.TwoFactorEnabled))
                     return (false, PasswordLengthMessage(user.TwoFactorEnabled));
-
                 if (IsDefaultPassword(newPassword))
                     return (false, DefaultPasswordMessage);
-
                 user.PasswordHash = PasswordHasher.Hash(newPassword);
                 user.MustChangePassword = true;
                 user.FailedLoginCount = 0;
                 user.LockedUntil = null;
                 user.LockoutLevel = 0;
                 Save();
-                return (true, "Đã đặt lại mật khẩu. Người dùng sẽ phải đổi mật khẩu khi đăng nhập lần tới.");
+                return (true, LocalizationAuditService.Get("auth.user.message018", "vi"));
             }
         }
-
         public (bool ok, string message) UpdateProfile(
             Guid userId, string fullName, string email, string phone)
         {
@@ -714,28 +606,22 @@ namespace PersonalInfoManager.Services
             {
                 if (!CanManageProfile(userId, out string denied)) return (false, denied);
                 Reload();
-
                 var user = FindByIdCore(userId);
                 if (user == null)
                     return (false, "Không tìm thấy user.");
-
                 if (string.IsNullOrWhiteSpace(fullName))
-                    return (false, "Họ tên không được để trống.");
-
+                    return (false, LocalizationAuditService.Get("auth.user.message004", "vi"));
                 if (!IsValidEmail(email))
-                    return (false, "Email không hợp lệ.");
-
+                    return (false, LocalizationAuditService.Get("auth.user.message005", "vi"));
                 if (EmailExistsCore(email, excludeUserId: userId))
-                    return (false, "Email đã được sử dụng bởi user khác.");
-
+                    return (false, LocalizationAuditService.Get("auth.user.message019", "vi"));
                 user.FullName = fullName.Trim();
                 user.Email = email.Trim();
                 user.Phone = phone.Trim();
                 Save();
-                return (true, "Cập nhật thành công.");
+                return (true, LocalizationAuditService.Get("auth.user.message020", "vi"));
             }
         }
-
         public (bool ok, string message) AdminUpdateUser(
             Guid userId, string fullName, string email, string phone,
             UserRole role, bool isActive)
@@ -744,20 +630,15 @@ namespace PersonalInfoManager.Services
             {
                 if (!RequireAdmin(out string denied)) return (false, denied);
                 Reload();
-
                 var user = FindByIdCore(userId);
                 if (user == null)
                     return (false, "Không tìm thấy user.");
-
                 if (string.IsNullOrWhiteSpace(fullName))
-                    return (false, "Họ tên không được để trống.");
-
+                    return (false, LocalizationAuditService.Get("auth.user.message004", "vi"));
                 if (!IsValidEmail(email))
-                    return (false, "Email không hợp lệ.");
-
+                    return (false, LocalizationAuditService.Get("auth.user.message005", "vi"));
                 if (EmailExistsCore(email, excludeUserId: userId))
-                    return (false, "Email đã được sử dụng bởi user khác.");
-
+                    return (false, LocalizationAuditService.Get("auth.user.message019", "vi"));
                 user.FullName = fullName.Trim();
                 user.Email = email.Trim();
                 user.Phone = phone.Trim();
@@ -770,20 +651,17 @@ namespace PersonalInfoManager.Services
                     user.LockoutLevel = 0;
                 }
                 Save();
-                return (true, "Cập nhật thành công.");
+                return (true, LocalizationAuditService.Get("auth.user.message020", "vi"));
             }
         }
-
         public void SetActive(Guid userId, bool active)
         {
             lock (Sync)
             {
                 if (!RequireAdmin(out string denied)) throw new UnauthorizedAccessException(denied);
                 Reload();
-
                 var user = FindByIdCore(userId);
                 if (user == null) return;
-
                 user.IsActive = active;
                 if (active)
                 {
@@ -794,58 +672,47 @@ namespace PersonalInfoManager.Services
                 Save();
             }
         }
-
         public (bool ok, string message) DeleteUser(Guid userId, Guid currentUserId)
         {
             lock (Sync)
             {
                 if (!RequireAdmin(out string denied)) return (false, denied);
                 Reload();
-
                 if (userId == currentUserId)
-                    return (false, "Không thể xóa tài khoản đang đăng nhập.");
-
+                    return (false, LocalizationAuditService.Get("auth.user.message021", "vi"));
                 var user = FindByIdCore(userId);
                 if (user == null)
                     return (false, "Không tìm thấy user.");
-
                 if (user.Role == UserRole.Admin &&
                     _users.Count(u => u.Role == UserRole.Admin) <= 1)
-                    return (false, "Không thể xóa admin cuối cùng.");
-
+                    return (false, LocalizationAuditService.Get("auth.user.message022", "vi"));
                 _users.Remove(user);
                 Save();
                 return (true, "Đã xóa tài khoản.");
             }
         }
-
         public (bool ok, string message) SetRole(Guid userId, UserRole role)
         {
             lock (Sync)
             {
                 if (!RequireAdmin(out string denied)) return (false, denied);
                 Reload();
-
                 var user = FindByIdCore(userId);
                 if (user == null)
                     return (false, "Không tìm thấy user.");
-
                 if (user.Role == UserRole.Admin &&
                     role == UserRole.User &&
                     _users.Count(u => u.Role == UserRole.Admin) <= 1)
-                    return (false, "Không thể thu quyền admin cuối cùng.");
-
+                    return (false, LocalizationAuditService.Get("auth.user.message023", "vi"));
                 user.Role = role;
                 Save();
-                return (true, "Đã đổi vai trò.");
+                return (true, LocalizationAuditService.Get("auth.user.message024", "vi"));
             }
         }
-
         public int CountAdmins() { lock (Sync) { Reload(); return _users.Count(u => u.Role == UserRole.Admin); } }
         public int CountUsers() { lock (Sync) { Reload(); return _users.Count(u => u.Role == UserRole.User); } }
         public int CountActive() { lock (Sync) { Reload(); return _users.Count(u => u.IsActive); } }
         public int CountInactive() { lock (Sync) { Reload(); return _users.Count(u => !u.IsActive); } }
-
         internal bool SetTwoFactorEnabled(string username, bool enabled)
         {
             lock (Sync)
@@ -854,7 +721,6 @@ namespace PersonalInfoManager.Services
                 var user = FindByUsernameCore(username);
                 if (user == null) return false;
                 if (user.TwoFactorEnabled == enabled) return true;
-
                 bool previous = user.TwoFactorEnabled;
                 user.TwoFactorEnabled = enabled;
                 try
@@ -869,7 +735,6 @@ namespace PersonalInfoManager.Services
                 }
             }
         }
-
         public (bool ok, string message) SetWindowsHello(
             Guid userId, bool enabled, string sid)
         {
@@ -877,36 +742,28 @@ namespace PersonalInfoManager.Services
             {
                 if (!IsCurrentActiveUser(userId, out string denied)) return (false, denied);
                 Reload();
-
                 var user = FindByIdCore(userId);
                 if (user == null)
                     return (false, "Không tìm thấy user.");
-
                 if (enabled && string.IsNullOrWhiteSpace(sid))
-                    return (false, "Không lấy được SID tài khoản Windows.");
-
+                    return (false, LocalizationAuditService.Get("auth.user.message025", "vi"));
                 if (enabled && !string.Equals(
                     sid, WindowsHelloService.GetCurrentWindowsSid(), StringComparison.OrdinalIgnoreCase))
-                    return (false, "Chỉ có thể liên kết Windows Hello với tài khoản Windows hiện tại.");
-
+                    return (false, LocalizationAuditService.Get("auth.user.message026", "vi"));
                 user.WindowsHelloEnabled = enabled;
                 user.WindowsHelloSid = enabled ? sid : "";
                 Save();
-
                 return (true, enabled
                     ? "Đã bật đăng nhập bằng Windows Hello."
                     : "Đã tắt đăng nhập bằng Windows Hello.");
             }
         }
-
         public User? FindByWindowsHelloSid(string sid)
         {
             if (string.IsNullOrWhiteSpace(sid)) return null;
-
             lock (Sync)
             {
                 Reload();
-
                 return _users.FirstOrDefault(u =>
                     u.WindowsHelloEnabled &&
                     u.IsActive &&
@@ -915,7 +772,6 @@ namespace PersonalInfoManager.Services
                         StringComparison.OrdinalIgnoreCase));
             }
         }
-
         public List<User> GetWindowsHelloUsers()
         {
             lock (Sync)

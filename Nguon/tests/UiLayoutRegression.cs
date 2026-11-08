@@ -28,9 +28,9 @@ internal static class UiLayoutRegression
                 {
                     var entry = new BackupComparisonEntry
                     {
-                        Name = "Synthetic example account", Status = "Đã sửa", Details = "Synthetic account details",
+                        Name = "Synthetic example account", Status = BackupItemStatus.Modified, Details = "Synthetic account details",
                         Kind = BackupRecoveryItemKind.Account, OlderKey = "synthetic", NewerKey = "synthetic",
-                        AvailableSources = new[] { LanguageService.Translate("Không khôi phục"), LanguageService.Translate("Bản sao lưu cũ"), LanguageService.Translate("Bản sao lưu mới") }
+                        AvailableSources = new[] { BackupRecoverySource.None, BackupRecoverySource.Older, BackupRecoverySource.Newer }
                     };
                     entry.SelectedSource = entry.AvailableSources[0];
                     Func<Window>[] createWindows =
@@ -40,7 +40,7 @@ internal static class UiLayoutRegression
                         () => new BackupCenterWindow(username),
                         () => new BackupComparisonWindow(LanguageService.Translate("Chọn mục cần lấy từ một trong hai bản. Ứng dụng sẽ thêm thành bản sao để giữ nguyên dữ liệu hiện tại."), new[] { entry }),
                         () => new BackupRestorePreviewWindow("Xem trước khôi phục", "{0}", () => new object?[] { "Synthetic backup preview" },
-                            new[] { new BackupPreviewItem("Synthetic account", "Sẽ thêm", "synthetic@example.invalid") }, allowSettingsRestore: true),
+                            new[] { new BackupPreviewItem("Synthetic account", BackupItemStatus.AddAccount, "synthetic@example.invalid") }, allowSettingsRestore: true),
                         () => new BackupPassphraseWindow(confirmMode: true),
                         () => new EditAccountWindow(new SavedAccount { ServiceName = "Synthetic service", Username = "synthetic@example.invalid" })
                     ];
