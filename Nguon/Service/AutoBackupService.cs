@@ -7,21 +7,16 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using Microsoft.Win32;
-
 namespace PersonalInfoManager.Services
 {
-
     public static class AutoBackupService
     {
         private const string AppKey = @"Software\TQLTK";
         private const string FilePrefix = "vault_auto_";
         private const string FileExt = ".vault";
-
         public const int KeepCount = 7;
-
         public const int RemindAfterDays = 7;
         public const int RestoreDrillReminderDays = 90;
-
         private const string CompletePrefix = "complete_auto_";
         private const string CompleteExtension = CompleteBackupService.FileExtension;
         private const string PinSuffix = ".pinned";
@@ -34,56 +29,41 @@ namespace PersonalInfoManager.Services
         private static readonly object TestSettingsLock = new();
         private static string TestSettingsPath => Path.Combine(ApplicationDataPath.Root, "auto-backup-test-settings.json");
 #endif
-
         public sealed record BackupHealthSummary(string Template, object?[] Arguments, bool Warn);
-
         public sealed record ScheduledBackupResult(bool Attempted, bool Succeeded, string Message, string? Path);
-
         public sealed record RetentionResult(int Removed, long CurrentBytes, bool LimitReached, string Message);
-
         public static bool IsPeriodicEnabled(string username) =>
             ReadValue("PeriodicBackupEnabled_" + Tag(username)) == "1";
-
         public static void SetPeriodicEnabled(string username, bool enabled) =>
             WriteValue("PeriodicBackupEnabled_" + Tag(username), enabled ? "1" : "0");
-
         public static int GetPeriodicIntervalHours(string username) =>
             ReadInt("PeriodicBackupIntervalHours_" + Tag(username), DefaultPeriodicIntervalHours,
                 24, 168, 720);
-
         public static void SetPeriodicIntervalHours(string username, int hours)
         {
             if (hours is not (24 or 168 or 720)) throw new ArgumentOutOfRangeException(nameof(hours));
             WriteValue("PeriodicBackupIntervalHours_" + Tag(username), hours.ToString(CultureInfo.InvariantCulture));
         }
-
         public static int GetRetentionCount(string username) =>
             ReadInt("BackupRetentionCount_" + Tag(username), DefaultRetentionCount, 3, 7, 14, 30);
-
         public static void SetRetentionCount(string username, int count)
         {
             if (count is not (3 or 7 or 14 or 30)) throw new ArgumentOutOfRangeException(nameof(count));
             WriteValue("BackupRetentionCount_" + Tag(username), count.ToString(CultureInfo.InvariantCulture));
         }
-
         public static int GetRetentionDays(string username) =>
             ReadInt("BackupRetentionDays_" + Tag(username), DefaultRetentionDays, 30, 90, 180, 365);
-
         public static void SetRetentionDays(string username, int days)
         {
             if (days is not (30 or 90 or 180 or 365)) throw new ArgumentOutOfRangeException(nameof(days));
             WriteValue("BackupRetentionDays_" + Tag(username), days.ToString(CultureInfo.InvariantCulture));
         }
-
         public static int GetDailyRetention(string username) =>
             ReadInt("BackupDailyRetention_" + Tag(username), 0, 0, 7, 14, 30);
-
         public static int GetWeeklyRetention(string username) =>
             ReadInt("BackupWeeklyRetention_" + Tag(username), 0, 0, 4, 8, 12);
-
         public static int GetMonthlyRetention(string username) =>
             ReadInt("BackupMonthlyRetention_" + Tag(username), 0, 0, 3, 6, 12);
-
         public static void SetCalendarRetention(string username, int daily, int weekly, int monthly)
         {
             if (daily is not (0 or 7 or 14 or 30) || weekly is not (0 or 4 or 8 or 12) || monthly is not (0 or 3 or 6 or 12))
@@ -92,7 +72,6 @@ namespace PersonalInfoManager.Services
             WriteValue("BackupWeeklyRetention_" + Tag(username), weekly.ToString(CultureInfo.InvariantCulture));
             WriteValue("BackupMonthlyRetention_" + Tag(username), monthly.ToString(CultureInfo.InvariantCulture));
         }
-
         internal static HashSet<string> SelectCalendarRetention(
             IEnumerable<(string Path, DateTime CreatedUtc)> snapshots, DateTime nowUtc,
             int daily, int weekly, int monthly)
@@ -118,16 +97,13 @@ namespace PersonalInfoManager.Services
             }
             return selected;
         }
-
         public static int GetStorageLimitMb(string username) =>
             ReadInt("BackupStorageLimitMb_" + Tag(username), DefaultStorageLimitMb, 512, 1024, 2048, 4096);
-
         public static void SetStorageLimitMb(string username, int megabytes)
         {
             if (megabytes is not (512 or 1024 or 2048 or 4096)) throw new ArgumentOutOfRangeException(nameof(megabytes));
             WriteValue("BackupStorageLimitMb_" + Tag(username), megabytes.ToString(CultureInfo.InvariantCulture));
         }
-
         public static IReadOnlyList<FileInfo> ListCompleteBackups(string username)
         {
             string folder = GetFolder(username);
@@ -135,7 +111,6 @@ namespace PersonalInfoManager.Services
             return CompleteBackupService.ListBackups(folder)
                 .Where(file => file.Name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)).ToArray();
         }
-
         public static bool IsPinned(string backupPath)
         {
             string marker = backupPath + PinSuffix;
@@ -155,7 +130,6 @@ namespace PersonalInfoManager.Services
             }
             catch { return false; }
         }
-
         public static (bool ok, string message) SetPinned(string backupPath, string passphrase, bool pinned)
         {
             try
@@ -178,10 +152,8 @@ namespace PersonalInfoManager.Services
             }
             catch (Exception ex) { return (false, "Không cập nhật được trạng thái ghim: " + ex.Message); }
         }
-
         public static ScheduledBackupResult RunPeriodicIfDue(string username, CancellationToken cancellationToken = default)
             => RunPeriodicIfDue(username, cancellationToken, DateTime.UtcNow);
-
         internal static ScheduledBackupResult RunPeriodicIfDue(string username, CancellationToken cancellationToken, DateTime nowUtc)
         {
             if (!IsPeriodicEnabled(username)) return new(false, true, "Sao lưu định kỳ đang tắt.", null);
@@ -197,23 +169,19 @@ namespace PersonalInfoManager.Services
             {
                 return new(false, true, "Một bản sao lưu định kỳ khác đang chạy.", null);
             }
-
             using (runLock)
                 return RunPeriodicLocked(username, folder, cancellationToken, nowUtc);
         }
-
         private static ScheduledBackupResult RunPeriodicLocked(string username, string folder, CancellationToken cancellationToken, DateTime now)
         {
             cancellationToken.ThrowIfCancellationRequested();
             DateTime? lastFailure = ParseUtc(ReadValue("LastCompleteBackupFailureUtc_" + Tag(username)));
             if (lastFailure.HasValue && now - lastFailure.Value < FailedBackupRetryDelay)
                 return new(false, false, "Sao lưu định kỳ chờ lần thử lại sau.", null);
-
             DateTime? last = ParseUtc(ReadValue("LastCompleteBackupUtc_" + Tag(username)));
             int interval = GetPeriodicIntervalHours(username);
             if (last.HasValue && now - last.Value < TimeSpan.FromHours(interval))
                 return new(false, true, "Chưa đến kỳ sao lưu tiếp theo.", null);
-
             string fingerprint;
             try { fingerprint = CompleteBackupService.GetCurrentStateFingerprint(username, cancellationToken); }
             catch (OperationCanceledException) { throw; }
@@ -224,7 +192,6 @@ namespace PersonalInfoManager.Services
             }
             if (string.Equals(fingerprint, ReadValue("LastCompleteBackupState_" + Tag(username)), StringComparison.Ordinal))
                 return new(false, true, "Không có thay đổi mới; bỏ qua bản sao lưu lần này.", null);
-
             string? passphrase = BackupCrypto.GetStoredPassphrase(username);
             if (passphrase == null)
             {
@@ -232,7 +199,6 @@ namespace PersonalInfoManager.Services
                 RecordCompleteBackupFailure(username, message);
                 return new(true, false, message, null);
             }
-
             string path = Path.Combine(folder,
                 $"{CompletePrefix}{Tag(username)}_{now:yyyyMMdd_HHmmss}{CompleteExtension}");
             cancellationToken.ThrowIfCancellationRequested();
@@ -242,16 +208,14 @@ namespace PersonalInfoManager.Services
                 RecordCompleteBackupFailure(username, created.message);
                 return new(true, false, created.message, null);
             }
-
             RecordCompleteBackup(username, path, created.info);
             RetentionResult retention = PruneCompleteBackups(username);
             string resultMessage = created.message;
             if (retention.LimitReached)
                 resultMessage += " " + retention.Message;
-            try { ActivityLogger.Log(username, "AUTO_BACKUP", $"Định kỳ: {Path.GetFileName(path)}"); } catch { }
+            try { ActivityLogger.LogMessage(username, "AUTO_BACKUP", "log.detail.auto_backup.1", Path.GetFileName(path)); } catch { }
             return new(true, true, resultMessage, path);
         }
-
         public static void RecordCompleteBackup(string username, string path, CompleteBackupInfo info)
         {
             WriteValue("LastCompleteBackupUtc_" + Tag(username), DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture));
@@ -261,14 +225,12 @@ namespace PersonalInfoManager.Services
             WriteValue("LastCompleteBackupFailureUtc_" + Tag(username), "");
             WriteValue("LastCompleteBackupFailure_" + Tag(username), "");
         }
-
         public static void RecordCompleteBackupFailure(string username, string message)
         {
             WriteValue("LastCompleteBackupFailureUtc_" + Tag(username), DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture));
             string safe = new string((message ?? "").Where(character => !char.IsControl(character)).Take(240).ToArray());
             WriteValue("LastCompleteBackupFailure_" + Tag(username), safe);
         }
-
         public static RetentionResult PruneCompleteBackups(string username)
         {
             try
@@ -322,7 +284,6 @@ namespace PersonalInfoManager.Services
                 return new(0, 0, true, LocalizationAuditService.Get("backup.retention.failed"));
             }
         }
-
         public static string GetPeriodicStatusLine(string username)
         {
             string status;
@@ -343,7 +304,6 @@ namespace PersonalInfoManager.Services
                         : LocalizationAuditService.Get("backup.periodic.enabled_empty");
                 }
             }
-
             string retentionState = ReadValue("LastCompleteBackupRetentionState_" + Tag(username)) ?? "";
             if (retentionState == "failed")
                 status += Environment.NewLine + LocalizationAuditService.Get("backup.retention.failed");
@@ -357,7 +317,6 @@ namespace PersonalInfoManager.Services
             }
             return status;
         }
-
         private static void SaveRetentionStatus(string username, bool warning, int copies, long bytes)
         {
             string tag = Tag(username);
@@ -365,40 +324,31 @@ namespace PersonalInfoManager.Services
             WriteValue("LastCompleteBackupRetentionCopies_" + tag, copies.ToString(CultureInfo.InvariantCulture));
             WriteValue("LastCompleteBackupRetentionBytes_" + tag, bytes.ToString(CultureInfo.InvariantCulture));
         }
-
         private static string FormatRetentionWarning(string username, int copies, long bytes) =>
             LocalizationAuditService.Format("backup.retention.warning", copies,
                 FileBackupService.FormatSize(bytes), GetRetentionCount(username), GetRetentionDays(username),
                 FileBackupService.FormatSize((long)GetStorageLimitMb(username) * 1024 * 1024));
-
         public static bool IsEnabled(string username) =>
             ReadValue("AutoBackupEnabled_" + Tag(username)) != "0";
-
         public static void SetEnabled(string username, bool enabled) =>
             WriteValue("AutoBackupEnabled_" + Tag(username), enabled ? "1" : "0");
-
         public static string GetFolder(string username)
         {
             string? saved = ReadValue("AutoBackupFolder_" + Tag(username));
             if (!string.IsNullOrWhiteSpace(saved)) return saved;
-
             string docs = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
             if (string.IsNullOrWhiteSpace(docs))
                 docs = Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                     "PersonalInfoManager");
-
             return Path.Combine(docs, "TQLTK Backup");
         }
-
         public static string? TrySetFolder(string username, string folder)
         {
             try
             {
                 if (string.IsNullOrWhiteSpace(folder)) return "Chưa chọn thư mục.";
-
                 Directory.CreateDirectory(folder);
-
                 string probe = Path.Combine(folder, ".tqltk_write_test_" + Guid.NewGuid().ToString("N"));
                 File.WriteAllText(probe, "x");
                 File.Delete(probe);
@@ -407,29 +357,23 @@ namespace PersonalInfoManager.Services
             {
                 return "Không ghi được vào thư mục này:\n" + ex.Message;
             }
-
             WriteValue("AutoBackupFolder_" + Tag(username), folder);
             SaveRetentionStatus(username, false, 0, 0);
             return null;
         }
-
         public static (bool ok, string message, string? path) BackupNow(string username, string reason = "Thủ công")
         {
             try
             {
                 string folder = GetFolder(username);
                 Directory.CreateDirectory(folder);
-
                 string prefix = $"{FilePrefix}{Tag(username)}_";
-
                 foreach (var stray in Directory.GetFiles(folder, prefix + "*" + FileExt + ".tmp"))
                 {
                     try { File.Delete(stray); } catch { }
                 }
-
                 string finalPath = Path.Combine(folder, $"{prefix}{DateTime.Now:yyyyMMdd_HHmmss}{FileExt}");
                 string tmpPath = finalPath + ".tmp";
-
                 var export = VaultBackupService.ExportToFile(username, tmpPath);
                 if (!export.ok)
                 {
@@ -437,22 +381,16 @@ namespace PersonalInfoManager.Services
                     RecordBackupFailure(username, export.message);
                     return (false, export.message, null);
                 }
-
                 AtomicFileService.PromoteTemporary(tmpPath, finalPath);
-
                 var old = Directory.GetFiles(folder, prefix + "*" + FileExt)
                     .OrderByDescending(f => Path.GetFileName(f), StringComparer.Ordinal)
                     .Skip(KeepCount);
-
                 foreach (var f in old)
                 {
                     try { File.Delete(f); } catch { }
                 }
-
                 RecordBackup(username, finalPath);
-
                 try { ActivityLogger.Log(username, "AUTO_BACKUP", $"{reason}: {Path.GetFileName(finalPath)}"); } catch { }
-
                 return (true, export.message, finalPath);
             }
             catch (Exception ex)
@@ -461,7 +399,6 @@ namespace PersonalInfoManager.Services
                 return (false, "Không sao lưu được: " + ex.Message, null);
             }
         }
-
         public static void RunOnExit(string username)
         {
             try
@@ -469,7 +406,6 @@ namespace PersonalInfoManager.Services
                 if (!IsEnabled(username)) return;
                 if (CountAccounts(username) <= 0) return;
                 if (!NeedsBackup(username)) return;
-
                 var r = BackupNow(username, "Khi thoát");
                 if (!r.ok)
                 {
@@ -483,7 +419,6 @@ namespace PersonalInfoManager.Services
                 try { ActivityLogger.Log(username, "AUTO_BACKUP_FAILED", ex.Message); } catch { }
             }
         }
-
         public static void RecordBackup(string username, string? path = null)
         {
             WriteValue("LastBackupUtc_" + Tag(username), DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture));
@@ -499,14 +434,12 @@ namespace PersonalInfoManager.Services
                 WriteValue("LastBackupVerificationOk_" + Tag(username), "1");
             }
         }
-
         public static void RecordBackupFailure(string username, string message)
         {
             WriteValue("LastBackupFailureUtc_" + Tag(username), DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture));
             string safe = new string((message ?? "").Where(character => !char.IsControl(character)).Take(240).ToArray());
             WriteValue("LastBackupFailure_" + Tag(username), safe);
         }
-
         public static void RecordBackupVerification(string username, string path, bool succeeded)
         {
             WriteValue("LastBackupVerificationUtc_" + Tag(username), DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture));
@@ -519,7 +452,6 @@ namespace PersonalInfoManager.Services
                 WriteValue("LastBackupHash_" + Tag(username), hash);
             }
         }
-
         public static void RecordRestoreDrill(string username, string backupPath, bool succeeded, string message)
         {
             WriteValue("LastRestoreDrillUtc_" + Tag(username), DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture));
@@ -529,7 +461,6 @@ namespace PersonalInfoManager.Services
             string safe = new string((message ?? "").Where(character => !char.IsControl(character)).Take(240).ToArray());
             WriteValue("LastRestoreDrillMessage_" + Tag(username), safe);
         }
-
         public static BackupHealthSummary GetHealthSummary(string username)
         {
             DateTime? lastBackup = GetLastBackupUtc(username);
@@ -552,7 +483,6 @@ namespace PersonalInfoManager.Services
                 verifiedOk, drill, drillOk, drillHash, lastFailure,
                 ReadValue("LastBackupFailure_" + Tag(username)) ?? "", DateTime.UtcNow);
         }
-
         public static BackupHealthSummary EvaluateHealth(
             DateTime? lastBackupUtc,
             bool vaultChangedAfterBackup,
@@ -589,28 +519,23 @@ namespace PersonalInfoManager.Services
             return new("Trạng thái sao lưu tốt: đã xác minh và diễn tập gần đây ({0}).",
                 new object?[] { LocalizationAuditService.FormatDate(lastRestoreDrillUtc.Value) }, false);
         }
-
         public static string GetHealthLine(string username)
         {
             BackupHealthSummary summary = GetHealthSummary(username);
             return LanguageService.Format(summary.Template, summary.Arguments);
         }
-
         public static DateTime? GetLastBackupUtc(string username)
         {
             DateTime? recorded = ParseUtc(ReadValue("LastBackupUtc_" + Tag(username)));
             return Max(recorded, NewestBackupFileUtc(username));
         }
-
         public static bool NeedsBackup(string username)
         {
             DateTime? vault = new AccountVaultService().GetLastWriteUtc(username);
             if (vault == null) return false;
-
             DateTime? last = GetLastBackupUtc(username);
             return last == null || vault.Value > last.Value;
         }
-
         public static (string text, bool warn) GetStatusLine(string username)
         {
             try
@@ -618,10 +543,8 @@ namespace PersonalInfoManager.Services
                 int count = CountAccounts(username);
                 if (count < 0) return ("", false);
                 if (count == 0) return ("💾 Sao lưu: chưa có dữ liệu", false);
-
                 DateTime? last = GetLastBackupUtc(username);
                 string text;
-
                 if (last == null)
                 {
                     text = "💾 Chưa từng sao lưu";
@@ -631,7 +554,6 @@ namespace PersonalInfoManager.Services
                     text = $"💾 Sao lưu gần nhất: {last.Value.ToLocalTime():dd/MM/yyyy HH:mm}";
                     if (NeedsBackup(username)) text += " (có thay đổi mới)";
                 }
-
                 if (!IsEnabled(username)) text += " • tự sao lưu: tắt";
                 BackupHealthSummary healthSummary = GetHealthSummary(username);
                 string health = GetHealthLine(username);
@@ -643,14 +565,12 @@ namespace PersonalInfoManager.Services
                 return ("", false);
             }
         }
-
         public static string? GetReminder(string username)
         {
             try
             {
                 if (CountAccounts(username) <= 0) return null;
                 if (!NeedsBackup(username)) return null;
-
                 DateTime? last = GetLastBackupUtc(username);
                 if (last == null)
                 {
@@ -658,12 +578,10 @@ namespace PersonalInfoManager.Services
                         ? null
                         : "Bạn chưa từng sao lưu dữ liệu, và tính năng tự sao lưu khi thoát đang tắt.";
                 }
-
                 double days = (DateTime.UtcNow - last.Value).TotalDays;
                 if (days >= RemindAfterDays)
                     return $"Đã khoảng {Math.Floor(days):0} ngày chưa sao lưu, và dữ liệu đã thay đổi " +
                            $"kể từ lần sao lưu gần nhất ({last.Value.ToLocalTime():dd/MM/yyyy HH:mm}).";
-
                 return null;
             }
             catch
@@ -671,9 +589,7 @@ namespace PersonalInfoManager.Services
                 return null;
             }
         }
-
         private static string Tag(string username) => BackupCrypto.UserTag(username);
-
         private static string HashFile(string path)
         {
             using var input = new FileStream(path, FileMode.Open, FileAccess.Read,
@@ -682,29 +598,24 @@ namespace PersonalInfoManager.Services
             try { return Convert.ToHexString(hash); }
             finally { CryptographicOperations.ZeroMemory(hash); }
         }
-
         private static int CountAccounts(string username)
         {
             try { return new AccountVaultService().Count(username); }
             catch { return -1; }
         }
-
         private static DateTime? NewestBackupFileUtc(string username)
         {
             try
             {
                 string folder = GetFolder(username);
                 if (!Directory.Exists(folder)) return null;
-
                 string prefix = $"{FilePrefix}{Tag(username)}_";
                 DateTime? newest = null;
-
                 foreach (var f in Directory.GetFiles(folder, prefix + "*" + FileExt))
                 {
                     DateTime t = File.GetLastWriteTimeUtc(f);
                     if (newest == null || t > newest) newest = t;
                 }
-
                 return newest;
             }
             catch
@@ -712,23 +623,19 @@ namespace PersonalInfoManager.Services
                 return null;
             }
         }
-
         private static DateTime? Max(DateTime? a, DateTime? b)
         {
             if (a == null) return b;
             if (b == null) return a;
             return a > b ? a : b;
         }
-
         private static DateTime? ParseUtc(string? s)
         {
             if (string.IsNullOrWhiteSpace(s)) return null;
-
             return DateTime.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var dt)
                 ? dt.ToUniversalTime()
                 : null;
         }
-
         private static string? ReadValue(string name)
         {
             try
@@ -751,7 +658,6 @@ namespace PersonalInfoManager.Services
                 return null;
             }
         }
-
         private static int ReadInt(string name, int fallback, params int[] allowed)
         {
             string? raw = ReadValue(name);
@@ -760,7 +666,6 @@ namespace PersonalInfoManager.Services
                 ? value
                 : fallback;
         }
-
         private static void WriteValue(string name, string value)
         {
             try

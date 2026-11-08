@@ -576,7 +576,47 @@ internal static class Program
                 actual.Contains("[UNDO_IMPORT]", StringComparison.Ordinal))
                 throw new InvalidDataException($"An activity action code was not translated: '{actual}'.");
         }
+        var timestamp = new DateTimeOffset(2026, 11, 5, 18, 20, 1, TimeSpan.FromHours(7));
+        const string hostile = "Người dùng%5B[admin]\r\n[LOGIN] \u2028 \u202E";
+        var structured = ActivityLogCodec.Create(timestamp, hostile, "EXPORT_CSV", messageId: "log.detail.export_csv.1", arguments: new object?[] { 3 });
+        string jsonLine = ActivityLogCodec.Serialize(structured);
+        if (jsonLine.Contains('\n') || jsonLine.Contains('\r') || !ActivityLogCodec.TryParse(jsonLine, out var parsed) || parsed!.Username != hostile || parsed.Timestamp != timestamp)
+            throw new InvalidDataException("Structured log round-trip or single-line framing failed.");
+        foreach (string language in new[] { "vi", "en", "vi" })
+        {
+            string display = LanguageService.TranslateLogContent(jsonLine, language);
+            if (display.Contains('\n') || display.Contains('\r') || !display.Contains(ActivityLogger.EscapeField(hostile), StringComparison.Ordinal) ||
+                !display.Contains(LocalizationAuditService.FormatForLanguage("log.detail.export_csv.1", language, 3), StringComparison.Ordinal))
+                throw new InvalidDataException("Structured log translation changed fields or allowed line injection.");
+        }
+        string opaque = ActivityLogCodec.Serialize(ActivityLogCodec.Create(timestamp, "admin", "EXPORT_FILE", "Được thêm [file] %5B"));
+        if (!LanguageService.TranslateLogContent(opaque, "en").EndsWith(ActivityLogger.EscapeField("Được thêm [file] %5B"), StringComparison.Ordinal))
+            throw new InvalidDataException("Opaque log data was translated or decoded.");
+        foreach (string broken in new[] { "{", "{}", jsonLine.Replace("\"Version\":2", "\"Version\":999"), jsonLine.Replace("\"Version\":2", "\"Version\":2,\"Version\":2") })
+            if (ActivityLogCodec.TryParse(broken, out _) || LanguageService.TranslateLogContent(broken, "en") != LocalizationAuditService.Get("log.unreadable", "en"))
+                throw new InvalidDataException("Malformed or unsupported structured log was accepted.");
+        var unknown = structured with { MessageId = "log.unknown.future" };
+        if (!LanguageService.TranslateLogContent(ActivityLogCodec.Serialize(unknown), "en").Contains(ActivityLogger.EscapeField(LocalizationAuditService.Get("log.unknown_message", "en")), StringComparison.Ordinal))
+            throw new InvalidDataException("Unknown event template did not fall back safely.");
+        DateTime now = DateTime.Now;
+        string oldLogin = ActivityLogger.FormatLine(now.AddHours(-2), "mixed", "LOGIN", "");
+        string failed = ActivityLogCodec.Serialize(ActivityLogCodec.Create(new DateTimeOffset(now.AddMinutes(-10)), "mixed", "LOGIN_FAILED"));
+        if (LoginHistory.BuildWarningFromLogs("mixed", now, new[] { new[] { oldLogin, "{broken", failed } }) == null ||
+            LoginHistory.BuildWarningFromLogs("other", now, new[] { new[] { oldLogin, failed } }) != null)
+            throw new InvalidDataException("Mixed legacy and structured sign-in history was misclassified.");
         ActivityLogger.Log("regressionadmin", "VAULT_KEY_ROTATION", "synthetic translation test");
+        ActivityLogger.LogMessage("regressionadmin", "EXPORT_CSV", "log.detail.export_csv.1", 2);
+        string activeLog = ActivityLogger.ListLogFiles().Single();
+        File.AppendAllText(activeLog, "{partial");
+        ActivityLogger.Log("regressionadmin", "EXPORT_FILE", "safe-after-partial");
+        var afterPartial = File.ReadAllLines(activeLog);
+        if (!afterPartial.Contains("{partial") || !ActivityLogCodec.TryParse(afterPartial[^1], out var recoveredLine) || recoveredLine!.Detail != "safe-after-partial")
+            throw new InvalidDataException("Appending after an interrupted line corrupted the next record.");
+        int beforeConcurrent = afterPartial.Length;
+        System.Threading.Tasks.Parallel.For(0, 8, index => ActivityLogger.Log("regressionadmin", "EXPORT_FILE", "concurrent-" + index));
+        string[] concurrent = File.ReadAllLines(activeLog).Skip(beforeConcurrent).ToArray();
+        if (concurrent.Length != 8 || concurrent.Any(line => !ActivityLogCodec.TryParse(line, out _)))
+            throw new InvalidDataException("Concurrent activity writes were lost or interleaved.");
         string[] logFiles = ActivityLogger.ListLogFiles();
         string expectedLogRoot = Path.Combine(tempRoot, "PersonalInfoManager", "Logs");
         if (logFiles.Length == 0 || logFiles.Any(path => !path.StartsWith(expectedLogRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)))

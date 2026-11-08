@@ -237,7 +237,7 @@ public static class CompleteBackupService
             cancellationToken.ThrowIfCancellationRequested();
             AtomicFileService.PromoteTemporary(stagedPath, destinationPath);
             stagedPath = null;
-            try { ActivityLogger.Log(username, "CREATE_COMPLETE_BACKUP", $"Đã tạo gói chuyển máy: {Path.GetFileName(destinationPath)}"); } catch { }
+            try { ActivityLogger.LogMessage(username, "CREATE_COMPLETE_BACKUP", "log.detail.create_complete_backup.1", Path.GetFileName(destinationPath)); } catch { }
             return (true, LocalizationAuditService.Get("backup.complete.message001", "vi"), ToInfo(manifest, new FileInfo(destinationPath).Length));
         }
         catch (OperationCanceledException)
@@ -414,7 +414,7 @@ public static class CompleteBackupService
                 settingsMayHaveChanged = true;
                 ApplySettings(package.Settings);
             }
-            try { ActivityLogger.Log(username, "RESTORE_COMPLETE_BACKUP", $"Đã thêm {accountsAdded} tài khoản, {notesAdded} ghi chú và {filesAdded} tệp."); } catch { }
+            try { ActivityLogger.LogMessage(username, "RESTORE_COMPLETE_BACKUP", "log.detail.restore_complete_backup.1", accountsAdded, notesAdded, filesAdded); } catch { }
             return (true, $"Khôi phục xong: thêm {accountsAdded} tài khoản, {notesAdded} ghi chú và {filesAdded} tệp. Dữ liệu trùng hoặc cài đặt chưa chọn được giữ nguyên.", accountsAdded, notesAdded, filesAdded);
         }
         catch (Exception ex)
@@ -622,7 +622,7 @@ public static class CompleteBackupService
                 new NoteService().Save(currentNotes);
                 notesSaved = true;
             }
-            try { ActivityLogger.Log(username, "RECOVER_SELECTED_BACKUP_COPIES", $"Đã khôi phục thành bản sao {accountsAdded} tài khoản, {notesAdded} ghi chú và {filesAdded} tệp."); } catch { }
+            try { ActivityLogger.LogMessage(username, "RECOVER_SELECTED_BACKUP_COPIES", "log.detail.recover_selected_backup_copies.1", accountsAdded, notesAdded, filesAdded); } catch { }
             return (true, LocalizationAuditService.Format("backup.selective.success", accountsAdded, notesAdded, filesAdded), accountsAdded, notesAdded, filesAdded);
         }
         catch (Exception ex)

@@ -78,10 +78,8 @@ namespace PersonalInfoManager
             try { AutoThemeService.Stop(); } catch { }
             try
             {
-                ActivityLogger.Log(
-                    SessionService.CurrentUser?.Username ?? "SYSTEM",
-                    "APP_EXIT",
-                    $"OnExit đã chạy, mã thoát {e.ApplicationExitCode}");
+                ActivityLogger.LogMessage(
+                    SessionService.CurrentUser?.Username ?? "SYSTEM", "APP_EXIT", "log.detail.app_exit", e.ApplicationExitCode);
             }
             catch { }
             base.OnExit(e);

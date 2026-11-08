@@ -213,12 +213,24 @@ public static class LanguageService
     }
     internal static string TranslateLogContent(string content, string languageCode)
     {
-        if (!string.Equals(languageCode, "en", StringComparison.OrdinalIgnoreCase) || string.IsNullOrEmpty(content)) return content;
+        if (string.IsNullOrEmpty(content)) return content;
         string normalized = content.Replace("\r\n", "\n", StringComparison.Ordinal);
         return string.Join(Environment.NewLine, normalized.Split('\n').Select(line => TranslateLogLine(line, languageCode)));
     }
     private static string TranslateLogLine(string line, string languageCode)
     {
+        if (line.TrimStart().StartsWith('{'))
+        {
+            if (!ActivityLogCodec.TryParse(line, out var record) || record == null)
+                return LocalizationAuditService.Get("log.unreadable", languageCode);
+            string actionLabel = string.Equals(languageCode, "en", StringComparison.OrdinalIgnoreCase) && EnglishActivityActions.TryGetValue(record.EventId, out var label) ? label : record.EventId;
+            string structuredDetail;
+            try { structuredDetail = record.MessageId == null ? record.Detail : LocalizationAuditService.FormatForLanguage(record.MessageId, languageCode, ActivityLogCodec.GetArguments(record)); }
+            catch (Exception ex) when (ex is KeyNotFoundException or FormatException or OverflowException)
+            { structuredDetail = LocalizationAuditService.Get("log.unknown_message", languageCode); }
+            return ActivityLogger.FormatLine(record.Timestamp.LocalDateTime, record.Username, actionLabel, structuredDetail);
+        }
+        if (!string.Equals(languageCode, "en", StringComparison.OrdinalIgnoreCase)) return line;
         int timestampEnd = line.IndexOf("] [", StringComparison.Ordinal);
         if (timestampEnd != 20) return Translate(line, languageCode);
         int usernameEnd = line.IndexOf("] [", timestampEnd + 3, StringComparison.Ordinal);

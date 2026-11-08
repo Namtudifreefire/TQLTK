@@ -341,7 +341,7 @@ namespace PersonalInfoManager
             User? currentUser = authenticatedUser == null ? null : _userService.FindById(authenticatedUser.Id);
             if (!CanRotateVaultKey(currentUser))
             {
-                try { ActivityLogger.Log(authenticatedUser?.Username ?? "SYSTEM", "VAULT_KEY_ROTATION_DENIED", "Chỉ quản trị viên đang hoạt động được xoay khóa dùng chung."); } catch { }
+                try { ActivityLogger.LogMessage(authenticatedUser?.Username ?? "SYSTEM", "VAULT_KEY_ROTATION_DENIED", "log.detail.vault_key_rotation_denied.1"); } catch { }
                 PersonalInfoManager.Services.LocalizedMessageBox.Show(
                     LanguageService.Translate("ui.mainwindow.message006"),
                     LanguageService.Translate("ui.mainwindow.message007"), MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -389,7 +389,7 @@ namespace PersonalInfoManager
                 });
                 if (_isLocked || !EnsureActiveSession()) return;
                 AccountVaultService.ClearCache();
-                try { ActivityLogger.Log(username, "VAULT_KEY_ROTATION", $"Đã mã hóa lại {operation.result.ReencryptedFiles} tệp; giữ {operation.result.PreservedLegacyBackups} backup dùng cụm mật khẩu."); } catch { }
+                try { ActivityLogger.LogMessage(username, "VAULT_KEY_ROTATION", "log.detail.vault_key_rotation.1", operation.result.ReencryptedFiles, operation.result.PreservedLegacyBackups); } catch { }
                 RefreshAccounts();
                 RefreshSecurityOverview();
                 string details = LanguageService.Format("ui.mainwindow.message012",
@@ -734,7 +734,7 @@ namespace PersonalInfoManager
                 if (IsAuthFresh())
                 {
                     ShowPasswordNow();
-                    try { ActivityLogger.Log(username, "SHOW_PASSWORD", "Nhớ xác thực"); } catch { }
+                    try { ActivityLogger.LogMessage(username, "SHOW_PASSWORD", "log.detail.show_password.1"); } catch { }
                     return;
                 }
                 bool available = await WindowsHelloService.IsAvailableAsync();
@@ -751,7 +751,7 @@ namespace PersonalInfoManager
                 if (_isLocked || !EnsureActiveSession()) return;
                 if (!verified)
                 {
-                    try { ActivityLogger.Log(username, "SHOW_PASSWORD_DENIED", "Xác thực Windows Hello thất bại"); } catch { }
+                    try { ActivityLogger.LogMessage(username, "SHOW_PASSWORD_DENIED", "log.detail.show_password_denied.1"); } catch { }
                     PersonalInfoManager.Services.LocalizedMessageBox.Show("Xác thực thất bại. Mật khẩu vẫn được ẩn.", "Từ chối", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
@@ -1108,7 +1108,7 @@ namespace PersonalInfoManager
                 {
                     if (!TwoFactorService.IsEnabled(username))
                     {
-                        try { ActivityLogger.Log(username, "COPY_PASSWORD_DENIED", "Windows Hello thất bại, chưa bật 2FA"); } catch { }
+                        try { ActivityLogger.LogMessage(username, "COPY_PASSWORD_DENIED", "log.detail.copy_password_denied.1"); } catch { }
                         PersonalInfoManager.Services.LocalizedMessageBox.Show(
                             "Xác thực Windows Hello không thành công và bạn chưa bật xác thực 2 bước nên không thể sao chép mật khẩu.\n\n" +
                             "Vào Bảo mật → Bật xác thực 2 bước (Authenticator) để có cách xác thực dự phòng.",
@@ -1121,7 +1121,7 @@ namespace PersonalInfoManager
                 }
                 if (!ok)
                 {
-                    try { ActivityLogger.Log(username, "COPY_PASSWORD_DENIED", "Windows Hello và 2FA đều thất bại"); } catch { }
+                    try { ActivityLogger.LogMessage(username, "COPY_PASSWORD_DENIED", "log.detail.copy_password_denied.2"); } catch { }
                     PersonalInfoManager.Services.LocalizedMessageBox.Show("Xác thực thất bại. Đã hủy sao chép mật khẩu.", "Từ chối", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
@@ -1274,7 +1274,7 @@ namespace PersonalInfoManager
             }
             if (changed == 0) return;
             _vaultService.Save(username, accounts);
-            try { ActivityLogger.Log(username, "BULK_ACCOUNT_ACTION", $"Thay đổi {changed} tài khoản"); } catch { }
+            try { ActivityLogger.LogMessage(username, "BULK_ACCOUNT_ACTION", "log.detail.bulk_account_action.1", changed); } catch { }
             RefreshAccounts();
         }
         private async void BtnExportSelected_Click(object? sender, RoutedEventArgs e)
@@ -1653,7 +1653,7 @@ namespace PersonalInfoManager
                     "Xác nhận để xuất CSV. File sẽ chứa mật khẩu, khóa TOTP, trường tùy chỉnh và URL đầy đủ dạng chữ thường.");
                 if (!verified)
                 {
-                    try { ActivityLogger.Log(username, "EXPORT_CSV_DENIED", "Xác thực Windows Hello thất bại"); } catch { }
+                    try { ActivityLogger.LogMessage(username, "EXPORT_CSV_DENIED", "log.detail.export_csv_denied.1"); } catch { }
                     PersonalInfoManager.Services.LocalizedMessageBox.Show("Xác thực thất bại. Đã hủy xuất CSV.", "Từ chối", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
@@ -1677,7 +1677,7 @@ namespace PersonalInfoManager
                     PersonalInfoManager.Services.LocalizedMessageBox.Show(res.message, "Lỗi xuất CSV", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
-                ActivityLogger.Log(username, "EXPORT_CSV", $"Xuất {accounts.Count} tài khoản ra CSV");
+                ActivityLogger.LogMessage(username, "EXPORT_CSV", "log.detail.export_csv.1", accounts.Count);
                 PersonalInfoManager.Services.LocalizedMessageBox.Show(res.message, "Thành công", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
@@ -1826,7 +1826,7 @@ namespace PersonalInfoManager
                 RefreshAccounts();
                 RefreshSecurityOverview();
                 UpdateStorageInfo();
-                ActivityLogger.Log(username, "IMPORT_CREDENTIALS", $"Thêm {added}, ghi đè {overwritten}, bỏ qua {skipped} ({parsed.Message})");
+                ActivityLogger.LogMessage(username, "IMPORT_CREDENTIALS", "log.detail.import_credentials.1", added, overwritten, skipped, parsed.Message);
                 PersonalInfoManager.Services.LocalizedMessageBox.Show(this, LanguageService.Format("ui.mainwindow.message037", added, overwritten, skipped),
                     LanguageService.Translate("ui.mainwindow.message036"), MessageBoxButton.OK, MessageBoxImage.Information);
             }
@@ -2366,7 +2366,7 @@ namespace PersonalInfoManager
                         }, _sessionRevocationCts.Token));
                     if (_isLocked || !EnsureActiveSession()) return;
                     AutoBackupService.RecordRestoreDrill(username, dialog.FileName, result.ok, result.message);
-                    try { ActivityLogger.Log(username, "FILE_BACKUP_RESTORE_DRILL", $"{Path.GetFileName(dialog.FileName)}: {result.ok}"); } catch { }
+                    try { ActivityLogger.LogMessage(username, "FILE_BACKUP_RESTORE_DRILL", "log.detail.file_backup_restore_drill.1", Path.GetFileName(dialog.FileName), result.ok); } catch { }
                     PersonalInfoManager.Services.LocalizedMessageBox.Show(LanguageService.Translate(result.message), LanguageService.Translate(result.ok ? "Diễn tập hoàn tất" : "Diễn tập thất bại"),
                         MessageBoxButton.OK, result.ok ? MessageBoxImage.Information : MessageBoxImage.Warning);
                 }
@@ -2378,7 +2378,7 @@ namespace PersonalInfoManager
                         username, dialog.FileName, passphrase));
                     if (_isLocked || !EnsureActiveSession()) return;
                     AutoBackupService.RecordRestoreDrill(username, dialog.FileName, result.ok, result.message);
-                    try { ActivityLogger.Log(username, "VAULT_BACKUP_RESTORE_DRILL", $"{Path.GetFileName(dialog.FileName)}: {result.ok}"); } catch { }
+                    try { ActivityLogger.LogMessage(username, "VAULT_BACKUP_RESTORE_DRILL", "log.detail.vault_backup_restore_drill.1", Path.GetFileName(dialog.FileName), result.ok); } catch { }
                     PersonalInfoManager.Services.LocalizedMessageBox.Show(LanguageService.Translate(result.message), LanguageService.Translate(result.ok ? "Diễn tập hoàn tất" : "Diễn tập thất bại"),
                         MessageBoxButton.OK, result.ok ? MessageBoxImage.Information : MessageBoxImage.Warning);
                 }
@@ -2819,7 +2819,7 @@ namespace PersonalInfoManager
                             LastSyncAtUtc = DateTime.UtcNow
                         });
                     PersonalInfoManager.Services.LocalizedMessageBox.Show(LanguageService.Translate("ui.mainwindow.message091"), LanguageService.Translate("ui.mainwindow.message043"), MessageBoxButton.OK, MessageBoxImage.Information);
-                    ActivityLogger.Log(username, "SYNC_GOOGLE_DRIVE", "Đã tải kho mật khẩu lên thành công");
+                    ActivityLogger.LogMessage(username, "SYNC_GOOGLE_DRIVE", "log.detail.drive_uploaded");
                 }
                 else
                 {
@@ -2903,7 +2903,7 @@ namespace PersonalInfoManager
                     });
                     await OfferSavePassphraseAsync(passphrase);
                     if (_isLocked) return;
-                    ActivityLogger.Log(username, "RESTORE_GOOGLE_DRIVE", $"Nhập kho mật khẩu từ Drive: {pick.Name}");
+                    ActivityLogger.LogMessage(username, "RESTORE_GOOGLE_DRIVE", "log.detail.restore_google_drive.1", pick.Name);
                     if (result.importedCount > 0)
                     {
                         RefreshAccounts();
@@ -3073,7 +3073,7 @@ namespace PersonalInfoManager
                     PersonalInfoManager.Services.LocalizedMessageBox.Show(
                         $"{pack.message}\n\nĐã đồng bộ lên Google Drive thành công!\n\nBản sao lưu nằm trong thư mục 'TQLTK Backup' trên Google Drive của bạn.",
                         "Thành công", MessageBoxButton.OK, MessageBoxImage.Information);
-                    ActivityLogger.Log(username, "SYNC_FILES_GOOGLE_DRIVE", $"Tải lên {pack.count} tệp cá nhân ({FileBackupService.FormatSize(pack.bytes)})");
+                    ActivityLogger.LogMessage(username, "SYNC_FILES_GOOGLE_DRIVE", "log.detail.sync_files_google_drive.1", pack.count, FileBackupService.FormatSize(pack.bytes));
                 }
                 else
                 {
@@ -3172,8 +3172,7 @@ namespace PersonalInfoManager
                 {
                     await OfferSavePassphraseAsync(typed);
                     if (_isLocked) return;
-                    ActivityLogger.Log(username, "RESTORE_FILES_GOOGLE_DRIVE",
-                        $"Khôi phục File cá nhân từ Drive: {pick.Name} ({result.added} file, bỏ qua {result.skipped})");
+                    ActivityLogger.LogMessage(username, "RESTORE_FILES_GOOGLE_DRIVE", "log.detail.drive_files_restored", pick.Name, result.added, result.skipped);
                 }
             }
             catch (Exception ex)
@@ -3288,7 +3287,7 @@ namespace PersonalInfoManager
                     _pwnedStateLoadFailed = false;
                 }
                 catch { _pwnedStateSaveFailed = true; }
-                try { ActivityLogger.Log(username, "PWNED_PASSWORD_CHECK", $"Đã kiểm tra {result.CheckedUniquePasswords} giá trị; ảnh hưởng {result.AffectedAccounts} mục"); } catch { }
+                try { ActivityLogger.LogMessage(username, "PWNED_PASSWORD_CHECK", "log.detail.pwned_password_check.1", result.CheckedUniquePasswords, result.AffectedAccounts); } catch { }
                 RefreshSecurityOverview();
             }
             catch (OperationCanceledException)

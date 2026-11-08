@@ -9,7 +9,6 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using PersonalInfoManager.Models;
 using PersonalInfoManager.Services;
-
 namespace PersonalInfoManager
 {
     public partial class EditAccountWindow : Window
@@ -27,9 +26,7 @@ namespace PersonalInfoManager
         private readonly string _draftUserScope;
         private readonly Guid? _draftAccountId;
         private readonly DispatcherTimer _draftTimer;
-
         public SavedAccount Result { get; private set; } = new();
-
         public EditAccountWindow(SavedAccount? existing)
         {
             InitializeComponent();
@@ -38,7 +35,6 @@ namespace PersonalInfoManager
             _draftAccountId = existing?.Id;
             _draftTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(800) };
             _draftTimer.Tick += DraftTimer_Tick;
-
             if (existing != null)
             {
                 lblTitle.Text = "✏️ Sửa tài khoản";
@@ -64,7 +60,6 @@ namespace PersonalInfoManager
             UpdatePasswordStrength();
             Loaded += EditAccountWindow_Loaded;
         }
-
         private void EditAccountWindow_Loaded(object sender, RoutedEventArgs e)
         {
             LanguageService.ApplyToWindow(this);
@@ -75,7 +70,6 @@ namespace PersonalInfoManager
                     lblDraftStatus.Text = LanguageService.Format("Không đọc được bản nháp đã mã hóa: {0}. Tệp vẫn được giữ nguyên.", error);
                 return;
             }
-
             if (draft == null) return;
             if (PersonalInfoManager.Services.LocalizedMessageBox.Show(this,
                     "Tìm thấy bản nháp được mã hóa cho mục này. Bạn có muốn khôi phục nội dung chưa lưu không?",
@@ -100,7 +94,6 @@ namespace PersonalInfoManager
                 lblDraftStatus.Text = LanguageService.Translate("Bản nháp đã bị xóa theo lựa chọn của bạn.");
             }
         }
-
         private void ApplyDraft(EditAccountDraft draft)
         {
             TotpCredential? restoredTotp = string.IsNullOrWhiteSpace(draft.TotpSecret)
@@ -133,7 +126,6 @@ namespace PersonalInfoManager
             btnDeleteNote.Visibility = _existing != null && !string.IsNullOrWhiteSpace(txtNote.Text)
                 ? Visibility.Visible : Visibility.Collapsed;
         }
-
         private EditAccountDraft CaptureDraft() => new()
         {
             ServiceName = txtService.Text,
@@ -153,24 +145,20 @@ namespace PersonalInfoManager
             TotpDigits = _totp?.Digits ?? 6,
             TotpPeriodSeconds = _totp?.PeriodSeconds ?? 30
         };
-
         private void FormField_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e) => MarkDirty();
         private void FormField_CheckedChanged(object sender, RoutedEventArgs e) => MarkDirty();
-
         private void MarkDirty()
         {
             if (_isInitializing || _allowClose) return;
             _isDirty = true;
             if (chkEncryptedDraft?.IsChecked == true) ScheduleDraftSave();
         }
-
         private void ScheduleDraftSave()
         {
             _draftTimer.Stop();
             _draftTimer.Interval = TimeSpan.FromMilliseconds(800);
             _draftTimer.Start();
         }
-
         private void DraftTimer_Tick(object? sender, EventArgs e)
         {
             _draftTimer.Stop();
@@ -187,14 +175,12 @@ namespace PersonalInfoManager
                 _draftTimer.Start();
             }
         }
-
         private void ChkEncryptedDraft_Checked(object sender, RoutedEventArgs e)
         {
             if (_isInitializing) return;
             lblDraftStatus.Text = LanguageService.Translate("Bản nháp chỉ nằm trên thiết bị này và dùng DPAPI của tài khoản Windows hiện tại.");
             if (_isDirty) ScheduleDraftSave();
         }
-
         private void ChkEncryptedDraft_Unchecked(object sender, RoutedEventArgs e)
         {
             if (_isInitializing) return;
@@ -202,7 +188,6 @@ namespace PersonalInfoManager
             EditAccountDraftService.Delete(_draftUserScope, _draftAccountId);
             lblDraftStatus.Text = LanguageService.Translate("Đã xóa bản nháp cục bộ.");
         }
-
         private void EditAccountWindow_Closing(object? sender, CancelEventArgs e)
         {
             if (_allowClose) return;
@@ -217,7 +202,6 @@ namespace PersonalInfoManager
             _draftTimer.Stop();
             EditAccountDraftService.Delete(_draftUserScope, _draftAccountId);
         }
-
         internal void CloseForSessionEnd()
         {
             _draftTimer.Stop();
@@ -226,14 +210,13 @@ namespace PersonalInfoManager
                 try { EditAccountDraftService.Save(_draftUserScope, _draftAccountId, CaptureDraft()); }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or CryptographicException)
                 {
-                    try { ActivityLogger.Log(_draftUserScope, "EDIT_DRAFT_SAVE_FAILED", "Không lưu được bản nháp khi khóa phiên."); } catch { }
+                    try { ActivityLogger.LogMessage(_draftUserScope, "EDIT_DRAFT_SAVE_FAILED", "log.detail.edit_draft_save_failed.1"); } catch { }
                 }
             }
             _allowClose = true;
             Hide();
             Close();
         }
-
         private void EditAccountWindow_Closed(object? sender, EventArgs e)
         {
             _draftTimer.Stop();
@@ -245,7 +228,6 @@ namespace PersonalInfoManager
             _deletedNotes.Clear();
             _totp = null;
         }
-
         private void BtnTogglePwd_Click(object sender, RoutedEventArgs e)
         {
             _showPwd = !_showPwd;
@@ -269,45 +251,37 @@ namespace PersonalInfoManager
             }
             finally { _synchronizingPassword = false; }
         }
-
         private void BtnGeneratePwd_Click(object sender, RoutedEventArgs e)
         {
             var dialog = new PasswordGeneratorWindow(txtWebsiteUrl.Text) { Owner = this };
             if (dialog.ShowDialog() != true || string.IsNullOrEmpty(dialog.GeneratedPassword)) return;
             string pwd = dialog.GeneratedPassword;
-
             if (_showPwd)
                 txtPasswordVisible.Text = pwd;
             else
                 txtPassword.Password = pwd;
-
             MarkDirty();
             UpdatePasswordStrength();
         }
-
         private void TxtPassword_PasswordChanged(object sender, RoutedEventArgs e)
         {
             if (!_synchronizingPassword) MarkDirty();
             UpdatePasswordStrength();
         }
-
         private void TxtPasswordVisible_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
         {
             if (!_synchronizingPassword) MarkDirty();
             UpdatePasswordStrength();
         }
-
         private void UpdatePasswordStrength()
         {
             if (lblPwdStrength == null || txtPassword == null || txtPasswordVisible == null) return;
-
             string password = _showPwd ? txtPasswordVisible.Text : txtPassword.Password;
             if (string.IsNullOrEmpty(password))
             {
                 LanguageService.SetLocalizedText(lblPwdStrength, "");
                 return;
             }
-
             int score = PasswordStrengthService.CalculateScore(password);
             LanguageService.SetLocalizedText(lblPwdStrength, $"Độ mạnh: {PasswordStrengthService.GetLabel(score)}");
             lblPwdStrength.Foreground = score switch
@@ -318,7 +292,6 @@ namespace PersonalInfoManager
                 _ => Brushes.DarkGreen
             };
         }
-
         private void BtnManageTotp_Click(object sender, RoutedEventArgs e)
         {
             var dialog = new TotpSetupWindow(txtService.Text.Trim()) { Owner = this };
@@ -327,7 +300,6 @@ namespace PersonalInfoManager
             MarkDirty();
             UpdateTotpStatus();
         }
-
         private void BtnRemoveTotp_Click(object sender, RoutedEventArgs e)
         {
             if (_totp == null) return;
@@ -337,7 +309,6 @@ namespace PersonalInfoManager
             MarkDirty();
             UpdateTotpStatus();
         }
-
         private void UpdateTotpStatus()
         {
             if (lblTotpStatus == null) return;
@@ -347,7 +318,6 @@ namespace PersonalInfoManager
                 ? $"Đã thiết lập • {_totp!.Algorithm} • {_totp.Digits} chữ số • mỗi {_totp.PeriodSeconds} giây"
                 : "Chưa có mã xác thực cho website này.";
         }
-
         private void BtnManageCustomFields_Click(object sender, RoutedEventArgs e)
         {
             var dialog = new CustomFieldsWindow(_customFields) { Owner = this };
@@ -357,7 +327,6 @@ namespace PersonalInfoManager
             MarkDirty();
             UpdateCustomFieldsStatus();
         }
-
         private void UpdateCustomFieldsStatus()
         {
             if (lblCustomFieldsStatus == null) return;
@@ -366,7 +335,6 @@ namespace PersonalInfoManager
                 ? "Chưa có trường tùy chỉnh"
                 : $"{_customFields.Count} trường • {sensitive} trường nhạy cảm";
         }
-
         private void BtnDeleteNote_Click(object sender, RoutedEventArgs e)
         {
             string content = txtNote.Text.Trim();
@@ -379,7 +347,6 @@ namespace PersonalInfoManager
             btnDeleteNote.Visibility = Visibility.Collapsed;
             MarkDirty();
         }
-
         private void TxtNote_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
         {
             MarkDirty();
@@ -387,7 +354,6 @@ namespace PersonalInfoManager
             btnDeleteNote.Visibility = string.IsNullOrWhiteSpace(txtNote.Text)
                 ? Visibility.Collapsed : Visibility.Visible;
         }
-
         private void BtnSave_Click(object sender, RoutedEventArgs e)
         {
             string service = txtService.Text.Trim();
@@ -404,7 +370,6 @@ namespace PersonalInfoManager
                 .Where(tag => tag.Length > 0)
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToList();
-
             Uri? normalizedWebsiteUri = null;
             if (!string.IsNullOrWhiteSpace(websiteUrl) &&
                 !WebsiteDomainService.TryNormalizeUrl(websiteUrl, out normalizedWebsiteUri, out _))
@@ -415,7 +380,6 @@ namespace PersonalInfoManager
                 return;
             }
             if (normalizedWebsiteUri != null) websiteUrl = normalizedWebsiteUri.AbsoluteUri;
-
             var urlWarnings = WebsiteDomainService.GetRiskWarnings(websiteUrl);
             if (urlWarnings.Count > 0 && PersonalInfoManager.Services.LocalizedMessageBox.Show(this,
                     LanguageService.Translate("Website URL có dấu hiệu cần kiểm tra:") + "\n\n" +
@@ -423,7 +387,6 @@ namespace PersonalInfoManager
                     LanguageService.Translate("Chỉ tiếp tục nếu bạn đã xác minh domain chính thức."),
                     LanguageService.Translate("Cảnh báo domain"), MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
                 return;
-
             if (_existing != null && WebsiteDomainService.TryGetHost(_existing.WebsiteUrl, out string oldHost) &&
                 WebsiteDomainService.TryGetHost(websiteUrl, out string newHost) &&
                 !string.Equals(oldHost, newHost, StringComparison.OrdinalIgnoreCase) &&
@@ -431,7 +394,6 @@ namespace PersonalInfoManager
                     $"Hostname thay đổi từ '{oldHost}' sang '{newHost}'. Hãy xác minh đây là domain chính thức trước khi lưu. Tiếp tục?",
                     "Xác nhận thay đổi domain", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
                 return;
-
             if (_existing != null && !_noteMovedToTrash && string.IsNullOrWhiteSpace(note) &&
                 !string.IsNullOrWhiteSpace(_existing.Note))
             {
@@ -441,34 +403,29 @@ namespace PersonalInfoManager
                     DeletedAt = DateTime.UtcNow
                 });
             }
-
             if (string.IsNullOrWhiteSpace(service))
             {
                 PersonalInfoManager.Services.LocalizedMessageBox.Show("Vui lòng nhập tên dịch vụ.");
                 txtService.Focus();
                 return;
             }
-
             if (string.IsNullOrWhiteSpace(username))
             {
                 PersonalInfoManager.Services.LocalizedMessageBox.Show("Vui lòng nhập tên đăng nhập.");
                 txtUsername.Focus();
                 return;
             }
-
             if (string.IsNullOrWhiteSpace(password))
             {
                 PersonalInfoManager.Services.LocalizedMessageBox.Show("Vui lòng nhập mật khẩu.");
                 return;
             }
-
             if (_existing != null)
             {
                 bool passwordChanged = !string.Equals(_existing.Password, password, StringComparison.Ordinal);
                 var history = (_existing.PasswordHistory ?? new List<PasswordHistoryEntry>())
                     .Where(entry => entry != null)
                     .Select(entry => entry.Clone()).ToList();
-
                 if (!string.Equals(_existing.Password, password, StringComparison.Ordinal))
                 {
                     history.RemoveAll(entry =>
@@ -481,7 +438,6 @@ namespace PersonalInfoManager
                     });
                     history = history.Take(5).ToList();
                 }
-
                 Result = new SavedAccount
                 {
                     Id = _existing.Id,
@@ -510,7 +466,6 @@ namespace PersonalInfoManager
             }
             else
             {
-
                 Result = new SavedAccount
                 {
                     ServiceName = service,
@@ -531,7 +486,6 @@ namespace PersonalInfoManager
                     PasswordChangedAt = DateTime.Now
                 };
             }
-
             _isDirty = false;
             _allowClose = true;
             _draftTimer.Stop();
@@ -539,7 +493,6 @@ namespace PersonalInfoManager
             DialogResult = true;
             Close();
         }
-
         private void BtnCancel_Click(object sender, RoutedEventArgs e)
         {
             Close();

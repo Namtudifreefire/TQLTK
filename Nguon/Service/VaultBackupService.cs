@@ -77,8 +77,7 @@ namespace PersonalInfoManager.Services
                 }
                 try
                 {
-                    ActivityLogger.Log(username, "EXPORT_VAULT",
-                        $"Đã xuất {accounts.Count} tài khoản ra {Path.GetFileName(destPath)}");
+                    ActivityLogger.LogMessage(username, "EXPORT_VAULT", "log.detail.export_vault.1", accounts.Count, Path.GetFileName(destPath));
                 }
                 catch { }
                 string msg = $"Đã xuất {accounts.Count} tài khoản.";
@@ -345,9 +344,7 @@ namespace PersonalInfoManager.Services
                 vaultService.Save(username, existing);
                 try
                 {
-                    ActivityLogger.Log(username, "IMPORT_VAULT",
-                        $"Đã nhập {imported} tài khoản (bỏ qua {skipped} trùng)" +
-                        (foreignOwner ? $" (bản sao lưu của người dùng '{preview.Owner}')" : ""));
+                    ActivityLogger.LogMessage(username, "IMPORT_VAULT", "log.detail.vault_imported", imported, skipped, foreignOwner ? preview.Owner : username);
                 }
                 catch { }
                 return (true,

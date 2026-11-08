@@ -113,8 +113,7 @@ namespace PersonalInfoManager
             }
             try
             {
-                ActivityLogger.Log(user.Username, "LOGIN_WINDOWS_HELLO",
-                    "Đăng nhập bằng Windows Hello");
+                ActivityLogger.LogMessage(user.Username, "LOGIN_WINDOWS_HELLO", "log.detail.login_windows_hello.1");
             }
             catch { }
             CompleteLogin(user, requireTwoFactor: false);
@@ -125,7 +124,7 @@ namespace PersonalInfoManager
             {
                 if (!TwoFactorPromptWindow.AskIfEnabled(this, user.Username))
                 {
-                    try { ActivityLogger.Log(user.Username, "LOGIN_2FA_FAILED", "Sai mã hoặc hủy xác thực 2 bước"); } catch { }
+                    try { ActivityLogger.LogMessage(user.Username, "LOGIN_2FA_FAILED", "log.detail.login_2fa_failed.1"); } catch { }
                     ShowError("Xác thực 2 bước thất bại hoặc đã bị hủy.");
                     txtPassword.Clear();
                     txtPassword.Focus();
@@ -141,7 +140,7 @@ namespace PersonalInfoManager
                 if (!dlg.Changed || fresh == null || fresh.MustChangePassword)
                 {
                     SessionService.Logout();
-                    try { ActivityLogger.Log(user.Username, "LOGIN_FORCED_CHANGE_CANCELLED", "Không đổi mật khẩu bắt buộc"); } catch { }
+                    try { ActivityLogger.LogMessage(user.Username, "LOGIN_FORCED_CHANGE_CANCELLED", "log.detail.login_forced_change_cancelled.1"); } catch { }
                     ShowError("Bạn cần đổi mật khẩu mới để tiếp tục đăng nhập.");
                     txtPassword.Clear();
                     txtPassword.Focus();
@@ -154,7 +153,7 @@ namespace PersonalInfoManager
             string? warning = LoginHistory.BuildWarning(user.Username);
             try
             {
-                ActivityLogger.Log(user.Username, "LOGIN", $"Role={user.Role}");
+                ActivityLogger.LogMessage(user.Username, "LOGIN", "log.detail.login.1", user.Role.ToString());
             }
             catch { }
             if (warning != null)
