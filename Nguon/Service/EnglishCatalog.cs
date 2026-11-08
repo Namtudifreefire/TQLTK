@@ -313,6 +313,7 @@ internal static class EnglishCatalog
         Add("Xem nhật ký", "View log");
         Add("TQLTK • Phát triển bởi thienthuongthienha_duyngadocton_", "TQLTK • Developed by thienthuongthienha_duyngadocton_");
         Add("Được tạo bởi 天地と月の造化 - TQLTK v3.6.7 (BETA) | © 2026 Namtudifreefire | Giấy phép MIT", "Made by 天地と月の造化 - TQLTK v3.6.7 (BETA) | © 2026 Namtudifreefire | MIT License");
+        Add("Được tạo bởi 天地と月の造化 - TQLTK v3.6.8 (BETA) | © 2026 Namtudifreefire | Giấy phép MIT", "Made by 天地と月の造化 - TQLTK v3.6.8 (BETA) | © 2026 Namtudifreefire | MIT License");
         Add("Sửa thông tin người dùng", "Edit user");
         Add("✏️ Sửa thông tin người dùng", "✏️ Edit user");
         Add("Cấp / Thu quyền quản trị", "Grant / revoke admin");
