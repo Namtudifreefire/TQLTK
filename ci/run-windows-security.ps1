@@ -12,6 +12,7 @@ if ($env:CI_DEBUG_TRACE -eq 'true') {
     throw 'Disable CI_DEBUG_TRACE before running security tests.'
 }
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
+& (Join-Path $PSScriptRoot 'test-windows-dpapi.ps1')
 $originalLocation = Get-Location
 $globalJson = Join-Path $repositoryRoot 'global.json'
 $createdGlobalJson = $false

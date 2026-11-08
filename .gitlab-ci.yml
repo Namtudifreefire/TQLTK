@@ -48,6 +48,7 @@ secret_detection:
 
 nuget-audit:
   stage: test
+  dependencies: []
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$CI_COMMIT_BRANCH'
@@ -59,15 +60,3 @@ nuget-audit:
   script:
     - dotnet restore Nguon/PersonalInfoManager.csproj --locked-mode --force -p:EnableWindowsTargeting=true -p:NuGetAudit=true -p:NuGetAuditMode=all -p:NuGetAuditLevel=low '-p:WarningsAsErrors=NU1900%3BNU1903%3BNU1904%3BNU1905'
     - dotnet restore Nguon/tests/PersonalInfoManager.SecurityRegression.csproj --force -p:EnableWindowsTargeting=true -p:NuGetAudit=true -p:NuGetAuditMode=all -p:NuGetAuditLevel=low '-p:WarningsAsErrors=NU1900%3BNU1903%3BNU1904%3BNU1905'
-
-windows-security-regression:
-  stage: test
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-    - if: '$CI_COMMIT_BRANCH'
-  tags:
-    - saas-windows-medium-amd64
-  timeout: 45 minutes
-  allow_failure: false
-  script:
-    - powershell -NoProfile -ExecutionPolicy Bypass -File ci/run-windows-security.ps1 -InstallSdk

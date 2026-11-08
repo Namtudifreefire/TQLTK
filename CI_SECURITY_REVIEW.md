@@ -2,6 +2,18 @@
 
 Ngày đối chiếu: 2026-11-08. Baseline: `1134e7059e97dbc57052e8839c2ca20f0048c7ef`, nhánh `main`, project `duyngadocton/TQLTK` (88625078).
 
+## Cập nhật sau pipeline thực tế — lựa chọn áp dụng hiện tại
+
+Phần bên dưới ghi lại thiết kế và kiểm tra ban đầu. Sau khi pipeline [3041940691](https://gitlab.com/duyngadocton/TQLTK/-/pipelines/3041940691) chạy, người dùng chọn **GitHub Actions cho kiểm thử Windows, GitLab cho scanner và NuGet Audit**. Lựa chọn này thay thế kế hoạch chạy regression bằng hosted Windows của GitLab trong các mục lịch sử bên dưới.
+
+- Pipeline đó có bảy job thành công, gồm NuGet Audit trên Linux và ba scanner bắt buộc; job Windows đạt 11 nhóm rồi lỗi DPAPI `CurrentUser` khi tạo tài khoản giả, 16 nhóm sau chưa chạy. SDK 10.0.403 đã tải/cài thành công. Git Credential Manager cũng báo lỗi `wincredman` trong checkout/cleanup; lỗi quyết định của regression nằm tại `ProtectedData.Protect`, không phải cài SDK.
+- Chưa chứng minh được nguyên nhân gốc trong phiên đăng nhập/profile của hosted runner. Không đổi phạm vi DPAPI, không thay crypto và không tính lỗi môi trường là PASS.
+- Đã chuyển regression về job Windows hiện có của GitHub Actions; giữ build, publish, ZIP và upload của workflow. Bước regression gọi `ci/run-windows-security.ps1`, chọn SDK 10 và chạy toàn bộ suite.
+- `ci/test-windows-dpapi.ps1` kiểm tra protect/unprotect `CurrentUser` bằng dữ liệu ngẫu nhiên giả ngay trước khi restore/run. Nếu môi trường không đáp ứng, job thất bại rõ ràng, không skip suite. Không in dữ liệu mẫu hoặc ciphertext; các buffer được xóa sau kiểm tra.
+- Xóa job hosted Windows khỏi root GitLab CI theo lựa chọn rõ ràng của người dùng. NuGet Audit có `dependencies: []`, tránh tự tải report scanner của stage trước mà job không sử dụng. Ba Security Profiles trùng vẫn cần xử lý riêng.
+- GitLab xanh chỉ xác nhận các job GitLab. Trước khi phát hành phải kiểm tra **cả GitLab pipeline và GitHub Windows CI thành công trên cùng SHA**. Hiện chưa cấu hình cơ chế để kết quả GitHub tự chặn merge ở GitLab; gate đó cần cấu hình riêng nếu muốn bắt buộc ở server.
+- Kiểm tra sau sửa trên máy Windows local: preflight đạt trong Windows PowerShell và PowerShell 7; script regression chạy SDK 10.0.403 đạt 27 nhóm, 0 lỗi. Parse PowerShell và `git diff --check` đạt. Pipeline mới trên hai dịch vụ cần chạy trước khi xác nhận hoàn tất.
+
 Đây là bản nâng cấp cấu hình đang chờ kiểm chứng trên GitLab. Không thay đổi logic ứng dụng, cơ chế mã hóa, package, GitHub Actions, quyền truy cập hay security policy. Lần rà soát ban đầu không commit/push theo yêu cầu; sau đó người dùng đã cho phép đồng bộ các thay đổi lên GitHub và GitLab. Việc đồng bộ không xác nhận các bước CI còn thiếu đã đạt.
 
 ## 1. Kết quả đối chiếu trước khi sửa
