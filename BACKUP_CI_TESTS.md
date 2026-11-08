@@ -5,7 +5,7 @@ Các nhóm này chạy trên GitHub Actions Windows. Hosted Windows GitLab đã 
 | Nhóm | Nơi chạy | Điều được kiểm tra |
 | --- | --- | --- |
 | Regression cũ và lỗi backup cơ bản | GitHub job build | 31 nhóm, gồm 4 nhóm mới về dữ liệu hỏng, sai cụm, tương thích fixture và lỗi ghi/rollback |
-| Chuyển máy | backup-transfer-producer → backup-transfer-consumer | Hai VM riêng, xác nhận machine name và Windows SID khác nhau. Backup dùng cụm mật khẩu được khôi phục, giữ dữ liệu consumer; ciphertext khóa máy không mở được bằng khóa consumer |
+| Chuyển máy | backup-transfer-producer → backup-transfer-consumer | Hai VM GitHub-hosted riêng, xác nhận mã thực thi runner khác nhau và blob DPAPI của producer không mở được trong profile consumer. Hostname/SID của ảnh runner có thể trùng, chỉ được ghi nhận, không dùng làm bằng chứng duy nhất. Backup dùng cụm mật khẩu được khôi phục, giữ dữ liệu consumer; ciphertext khóa máy không mở được bằng khóa consumer |
 | Backup schema cũ | Consumer và regression | Fixture tổng hợp schema 3.6.2/v3p, PBKDF2 100.000 vòng được tạo độc lập và nhập trên máy khác. CBC vẫn bị từ chối. Chưa có corpus backup từ mọi bản phát hành cũ; không tuyên bố mọi phiên bản đều tương thích |
 | Rollback thất bại | Bước backup rollback trong job build | Tiêm lỗi sau khi lưu vault và trước rollback; kiểm tra thông báo lỗi không che giấu trạng thái một phần, tài khoản gốc còn nguyên, retry hoàn tất không trùng |
 | Tiến trình bị gián đoạn | Bước process termination trong job build | Tiến trình con thật dừng tại checkpoint sau khi vault đã lưu; tiến trình cha kill đúng child do mình tạo rồi đọc lại dữ liệu và retry restore |
@@ -29,6 +29,6 @@ Workflow Windows CI tự chạy các nhóm trên cho push main và PR vào main,
 ./ci/run-windows-security.ps1 -BackupLabMode crash
 ```
 
-Transfer cần hai máy/VM Windows độc lập, không sửa metadata để lách kiểm tra khác máy. Chỉ upload bốn fixture tổng hợp được chọn, giữ artifact 1 ngày; không upload cả test root, users.json, key.dat hoặc vault sống. Cụm mật khẩu trong code chỉ dành cho dữ liệu giả, công khai; không dùng để bảo vệ dữ liệu thật.
+Transfer cần hai job trên VM GitHub-hosted độc lập; không sửa metadata để lách kiểm tra mã thực thi hoặc phép thử DPAPI. Chỉ upload bốn fixture tổng hợp được chọn, giữ artifact 1 ngày; không upload cả test root, users.json, key.dat hoặc vault sống. Cụm mật khẩu trong code chỉ dành cho dữ liệu giả, công khai; không dùng để bảo vệ dữ liệu thật.
 
 Tài liệu tham khảo: [runner GitHub](https://docs.github.com/en/actions/how-tos/manage-runners/github-hosted-runners/use-github-hosted-runners), [DiskPart của Microsoft](https://learn.microsoft.com/windows-server/administration/windows-commands/diskpart).

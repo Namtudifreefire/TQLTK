@@ -167,14 +167,31 @@ internal static partial class Program
         RequireBackup(CompleteBackupService.Create(LabUser, Path.Combine(bundle, "complete.tqltk"), LabPassphrase).ok, "export synthetic portable complete backup");
         string machineCipher = AesCrypto.Encrypt("synthetic machine-bound marker");
         File.WriteAllText(Path.Combine(bundle, "machine-bound.txt"), machineCipher);
-        File.WriteAllText(Path.Combine(bundle, "producer.json"), JsonSerializer.Serialize(new { Machine = Environment.MachineName, Sid = WindowsIdentity.GetCurrent().User!.Value }));
+        byte[] probe = ProtectedData.Protect(RandomNumberGenerator.GetBytes(32), null, DataProtectionScope.CurrentUser);
+        string execution = Environment.GetEnvironmentVariable("RUNNER_TRACKING_ID") ?? "";
+        File.WriteAllText(Path.Combine(bundle, "producer.json"), JsonSerializer.Serialize(new {
+            Machine = Environment.MachineName, Sid = WindowsIdentity.GetCurrent().User!.Value,
+            Execution = execution, DpapiProbe = Convert.ToBase64String(probe)
+        }));
         File.WriteAllText(Path.Combine(bundle, "legacy-v3p.vault"), LabLegacyFixture());
     }
     private static void LabTransferImport(string bundle)
     {
         using var metadata = JsonDocument.Parse(File.ReadAllText(Path.Combine(bundle, "producer.json")));
-        RequireBackup(metadata.RootElement.GetProperty("Machine").GetString() != Environment.MachineName, "portable backup consumer runs on a different Windows machine");
-        RequireBackup(metadata.RootElement.GetProperty("Sid").GetString() != WindowsIdentity.GetCurrent().User!.Value, "portable backup consumer has a different Windows SID");
+        string execution = Environment.GetEnvironmentVariable("RUNNER_TRACKING_ID") ?? "";
+        RequireBackup(Environment.GetEnvironmentVariable("RUNNER_ENVIRONMENT") == "github-hosted" && execution.Length > 0 &&
+            metadata.RootElement.GetProperty("Execution").GetString() is { Length: > 0 } producerExecution && producerExecution != execution,
+            "portable backup consumer runs in a distinct GitHub-hosted job/VM execution");
+        Console.WriteLine("ENVIRONMENT: hostname differs=" + (metadata.RootElement.GetProperty("Machine").GetString() != Environment.MachineName) +
+            "; Windows SID differs=" + (metadata.RootElement.GetProperty("Sid").GetString() != WindowsIdentity.GetCurrent().User!.Value));
+        bool dpapiRejected = false;
+        try
+        {
+            byte[] unexpected = ProtectedData.Unprotect(Convert.FromBase64String(metadata.RootElement.GetProperty("DpapiProbe").GetString()!), null, DataProtectionScope.CurrentUser);
+            CryptographicOperations.ZeroMemory(unexpected);
+        }
+        catch (CryptographicException) { dpapiRejected = true; }
+        RequireBackup(dpapiRejected, "producer DPAPI CurrentUser blob cannot be opened in consumer profile");
         bool rejected = false;
         try { AesCrypto.Decrypt(File.ReadAllText(Path.Combine(bundle, "machine-bound.txt"))); }
         catch (CryptographicException) { rejected = true; }
