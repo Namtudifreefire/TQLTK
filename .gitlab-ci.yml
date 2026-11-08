@@ -1,11 +1,73 @@
-# GitLab CI for TQLTK (.NET 10 / WPF)
-# Security jobs use GitLab's built-in Linux-based analyzers.
-
 include:
   - template: Jobs/SAST.gitlab-ci.yml
-
   - template: Jobs/Dependency-Scanning.v2.gitlab-ci.yml
     inputs:
       max_scan_depth: -1
-
   - template: Jobs/Secret-Detection.gitlab-ci.yml
+
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: '$CI_PIPELINE_SOURCE == "web" && $CI_COMMIT_BRANCH'
+    - if: '$CI_PIPELINE_SOURCE == "schedule" && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS'
+      when: never
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH'
+    - when: never
+
+variables:
+  GITLAB_ADVANCED_SAST_ENABLED: "true"
+  AST_ENABLE_MR_PIPELINES: "true"
+  SAST_EXCLUDED_PATHS: "**/bin/**,**/obj/**,**/artifacts/**,**/.git/**,**/runtime-temp/**"
+  DS_EXCLUDED_PATHS: "**/bin,**/obj,**/artifacts,**/.git,**/runtime-temp"
+  DS_INCLUDE_DEV_DEPENDENCIES: "true"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+  DOTNET_NOLOGO: "true"
+
+.sast-analyzer:
+  allow_failure: false
+
+gitlab-advanced-sast:
+  allow_failure: false
+  artifacts:
+    access: maintainer
+    expire_in: 7 days
+
+dependency-scanning:
+  allow_failure: false
+  artifacts:
+    access: maintainer
+    expire_in: 7 days
+
+secret_detection:
+  allow_failure: false
+  artifacts:
+    access: maintainer
+    expire_in: 7 days
+
+nuget-audit:
+  stage: test
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH'
+  image: mcr.microsoft.com/dotnet/sdk:10.0
+  tags:
+    - saas-linux-small-amd64
+  timeout: 15 minutes
+  allow_failure: false
+  script:
+    - dotnet restore Nguon/PersonalInfoManager.csproj --locked-mode --force -p:EnableWindowsTargeting=true -p:NuGetAudit=true -p:NuGetAuditMode=all -p:NuGetAuditLevel=low '-p:WarningsAsErrors=NU1900%3BNU1903%3BNU1904%3BNU1905'
+    - dotnet restore Nguon/tests/PersonalInfoManager.SecurityRegression.csproj --force -p:EnableWindowsTargeting=true -p:NuGetAudit=true -p:NuGetAuditMode=all -p:NuGetAuditLevel=low '-p:WarningsAsErrors=NU1900%3BNU1903%3BNU1904%3BNU1905'
+
+windows-security-regression:
+  stage: test
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH'
+  tags:
+    - saas-windows-medium-amd64
+  timeout: 45 minutes
+  allow_failure: false
+  script:
+    - powershell -NoProfile -ExecutionPolicy Bypass -File ci/run-windows-security.ps1 -InstallSdk
