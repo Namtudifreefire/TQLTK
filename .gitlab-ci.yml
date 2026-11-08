@@ -60,17 +60,3 @@ nuget-audit:
   script:
     - dotnet restore Nguon/PersonalInfoManager.csproj --locked-mode --force -p:EnableWindowsTargeting=true -p:NuGetAudit=true -p:NuGetAuditMode=all -p:NuGetAuditLevel=low '-p:WarningsAsErrors=NU1900%3BNU1903%3BNU1904%3BNU1905'
     - dotnet restore Nguon/tests/PersonalInfoManager.SecurityRegression.csproj --force -p:EnableWindowsTargeting=true -p:NuGetAudit=true -p:NuGetAuditMode=all -p:NuGetAuditLevel=low '-p:WarningsAsErrors=NU1900%3BNU1903%3BNU1904%3BNU1905'
-
-windows-dpapi-diagnostic:
-  stage: test
-  needs: []
-  dependencies: []
-  tags:
-    - saas-windows-medium-amd64
-  timeout: 15 minutes
-  rules:
-    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
-      when: manual
-      allow_failure: true
-  script:
-    - powershell -NoProfile -ExecutionPolicy Bypass -File ci/diagnose-windows-dpapi.ps1
