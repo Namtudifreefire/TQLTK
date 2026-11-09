@@ -6,9 +6,8 @@
 
 TQLTK is a local account and password manager for Windows. It stores logins in an encrypted vault on your PC, supports per-account TOTP and optional Windows Hello authentication, and can back up to your own Google Drive. The interface is available in Vietnamese and English. TQLTK is written in C# with WPF and .NET and is distributed as a portable, self-contained executable.
 
-> **v3.6.8 (BETA) — release preparation.** See the [v3.6.8 release notes](RELEASE_NOTES_v3.6.8.md) for complete encrypted backups, migration, retention, draft protection and validation updates. The latest available download is still v3.6.7; v3.6.8 assets and their checksum will be linked after publication.
 
-> The latest published build is **v3.6.7 (BETA, pre-release)**, released on November 6, 2026. Read the [release notes](https://github.com/Namtudifreefire/TQLTK/releases/tag/v3.6.7) or download [PersonalInfoManager-3.6.7-win-x64.zip](https://github.com/Namtudifreefire/TQLTK/releases/download/v3.6.7/PersonalInfoManager-3.6.7-win-x64.zip). The ZIP's SHA-256 is `39ba26a39bc3c10da9756739a58426bc1079c6daa5617cfd6ea8cdb087f5fe14`. This build is unsigned; Windows may display a publisher or SmartScreen warning.
+> The latest published build is **v3.6.8 (BETA, pre-release)**, released on November 9, 2026. Read the [release notes](https://github.com/Namtudifreefire/TQLTK/releases/tag/v3.6.8) or download [PersonalInfoManager-3.6.8-win-x64.zip](https://github.com/Namtudifreefire/TQLTK/releases/download/v3.6.8/PersonalInfoManager-3.6.8-win-x64.zip). The ZIP's SHA-256 is `243fd9c3c8fe601c4f01056f4ef71988b60c04dc9d5d654cdc2633fb84fb7cf9`. This build is unsigned; Windows may display a publisher or SmartScreen warning.
 
 > English interface support was introduced in v3.6.6 (BETA); earlier versions are Vietnamese-only.
 
@@ -46,7 +45,7 @@ For vulnerability reporting and the current code-signing status, see the [Securi
 
 ## Install
 
-**Manual download:** download [PersonalInfoManager-3.6.7-win-x64.zip](https://github.com/Namtudifreefire/TQLTK/releases/download/v3.6.7/PersonalInfoManager-3.6.7-win-x64.zip) from the [v3.6.7 BETA release](https://github.com/Namtudifreefire/TQLTK/releases/tag/v3.6.7), extract it, then run PersonalInfoManager.exe. The ZIP contains the executable and MIT license. This build is unsigned, so Windows may show a publisher or SmartScreen warning. To remove the app, delete the extracted folder. Your data remains in %AppData%\PersonalInfoManager unless you remove it separately.
+**Manual download:** download [PersonalInfoManager-3.6.8-win-x64.zip](https://github.com/Namtudifreefire/TQLTK/releases/download/v3.6.8/PersonalInfoManager-3.6.8-win-x64.zip) from the [v3.6.8 BETA release](https://github.com/Namtudifreefire/TQLTK/releases/tag/v3.6.8), extract it, then run PersonalInfoManager.exe. The ZIP contains the executable and MIT license. This build is unsigned, so Windows may show a publisher or SmartScreen warning. To remove the app, delete the extracted folder. Your data remains in %AppData%\PersonalInfoManager unless you remove it separately.
 
 **WinGet:** availability depends on accepted package manifests. Check the version offered by `winget show --id Namtudifreefire.TQLTK --exact` before installing; use GitHub Releases if the required version is unavailable.
 
@@ -78,7 +77,7 @@ Google Drive features need your own OAuth client. In Google Cloud Console, creat
 
 ## Release notes
 
-### v3.6.8 (BETA — preparing release)
+### v3.6.8 (BETA)
 
 See the [English and Vietnamese release notes](RELEASE_NOTES_v3.6.8.md). Includes the backup center, migration, retention, draft protection, localization/layout validation and expanded backup CI tests. Read the crash/rollback limits before restoring important data.
 
@@ -152,9 +151,8 @@ TQLTK is distributed under the [MIT License](LICENSE). Copyright © 2026 Namtudi
 
 **TQLTK** là ứng dụng quản lý tài khoản và mật khẩu chạy trên Windows. Dữ liệu tài khoản được lưu trong vault mã hóa trên máy; ứng dụng hỗ trợ TOTP cho từng tài khoản, tùy chọn Windows Hello và sao lưu lên Google Drive của chính bạn. Giao diện có tiếng Việt và tiếng Anh. Ứng dụng viết bằng C# (WPF, .NET), phát hành dạng portable và không cần cài .NET riêng.
 
-> **v3.6.8 (BETA) — đang chuẩn bị phát hành.** Xem [release notes v3.6.8](RELEASE_NOTES_v3.6.8.md) về backup mã hóa đầy đủ, chuyển máy, chính sách giữ bản sao, bảo vệ bản nháp và kiểm thử. Bản tải xuống hiện có vẫn là v3.6.7; link và checksum v3.6.8 sẽ được cập nhật sau khi phát hành.
 
-> Bản mới nhất đã phát hành là **v3.6.7 (BETA, pre-release)** vào ngày 06/11/2026. Xem [ghi chú phát hành](https://github.com/Namtudifreefire/TQLTK/releases/tag/v3.6.7) hoặc tải [PersonalInfoManager-3.6.7-win-x64.zip](https://github.com/Namtudifreefire/TQLTK/releases/download/v3.6.7/PersonalInfoManager-3.6.7-win-x64.zip). SHA-256 của ZIP: `39ba26a39bc3c10da9756739a58426bc1079c6daa5617cfd6ea8cdb087f5fe14`. Bản này chưa ký số; Windows có thể hiện cảnh báo nhà phát hành hoặc SmartScreen.
+> Bản mới nhất đã phát hành là **v3.6.8 (BETA, pre-release)** vào ngày 09/11/2026. Xem [ghi chú phát hành](https://github.com/Namtudifreefire/TQLTK/releases/tag/v3.6.8) hoặc tải [PersonalInfoManager-3.6.8-win-x64.zip](https://github.com/Namtudifreefire/TQLTK/releases/download/v3.6.8/PersonalInfoManager-3.6.8-win-x64.zip). SHA-256 của ZIP: `243fd9c3c8fe601c4f01056f4ef71988b60c04dc9d5d654cdc2633fb84fb7cf9`. Bản này chưa ký số; Windows có thể hiện cảnh báo nhà phát hành hoặc SmartScreen.
 
 > Giao diện tiếng Anh được giới thiệu từ v3.6.6 (BETA); các phiên bản trước chỉ có tiếng Việt.
 
@@ -186,7 +184,7 @@ Xem [Chính sách bảo mật](SECURITY.md) để biết cách báo cáo lỗ h�
 
 ## Cài đặt
 
-**Tải thủ công:** tải [PersonalInfoManager-3.6.7-win-x64.zip](https://github.com/Namtudifreefire/TQLTK/releases/download/v3.6.7/PersonalInfoManager-3.6.7-win-x64.zip) từ [bản phát hành v3.6.7 BETA](https://github.com/Namtudifreefire/TQLTK/releases/tag/v3.6.7), giải nén rồi chạy PersonalInfoManager.exe. ZIP gồm file thực thi và giấy phép MIT. Bản này chưa ký số nên Windows có thể hiện cảnh báo nhà phát hành hoặc SmartScreen. Xóa thư mục đã giải nén để gỡ ứng dụng; dữ liệu trong %AppData%\PersonalInfoManager vẫn được giữ lại.
+**Tải thủ công:** tải [PersonalInfoManager-3.6.8-win-x64.zip](https://github.com/Namtudifreefire/TQLTK/releases/download/v3.6.8/PersonalInfoManager-3.6.8-win-x64.zip) từ [bản phát hành v3.6.8 BETA](https://github.com/Namtudifreefire/TQLTK/releases/tag/v3.6.8), giải nén rồi chạy PersonalInfoManager.exe. ZIP gồm file thực thi và giấy phép MIT. Bản này chưa ký số nên Windows có thể hiện cảnh báo nhà phát hành hoặc SmartScreen. Xóa thư mục đã giải nén để gỡ ứng dụng; dữ liệu trong %AppData%\PersonalInfoManager vẫn được giữ lại.
 
 **WinGet:** phiên bản có sẵn phụ thuộc manifest đã được chấp nhận. Kiểm tra bằng `winget show --id Namtudifreefire.TQLTK --exact` trước khi cài; dùng GitHub Releases nếu chưa có bản cần tải.
 
@@ -208,7 +206,7 @@ Trong thời gian chờ, hãy dùng file ZIP ở trên.
 
 Xem [trang Releases](https://github.com/Namtudifreefire/TQLTK/releases) để tải bản phát hành và đọc lịch sử đầy đủ.
 
-### v3.6.8 (BETA — chuẩn bị phát hành)
+### v3.6.8 (BETA)
 
 Xem [release notes Việt–Anh](RELEASE_NOTES_v3.6.8.md). Gồm trung tâm backup, chuyển máy, chính sách giữ bản sao, bảo vệ bản nháp, kiểm tra dịch/layout và các nhóm test backup CI mở rộng.
 
