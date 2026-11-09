@@ -60,3 +60,29 @@ nuget-audit:
   script:
     - dotnet restore Nguon/PersonalInfoManager.csproj --locked-mode --force -p:EnableWindowsTargeting=true -p:NuGetAudit=true -p:NuGetAuditMode=all -p:NuGetAuditLevel=low '-p:WarningsAsErrors=NU1900%3BNU1903%3BNU1904%3BNU1905'
     - dotnet restore Nguon/tests/PersonalInfoManager.SecurityRegression.csproj --force -p:EnableWindowsTargeting=true -p:NuGetAudit=true -p:NuGetAuditMode=all -p:NuGetAuditLevel=low '-p:WarningsAsErrors=NU1900%3BNU1903%3BNU1904%3BNU1905'
+
+
+gl09-backup-paths:
+  stage: test
+  dependencies: []
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH'
+  image: mcr.microsoft.com/dotnet/sdk:10.0
+  tags:
+    - saas-linux-small-amd64
+  timeout: 10 minutes
+  allow_failure: false
+  script:
+    - cd ci/linux-security
+    - dotnet restore Tqltk.LinuxSecurity.csproj --locked-mode
+    - dotnet build Tqltk.LinuxSecurity.csproj --configuration Release --no-restore --disable-build-servers
+    - dotnet run --project Tqltk.LinuxSecurity.csproj --configuration Release --no-build -- --require-linux --junit "$CI_PROJECT_DIR/artifacts/gl09/junit.xml"
+  artifacts:
+    when: always
+    access: maintainer
+    expire_in: 7 days
+    reports:
+      junit: artifacts/gl09/junit.xml
+    paths:
+      - artifacts/gl09/junit.xml
