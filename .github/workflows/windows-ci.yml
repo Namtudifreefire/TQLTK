@@ -41,6 +41,19 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+      - name: Windows GL-11 backup log privacy
+        shell: pwsh
+        run: ./ci/run-windows-security.ps1 -BackupLabMode log-privacy -LabPath "$env:GITHUB_WORKSPACE/artifacts/windows-gl11/junit.xml"
+
+      - name: Upload Windows GL-11 JUnit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-gl11-junit
+          path: artifacts/windows-gl11/junit.xml
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Confirm fault injection hooks are absent from production build
         shell: pwsh
         run: |

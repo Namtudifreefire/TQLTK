@@ -13,6 +13,7 @@ internal static class UnsupportedStorage
 internal static class LocalizationAuditService
 {
     public static string Get(string key, string language) => key;
+    public static string FormatForLanguage(string key, string language, params object?[] arguments) => key;
 }
 
 internal sealed class LocalFileService

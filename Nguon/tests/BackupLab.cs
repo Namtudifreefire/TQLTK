@@ -39,6 +39,7 @@ internal static partial class Program
             LabSetup(args[1] == "transfer-import" ? "consumer" : "producer");
             switch (args[1])
             {
+                case "log-privacy": LabWindowsLogPrivacy(root, args[2]); break;
                 case "windows-paths": LabWindowsPaths(root, args[2]); break;
                 case "rollback": LabRollbackFailure(root); break;
                 case "crash": LabCrash(root); break;

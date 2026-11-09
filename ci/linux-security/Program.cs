@@ -8,7 +8,7 @@ using System.Text.Json;
 using System.Xml.Linq;
 using PersonalInfoManager.Services;
 
-internal static class Program
+internal static partial class Program
 {
     private const string Owner = "synthetic-gl09-user";
     private const string Passphrase = "Synthetic GL09 backup phrase only!";
@@ -22,6 +22,7 @@ internal static class Program
 
     private static int Main(string[] args)
     {
+        if (args.Length > 0 && args[0] == "--gl11") return RunGl11(args[1..]);
         bool requireLinux = args.Length > 0 && args[0] == "--require-linux";
         if (requireLinux) args = args[1..];
         if (args.Length != 2 || args[0] != "--junit")

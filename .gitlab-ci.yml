@@ -86,3 +86,28 @@ gl09-backup-paths:
       junit: artifacts/gl09/junit.xml
     paths:
       - artifacts/gl09/junit.xml
+
+gl11-log-privacy:
+  stage: test
+  dependencies: []
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH'
+  image: mcr.microsoft.com/dotnet/sdk:10.0
+  tags:
+    - saas-linux-small-amd64
+  timeout: 10 minutes
+  allow_failure: false
+  script:
+    - cd ci/linux-security
+    - dotnet restore Tqltk.LinuxSecurity.csproj --locked-mode
+    - dotnet build Tqltk.LinuxSecurity.csproj --configuration Release --no-restore --disable-build-servers
+    - dotnet run --project Tqltk.LinuxSecurity.csproj --configuration Release --no-build -- --gl11 --require-linux --junit "$CI_PROJECT_DIR/artifacts/gl11/junit.xml"
+  artifacts:
+    when: always
+    access: maintainer
+    expire_in: 7 days
+    reports:
+      junit: artifacts/gl11/junit.xml
+    paths:
+      - artifacts/gl11/junit.xml

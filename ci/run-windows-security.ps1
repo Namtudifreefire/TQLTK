@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [switch]$InstallSdk,
-    [ValidateSet('', 'rollback', 'crash', 'disk-full', 'transfer-export', 'transfer-import', 'windows-paths')]
+    [ValidateSet('', 'rollback', 'crash', 'disk-full', 'transfer-export', 'transfer-import', 'windows-paths', 'log-privacy')]
     [string]$BackupLabMode = '',
     [string]$LabPath = '.'
 )

@@ -9,6 +9,8 @@
     <TqltkSourceRoot Condition="'$(TqltkSourceRoot)' == ''">$(MSBuildThisFileDirectory)../../Nguon</TqltkSourceRoot>
   </PropertyGroup>
   <ItemGroup>
+<Compile Include="$(TqltkSourceRoot)/Service/ActivityLogger.cs" Link="Production/ActivityLogger.cs" />
+<Compile Include="$(TqltkSourceRoot)/Service/ActivityLogRecord.cs" Link="Production/ActivityLogRecord.cs" />
     <Compile Include="$(TqltkSourceRoot)/Service/FileBackupService.cs" Link="Production/FileBackupService.cs" />
     <Compile Include="$(TqltkSourceRoot)/Service/BackupCrypto.cs" Link="Production/BackupCrypto.cs" />
     <Compile Include="$(TqltkSourceRoot)/Service/AtomicFileService.cs" Link="Production/AtomicFileService.cs" />
