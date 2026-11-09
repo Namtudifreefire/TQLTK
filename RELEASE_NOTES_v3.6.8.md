@@ -1,6 +1,6 @@
 # TQLTK v3.6.8 (BETA)
 
-Status: prepared for release; the v3.6.8 download has not been published yet.
+Released November 9, 2026 as a BETA pre-release. | Đã phát hành ngày 09/11/2026 dưới dạng BETA pre-release.
 
 ## English
 
