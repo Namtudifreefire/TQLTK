@@ -89,3 +89,18 @@ không chứng minh an toàn cho mọi thao tác khôi phục hoặc toàn bộ 
 JUnit local nằm ngoài source CI: `artifacts/gl09-ci-work/results/gl09-windows.xml`
 trong thư mục phát triển. Job GitLab sẽ tạo `artifacts/gl09/junit.xml`; không
 đưa báo cáo Windows vào artifact Linux để thay kết quả chưa chạy.
+
+## Nhóm Windows trên GitHub Actions
+
+Workflow `TQLTK Windows CI` chạy thêm chế độ `windows-paths` qua
+`ci/run-windows-security.ps1`. Bộ `Nguon/tests/WindowsBackupPaths.cs` có 27 ca:
+15 tên đường dẫn Windows bị từ chối qua preview/drill/restore; 1 gói trộn được
+khôi phục vào kho mã hóa DPAPI và giữ nguyên các file trước đó; 1 gói đầy đủ hợp
+lệ làm đối chứng; 10 trường hợp đường dẫn traversal trong manifest hoặc mục ZIP
+không khai báo bị từ chối khi inspect/prepare restore. Các test rollback, crash,
+chuyển máy và hết dung lượng vẫn ở các job Windows hiện có, không nhân đôi.
+
+Chạy tại máy Windows đã đạt 27 PASS / 0 FAIL / 0 SKIPPED. Workflow tải JUnit
+`artifacts/windows-gl09/junit.xml` thành artifact `windows-gl09-junit`, kể cả khi
+test thất bại. Artifact JUnit không đồng nghĩa GitHub có giao diện test report
+riêng. Ba nhóm SKIPPED trong job Linux vẫn được giữ để chỉ rõ phạm vi nền tảng.

@@ -28,6 +28,19 @@ jobs:
         shell: pwsh
         run: ./ci/run-windows-security.ps1
 
+      - name: Windows GL-09 backup path and DPAPI checks
+        shell: pwsh
+        run: ./ci/run-windows-security.ps1 -BackupLabMode windows-paths -LabPath "$env:GITHUB_WORKSPACE/artifacts/windows-gl09/junit.xml"
+
+      - name: Upload Windows GL-09 JUnit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-gl09-junit
+          path: artifacts/windows-gl09/junit.xml
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Confirm fault injection hooks are absent from production build
         shell: pwsh
         run: |
