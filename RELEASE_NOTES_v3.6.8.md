@@ -30,10 +30,6 @@ Status: prepared for release; the v3.6.8 download has not been published yet.
 - Windows Hello and Google Drive remain BETA. Windows Hello setup and Google authorization may need to be repeated after moving Windows accounts or PCs.
 - Code signing is not configured for this release preparation. Check the final asset and its release information; a SHA-256 checksum alone does not prove publisher identity.
 
-### Download
-
-When published, the portable ZIP will be named `PersonalInfoManager-3.6.8-win-x64.zip`, with `PersonalInfoManager.exe` and the MIT `LICENSE` at its root. Publish the checksum generated from the final ZIP. Until then, use the [Releases page](https://github.com/Namtudifreefire/TQLTK/releases) to select an available build. No v3.6.8 download or checksum is claimed here.
-
 ## Tiếng Việt
 
 ### Sao lưu và khôi phục
@@ -61,7 +57,3 @@ When published, the portable ZIP will be named `PersonalInfoManager-3.6.8-win-x6
 - Test hết dung lượng bao phủ đích ghi backup, chưa bao phủ mọi điểm hết đĩa trong restore/rollback. Chưa mô phỏng đầy đủ hỏng phần cứng hoặc mất điện.
 - Windows Hello và Google Drive tiếp tục là BETA. Sau khi đổi tài khoản Windows hoặc chuyển máy có thể cần thiết lập lại Hello và cấp quyền Google.
 - Chưa cấu hình ký số cho lần chuẩn bị phát hành này. Kiểm tra tệp cuối và thông tin release; riêng checksum SHA-256 không chứng minh danh tính nhà phát hành.
-
-### Tải xuống
-
-Khi được phát hành, ZIP portable dự kiến mang tên `PersonalInfoManager-3.6.8-win-x64.zip`, chứa `PersonalInfoManager.exe` và giấy phép MIT `LICENSE` ở gốc. Checksum phải được tạo từ chính ZIP cuối. Trong lúc chờ, chọn bản có sẵn tại [Releases](https://github.com/Namtudifreefire/TQLTK/releases). Tài liệu này chưa công bố link tải trực tiếp hay checksum v3.6.8.
