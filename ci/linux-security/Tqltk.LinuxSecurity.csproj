@@ -9,13 +9,16 @@
     <TqltkSourceRoot Condition="'$(TqltkSourceRoot)' == ''">$(MSBuildThisFileDirectory)../../Nguon</TqltkSourceRoot>
   </PropertyGroup>
   <ItemGroup>
-<Compile Include="$(TqltkSourceRoot)/Service/ActivityLogger.cs" Link="Production/ActivityLogger.cs" />
-<Compile Include="$(TqltkSourceRoot)/Service/ActivityLogRecord.cs" Link="Production/ActivityLogRecord.cs" />
+    <Compile Include="$(TqltkSourceRoot)/Model/SavedAccount.cs" Link="Production/SavedAccount.cs" />
+    <Compile Include="$(TqltkSourceRoot)/Model/TotpCredential.cs" Link="Production/TotpCredential.cs" />
+    <Compile Include="$(TqltkSourceRoot)/Service/ActivityLogger.cs" Link="Production/ActivityLogger.cs" />
+    <Compile Include="$(TqltkSourceRoot)/Service/ActivityLogRecord.cs" Link="Production/ActivityLogRecord.cs" />
     <Compile Include="$(TqltkSourceRoot)/Service/FileBackupService.cs" Link="Production/FileBackupService.cs" />
     <Compile Include="$(TqltkSourceRoot)/Service/BackupCrypto.cs" Link="Production/BackupCrypto.cs" />
     <Compile Include="$(TqltkSourceRoot)/Service/AtomicFileService.cs" Link="Production/AtomicFileService.cs" />
     <Compile Include="$(TqltkSourceRoot)/Service/ApplicationDataPath.cs" Link="Production/ApplicationDataPath.cs" />
     <Compile Include="$(TqltkSourceRoot)/BackupPreviewItem.cs" Link="Production/BackupPreviewItem.cs" />
+    <Compile Include="$(TqltkSourceRoot)/Service/TotpService.cs" Link="Production/TotpService.cs" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.13" />
   </ItemGroup>
 </Project>
