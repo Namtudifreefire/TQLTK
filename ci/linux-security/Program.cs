@@ -24,6 +24,7 @@ internal static partial class Program
     {
         if (args.Length > 0 && args[0] == "--gl10") return RunGl10(args[1..]);
         if (args.Length > 0 && args[0] == "--gl11") return RunGl11(args[1..]);
+        if (args.Length > 0 && args[0] == "--gl12") return RunGl12(args[1..]);
         bool requireLinux = args.Length > 0 && args[0] == "--require-linux";
         if (requireLinux) args = args[1..];
         if (args.Length != 2 || args[0] != "--junit")

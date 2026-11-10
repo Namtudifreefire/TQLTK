@@ -136,3 +136,28 @@ gl11-log-privacy:
       junit: artifacts/gl11/junit.xml
     paths:
       - artifacts/gl11/junit.xml
+
+gl12-localization-audit:
+  stage: test
+  dependencies: []
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH'
+  image: mcr.microsoft.com/dotnet/sdk:10.0
+  tags:
+    - saas-linux-small-amd64
+  timeout: 10 minutes
+  allow_failure: false
+  script:
+    - cd ci/linux-security
+    - dotnet restore Tqltk.LinuxSecurity.csproj --locked-mode
+    - dotnet build Tqltk.LinuxSecurity.csproj --configuration Release --no-restore --disable-build-servers
+    - dotnet run --project Tqltk.LinuxSecurity.csproj --configuration Release --no-build -- --gl12 --require-linux --source-root "$CI_PROJECT_DIR/Nguon" --junit "$CI_PROJECT_DIR/artifacts/gl12/junit.xml"
+  artifacts:
+    when: always
+    access: maintainer
+    expire_in: 7 days
+    reports:
+      junit: artifacts/gl12/junit.xml
+    paths:
+      - artifacts/gl12/junit.xml

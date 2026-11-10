@@ -19,6 +19,8 @@
     <Compile Include="$(TqltkSourceRoot)/Service/ApplicationDataPath.cs" Link="Production/ApplicationDataPath.cs" />
     <Compile Include="$(TqltkSourceRoot)/BackupPreviewItem.cs" Link="Production/BackupPreviewItem.cs" />
     <Compile Include="$(TqltkSourceRoot)/Service/TotpService.cs" Link="Production/TotpService.cs" />
+    <Compile Include="$(TqltkSourceRoot)/Service/EnglishCatalog.cs" Link="Production/EnglishCatalog.cs" />
+    <Compile Include="$(TqltkSourceRoot)/Service/LocalizationAuditService.cs" Link="Production/LocalizationAuditService.cs" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.13" />
   </ItemGroup>
 </Project>

@@ -10,10 +10,11 @@ internal static class UnsupportedStorage
     }
 }
 
-internal static class LocalizationAuditService
+internal static class LanguageService
 {
-    public static string Get(string key, string language) => key;
-    public static string FormatForLanguage(string key, string language, params object?[] arguments) => key;
+    internal static bool IsEnglish => false;
+    internal static string Translate(string value, string languageCode) =>
+        LocalizationAuditService.TryTranslateKnown(value, languageCode, out string translation) ? translation : value;
 }
 
 internal sealed class LocalFileService
