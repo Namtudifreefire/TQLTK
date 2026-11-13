@@ -25,6 +25,7 @@ jobs:
         env:
           TEMP: ${{ runner.temp }}
           TMP: ${{ runner.temp }}
+          TQLTK_GL13_JUNCTION_TEST: '1'
         run: |
           $report = Join-Path $env:RUNNER_TEMP 'gl13-report.xml'
           dotnet run --no-build --project Nguon/tests/PersonalInfoManager.SecurityRegression.csproj --configuration Release -- --gl13 $report
@@ -32,7 +33,7 @@ jobs:
           [xml]$results = Get-Content -LiteralPath $report -Raw
           if ($results.DocumentElement.LocalName -ne 'testsuite' -or @($results.DocumentElement.Attributes | Where-Object { $_.LocalName -notin @('name','tests','failures','skipped') }).Count -ne 0 -or @($results.DocumentElement.ChildNodes | Where-Object { $_.LocalName -ne 'testcase' }).Count -ne 0) { throw 'Unexpected JUnit structure.' }
           $cases = @($results.testsuite.testcase)
-          if ($results.testsuite.name -ne 'TQLTK.Windows.GL13' -or $cases.Count -lt 20 -or [int]$results.testsuite.tests -ne $cases.Count -or [int]$results.testsuite.failures -ne 0 -or [int]$results.testsuite.skipped -ne 0) { throw 'Invalid or unsuccessful GL-13 report.' }
+          if ($results.testsuite.name -ne 'TQLTK.Windows.GL13' -or $cases.Count -ne 21 -or @($cases | Where-Object { $_.name -eq 'junction-detection-cleanup' }).Count -ne 1 -or [int]$results.testsuite.tests -ne $cases.Count -or [int]$results.testsuite.failures -ne 0 -or [int]$results.testsuite.skipped -ne 0) { throw 'Invalid or unsuccessful GL-13 report.' }
           foreach ($case in $cases) {
             if ($case.classname -ne 'TQLTK.Windows.GL13' -or $case.name -notmatch '^[a-z0-9-]+$' -or $case.ChildNodes.Count -ne 0 -or @($case.Attributes | Where-Object { $_.LocalName -notin @('name','classname') }).Count -ne 0) { throw 'Unexpected JUnit content.' }
           }

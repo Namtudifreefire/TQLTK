@@ -51,6 +51,8 @@ internal static partial class Program
             Case("twofactor-cross-process-failure-retry", () => TestGl13CrossProcess(root, 2));
             Case("twofactor-cross-process-migration-lock-contention", () => TestGl13MigrationLockContention(root, terminateHolder: false));
             Case("twofactor-cross-process-migration-lock-abandonment", () => TestGl13MigrationLockContention(root, terminateHolder: true));
+            if (!crossOnly && Environment.GetEnvironmentVariable("TQLTK_GL13_JUNCTION_TEST") == "1")
+                Case("junction-detection-cleanup", () => TestGl13Junction(root));
             if (crossOnly && cases.Count != 5) throw new InvalidDataException("Expected five cross-process cases.");
             string fullReport = Path.GetFullPath(reportPath);
             Directory.CreateDirectory(Path.GetDirectoryName(fullReport)!);
@@ -368,6 +370,59 @@ internal static partial class Program
                 if ((attributes & FileAttributes.Directory) != 0) pending.Push(entry);
             }
         }
+    }
+
+    private static void TestGl13Junction(string root)
+    {
+        string? runnerTemp = Environment.GetEnvironmentVariable("RUNNER_TEMP");
+        if (Environment.GetEnvironmentVariable("GITHUB_ACTIONS") != "true" ||
+            Environment.GetEnvironmentVariable("RUNNER_ENVIRONMENT") != "github-hosted" ||
+            string.IsNullOrWhiteSpace(runnerTemp) ||
+            !string.Equals(Path.GetFullPath(Path.GetDirectoryName(root)!), Path.GetFullPath(runnerTemp).TrimEnd(Path.DirectorySeparatorChar), StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("Junction fixture requires a GitHub-hosted runner temporary root.");
+
+        string fixture = Path.Combine(root, "junction-fixture");
+        string control = Path.Combine(fixture, "control");
+        string link = Path.Combine(fixture, "link");
+        string sentinel = Path.Combine(control, "sentinel.bin");
+        Directory.CreateDirectory(control);
+        byte[] expected = { 31, 42, 53, 64 };
+        File.WriteAllBytes(sentinel, expected);
+        // The command is limited to fixed names below the generated runner temp root.
+        if (fixture.IndexOfAny(new[] { '"', '%', '!', '&', '|', '<', '>', '^' }) >= 0)
+            throw new InvalidDataException("Unsafe fixture path.");
+        using var process = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+        {
+            FileName = Path.Combine(Environment.SystemDirectory, "cmd.exe"),
+            Arguments = "/d /c mklink /J \"" + link + "\" \"" + control + "\"",
+            UseShellExecute = false, CreateNoWindow = true,
+            RedirectStandardOutput = true, RedirectStandardError = true
+        }) ?? throw new IOException("Unable to create fixture process.");
+        if (!process.WaitForExit(10000)) { process.Kill(); process.WaitForExit(); throw new IOException("Junction creation timed out."); }
+        if (process.ExitCode != 0) throw new IOException("Junction creation unavailable on runner.");
+        try
+        {
+            Gl13Check((File.GetAttributes(link) & FileAttributes.ReparsePoint) != 0, "junction detected");
+            bool rejected = false;
+            bool migrationStarted = false;
+            try { Gl13RejectReparsePoints(root); migrationStarted = true; } catch (IOException) { rejected = true; }
+            Gl13Check(rejected, "fixture rejected before migration");
+            Gl13Check(!migrationStarted, "migration not started");
+            rejected = false;
+            try { Gl13RejectReparsePoints(link); } catch (IOException) { rejected = true; }
+            Gl13Check(rejected, "source or destination junction rejected");
+            Gl13Check(File.ReadAllBytes(sentinel).SequenceEqual(expected), "control preserved before cleanup");
+        }
+        finally
+        {
+            var info = new DirectoryInfo(link);
+            if ((info.Attributes & FileAttributes.ReparsePoint) == 0 ||
+                !string.Equals(Path.GetFullPath(info.ResolveLinkTarget(false)!.FullName).TrimEnd(Path.DirectorySeparatorChar), Path.GetFullPath(control).TrimEnd(Path.DirectorySeparatorChar), StringComparison.OrdinalIgnoreCase))
+                throw new IOException("Unsafe junction cleanup refused.");
+            Directory.Delete(link, recursive: false);
+        }
+        Gl13Check(!Directory.Exists(link) && File.ReadAllBytes(sentinel).SequenceEqual(expected), "control preserved after unlink");
+        Gl13RejectReparsePoints(root);
     }
 
     private static void TestGl13ParentCreationFailure(string parent)
