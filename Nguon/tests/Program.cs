@@ -19,6 +19,8 @@ internal static partial class Program
     [STAThread]
     private static int Main(string[] args)
     {
+        if (args.Length == 2 && args[0] == "--gl13-child") return RunGl13Child(args[1]);
+        if (args.Length == 2 && args[0] == "--gl13-cross") return RunGl13(args[1], crossOnly: true);
         if (args.Length == 2 && args[0] == "--gl13") return RunGl13(args[1]);
         if (args.Length > 0) return RunBackupLab(args);
         if (!OperatingSystem.IsWindows())

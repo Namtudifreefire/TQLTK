@@ -20,9 +20,17 @@ namespace PersonalInfoManager.Services
         private const string Base32Alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
         private static readonly byte[] Entropy = Encoding.UTF8.GetBytes("TQLTK.2FA.v1");
         private static readonly object ValidationSync = new();
-        private static readonly string Folder = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "PersonalInfoManager", "2fa");
+        private static string Folder
+        {
+            get
+            {
+#if SECURITY_TEST
+                if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("TQLTK_SECURITY_TEST_ROOT")))
+                    throw new InvalidOperationException("An isolated security test root is required for 2FA.");
+#endif
+                return Path.Combine(ApplicationDataPath.Root, "PersonalInfoManager", "2fa");
+            }
+        }
         private class TwoFactorData
         {
             public string Secret { get; set; } = "";
