@@ -44,6 +44,7 @@ internal static partial class Program
             Case("twofactor-locked-destination", () => TestGl13TwoFactorLockedDestination(root));
             Case("migration-parent-creation-failure", () => TestGl13ParentCreationFailure(root));
             Case("migration-locked-source-archive-retry", () => TestGl13LockedArchiveRetry(root));
+            Case("migration-stale-observation-existing-destination", () => TestGl13StaleDestination(root));
             Case("migration-child-interruption-retry", () => TestGl13ChildInterruption(root));
             Case("migration-child-exit-and-timeout", () => TestGl13ChildFailure(root));
             Case("twofactor-cross-process-concurrent", () => TestGl13CrossProcess(root, 0));
@@ -66,6 +67,26 @@ internal static partial class Program
             Gl13RejectReparsePoints(root);
             Directory.Delete(root, recursive: true);
         }
+    }
+
+    private static void TestGl13StaleDestination(string root)
+    {
+        string folder = Path.Combine(root, "stale-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(folder);
+        Guid userId = Guid.NewGuid();
+        string source = Path.Combine(folder, "legacy.2fa");
+        string destination = Path.Combine(folder, "current.2fa");
+        byte[] legacy = { 1, 3, 5, 7 };
+        byte[] current = { 2, 4, 6, 8 };
+        File.WriteAllBytes(source, legacy);
+        Gl13Check(!File.Exists(destination), "destination absent at observation");
+        File.WriteAllBytes(destination, current);
+        UserStorageIdentity.MoveLegacyFile(source, destination, userId);
+        string[] archives = Directory.GetFiles(folder, "legacy.2fa.migrated-*");
+        Gl13Check(File.ReadAllBytes(destination).SequenceEqual(current), "existing destination preserved");
+        Gl13Check(!File.Exists(source) && archives.Length == 1 && File.ReadAllBytes(archives[0]).SequenceEqual(legacy), "source archived intact");
+        UserStorageIdentity.MoveLegacyFile(source, destination, userId);
+        Gl13Check(Directory.GetFiles(folder, "legacy.2fa.migrated-*").Length == 1 && File.ReadAllBytes(destination).SequenceEqual(current), "retry is idempotent");
     }
 
     private static int RunGl13Child(string mode)
