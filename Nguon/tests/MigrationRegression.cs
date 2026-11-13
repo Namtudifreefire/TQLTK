@@ -46,6 +46,7 @@ internal static partial class Program
             Case("migration-locked-source-archive-retry", () => TestGl13LockedArchiveRetry(root));
             Case("migration-stale-observation-existing-destination", () => TestGl13StaleDestination(root));
             Case("migration-child-interruption-retry", () => TestGl13ChildInterruption(root));
+            Case("migration-child-after-move-retry", () => TestGl13ChildAfterMove(root));
             Case("migration-child-exit-and-timeout", () => TestGl13ChildFailure(root));
             Case("twofactor-cross-process-concurrent", () => TestGl13CrossProcess(root, 0));
             Case("twofactor-cross-process-ordered", () => TestGl13CrossProcess(root, 1));
@@ -142,6 +143,18 @@ internal static partial class Program
                 File.WriteAllText(Path.Combine(dir, "checkpoint"), "ready");
                 System.Threading.Thread.Sleep(30000);
                 return 48;
+            }
+            if (mode == "move-pause")
+            {
+                UserStorageIdentity.MoveLegacyFile(Path.Combine(dir, "after-source"), Path.Combine(dir, "after-destination"), Guid.Empty);
+                File.WriteAllText(Path.Combine(dir, "after-checkpoint"), "ready");
+                System.Threading.Thread.Sleep(30000);
+                return 48;
+            }
+            if (mode == "move-after")
+            {
+                UserStorageIdentity.MoveLegacyFile(Path.Combine(dir, "after-source"), Path.Combine(dir, "after-destination"), Guid.Empty);
+                return 0;
             }
             if (mode != "move") return 81;
             UserStorageIdentity.MoveLegacyFile(Path.Combine(dir, "source"), Path.Combine(dir, "destination"), Guid.Empty);
@@ -363,6 +376,33 @@ internal static partial class Program
         string[] archives = Directory.GetFiles(dir, "source.migrated-*");
         Gl13Check(archives.Length == 1 && File.ReadAllBytes(archives[0]).SequenceEqual(laterSource), "conflicting source archived");
         Gl13Check(File.ReadAllBytes(destination).SequenceEqual(data), "existing destination not overwritten");
+    }
+
+    private static void TestGl13ChildAfterMove(string root)
+    {
+        string dir = Path.Combine(root, "child-fixture");
+        Directory.CreateDirectory(dir);
+        File.WriteAllText(Path.Combine(dir, "fixture.marker"), "synthetic");
+        string source = Path.Combine(dir, "after-source"), destination = Path.Combine(dir, "after-destination");
+        string checkpoint = Path.Combine(dir, "after-checkpoint");
+        byte[] data = { 15, 23, 42, 99 };
+        File.WriteAllBytes(source, data);
+        using (var child = Gl13StartChild(root, "move-pause"))
+        {
+            try
+            {
+                var until = DateTime.UtcNow.AddSeconds(10);
+                while (!File.Exists(checkpoint) && !child.HasExited && DateTime.UtcNow < until)
+                    Thread.Sleep(25);
+                Gl13Check(File.Exists(checkpoint) && !child.HasExited, "child completed move before checkpoint");
+                child.Kill();
+                Gl13Check(child.WaitForExit(5000) && child.ExitCode != 0, "child interrupted after move");
+            }
+            finally { if (!child.HasExited) { child.Kill(); child.WaitForExit(); } }
+        }
+        Gl13Check(!File.Exists(source) && File.ReadAllBytes(destination).SequenceEqual(data), "destination intact after interruption");
+        using (var retry = Gl13StartChild(root, "move-after")) Gl13Check(Gl13WaitChild(retry, 10000) == 0, "retry after completed move");
+        Gl13Check(File.ReadAllBytes(destination).SequenceEqual(data) && Directory.GetFiles(dir, "after-source.migrated-*").Length == 0, "retry preserves destination without archive");
     }
 
     private static void TestGl13ChildFailure(string root)
