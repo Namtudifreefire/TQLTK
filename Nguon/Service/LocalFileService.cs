@@ -22,6 +22,7 @@ namespace PersonalInfoManager.Services
 
         public string GetUserFolder(string username)
         {
+            UserStorageIdentity.ValidateMigrationPaths(Path.GetDirectoryName(_storageRoot)!, _storageRoot);
             var userService = new UserService();
             var user = userService.FindByUsername(username)
                 ?? throw new InvalidOperationException("Không tìm thấy tài khoản để xác định kho file riêng.");
@@ -32,11 +33,15 @@ namespace PersonalInfoManager.Services
                 Path.GetDirectoryName(_storageRoot)!, user.Username,
                 LegacyUserStorageKind.LocalFiles);
 
+            string root = Path.GetDirectoryName(_storageRoot)!;
+            UserStorageIdentity.ValidateMigrationPaths(root, legacyFolder, folder);
+
             if (!string.Equals(folder, legacyFolder, StringComparison.OrdinalIgnoreCase) &&
-                Directory.Exists(legacyFolder))
+                UserStorageIdentity.MigrationPathExists(legacyFolder, directory: true))
             {
                 using var migrationLock = UserStorageIdentity.AcquireMigrationLock(user.Id);
-                if (Directory.Exists(legacyFolder))
+                UserStorageIdentity.ValidateMigrationPaths(root, legacyFolder, folder);
+                if (UserStorageIdentity.MigrationPathExists(legacyFolder, directory: true))
                 {
                     if (userService.HasLegacyStoragePathCollision(
                         user.Id, user.Username, LegacyUserStorageKind.LocalFiles))
@@ -44,7 +49,7 @@ namespace PersonalInfoManager.Services
                             "Thư mục file cũ trùng đường dẫn với tài khoản khác. Thư mục vẫn được giữ nguyên; " +
                             "không thể tự chọn chủ sở hữu an toàn.");
 
-                    UserStorageIdentity.MoveLegacyDirectory(legacyFolder, folder, user.Id);
+                    UserStorageIdentity.MoveLegacyDirectory(legacyFolder, folder, user.Id, root);
                 }
             }
 

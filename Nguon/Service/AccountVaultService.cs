@@ -34,6 +34,7 @@ namespace PersonalInfoManager.Services
             "PersonalInfoManager");
         private string GetVaultFile(string username)
         {
+            UserStorageIdentity.ValidateMigrationPaths(_root, _root);
             var userService = new UserService();
             var user = userService.FindByUsername(username)
                 ?? throw new InvalidOperationException(LocalizationAuditService.Get("storage.vault.message001", "vi"));
@@ -43,23 +44,33 @@ namespace PersonalInfoManager.Services
                 _root, $"vault_{UserStorageIdentity.GetDirectoryName(user.Id)}.dat");
             string legacyPath = UserStorageIdentity.GetLegacyPath(
                 _root, user.Username, LegacyUserStorageKind.Vault);
+            UserStorageIdentity.ValidateMigrationPaths(_root, legacyPath, isolatedPath, legacyPath + ".bak", isolatedPath + ".bak");
+            bool legacyExists = UserStorageIdentity.MigrationPathExists(legacyPath);
+            bool legacyBackupExists = UserStorageIdentity.MigrationPathExists(legacyPath + ".bak");
+            _ = UserStorageIdentity.MigrationPathExists(isolatedPath);
+            _ = UserStorageIdentity.MigrationPathExists(isolatedPath + ".bak");
             if (string.Equals(isolatedPath, legacyPath, StringComparison.OrdinalIgnoreCase) ||
-                (!File.Exists(legacyPath) && !File.Exists(legacyPath + ".bak")))
+                (!legacyExists && !legacyBackupExists))
                 return isolatedPath;
             using var migrationLock = UserStorageIdentity.AcquireMigrationLock(user.Id);
-            if (!File.Exists(legacyPath) && !File.Exists(legacyPath + ".bak"))
+            UserStorageIdentity.ValidateMigrationPaths(_root, legacyPath, isolatedPath, legacyPath + ".bak", isolatedPath + ".bak");
+            legacyExists = UserStorageIdentity.MigrationPathExists(legacyPath);
+            legacyBackupExists = UserStorageIdentity.MigrationPathExists(legacyPath + ".bak");
+            _ = UserStorageIdentity.MigrationPathExists(isolatedPath);
+            _ = UserStorageIdentity.MigrationPathExists(isolatedPath + ".bak");
+            if (!legacyExists && !legacyBackupExists)
                 return isolatedPath;
             if (userService.HasLegacyStoragePathCollision(
                 user.Id, user.Username, LegacyUserStorageKind.Vault))
                 throw new VaultUnreadableException(
                     "File vault cũ trùng đường dẫn với tài khoản khác. File cũ được giữ nguyên; " +
                     "không thể tự chọn chủ sở hữu an toàn.");
-            UserStorageIdentity.MoveLegacyFile(legacyPath, isolatedPath, user.Id);
+            UserStorageIdentity.MoveLegacyFile(legacyPath, isolatedPath, user.Id, _root);
 #if SECURITY_TEST
             Gl13VaultMoveCheckpoint?.Invoke();
 #endif
             UserStorageIdentity.MoveLegacyFile(
-                legacyPath + ".bak", isolatedPath + ".bak", user.Id);
+                legacyPath + ".bak", isolatedPath + ".bak", user.Id, _root);
             return isolatedPath;
         }
         public static void ClearCache()
@@ -158,6 +169,7 @@ namespace PersonalInfoManager.Services
         }
         public void Save(string username, List<SavedAccount> accounts)
         {
+            UserStorageIdentity.ValidateMigrationPaths(_root, _root);
             using var storageLock = AesCrypto.AcquireStorageLock();
             ValidateAttachments(accounts);
             Directory.CreateDirectory(_root);

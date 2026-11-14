@@ -23,6 +23,58 @@ namespace PersonalInfoManager.Services
     {
         public static string GetDirectoryName(Guid userId) => "user_" + userId.ToString("N");
 
+        // This preflight detects existing reparse points; it cannot eliminate TOCTOU.
+        // ApplicationData itself is supplied by Windows and its ancestors are not rejected.
+        internal static void ValidateMigrationPaths(string root, params string[] paths)
+        {
+            string fullRoot = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar);
+            foreach (string path in paths.Prepend(fullRoot))
+            {
+                string fullPath = Path.GetFullPath(path);
+                string relative = Path.GetRelativePath(fullRoot, fullPath);
+                if (Path.IsPathRooted(relative) || relative == ".." ||
+                    relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal))
+                    throw new IOException("Đường dẫn migration nằm ngoài kho dữ liệu ứng dụng.");
+                string current = fullRoot;
+                if (!ValidateExistingComponent(current, mustBeDirectory: true)) continue;
+                if (relative == ".") continue;
+                string[] parts = relative.Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries);
+                for (int index = 0; index < parts.Length; index++)
+                {
+                    current = Path.Combine(current, parts[index]);
+                    if (!ValidateExistingComponent(current, mustBeDirectory: index < parts.Length - 1)) break;
+                }
+            }
+        }
+
+        private static bool ValidateExistingComponent(string path, bool mustBeDirectory)
+        {
+            try
+            {
+                FileAttributes attributes = File.GetAttributes(path);
+                if ((attributes & FileAttributes.ReparsePoint) != 0)
+                    throw new IOException("Migration không hỗ trợ đường dẫn chứa junction hoặc reparse point.");
+                if (mustBeDirectory && (attributes & FileAttributes.Directory) == 0)
+                    throw new IOException("Thành phần cha của đường dẫn migration không phải thư mục.");
+                return true;
+            }
+            catch (FileNotFoundException) { return false; }
+            catch (DirectoryNotFoundException) { return false; }
+        }
+
+        internal static bool MigrationPathExists(string path, bool directory = false)
+        {
+            try
+            {
+                FileAttributes attributes = File.GetAttributes(path);
+                if (((attributes & FileAttributes.Directory) != 0) != directory)
+                    throw new IOException("Loại đường dẫn migration không hợp lệ.");
+                return true;
+            }
+            catch (FileNotFoundException) { return false; }
+            catch (DirectoryNotFoundException) { return false; }
+        }
+
         public static string GetLegacyPath(
             string root, string username, LegacyUserStorageKind kind)
         {
@@ -99,26 +151,36 @@ namespace PersonalInfoManager.Services
             }
         }
 
-        public static void MoveLegacyFile(string source, string destination, Guid userId)
+        public static void MoveLegacyFile(string source, string destination, Guid userId, string? root = null)
         {
-            if (!File.Exists(source)) return;
+            if (root != null) ValidateMigrationPaths(root, source, destination);
+            if (!(root == null ? File.Exists(source) : MigrationPathExists(source))) return;
             Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
 
-            if (!File.Exists(destination))
+            if (!(root == null ? File.Exists(destination) : MigrationPathExists(destination)))
                 File.Move(source, destination);
             else
-                File.Move(source, GetArchivePath(source, userId));
+            {
+                string archive = GetArchivePath(source, userId);
+                if (root != null) ValidateMigrationPaths(root, source, destination, archive);
+                File.Move(source, archive);
+            }
         }
 
-        public static void MoveLegacyDirectory(string source, string destination, Guid userId)
+        public static void MoveLegacyDirectory(string source, string destination, Guid userId, string? root = null)
         {
-            if (!Directory.Exists(source)) return;
+            if (root != null) ValidateMigrationPaths(root, source, destination);
+            if (!(root == null ? Directory.Exists(source) : MigrationPathExists(source, directory: true))) return;
             Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
 
-            if (!Directory.Exists(destination))
+            if (!(root == null ? Directory.Exists(destination) : MigrationPathExists(destination, directory: true)))
                 Directory.Move(source, destination);
             else
-                Directory.Move(source, GetArchivePath(source, userId));
+            {
+                string archive = GetArchivePath(source, userId);
+                if (root != null) ValidateMigrationPaths(root, source, destination, archive);
+                Directory.Move(source, archive);
+            }
         }
 
         private static string GetArchivePath(string source, Guid userId)

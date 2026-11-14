@@ -41,11 +41,16 @@ namespace PersonalInfoManager.Services
         }
         private static IDisposable AcquireCrossProcessLock(string username)
         {
+            UserStorageIdentity.ValidateMigrationPaths(Path.Combine(ApplicationDataPath.Root, "PersonalInfoManager"), Folder);
             var user = new UserService().FindByUsername(username)
                 ?? throw new InvalidOperationException(LocalizationAuditService.Get("auth.twofactor.message001", "vi"));
-            Directory.CreateDirectory(Folder);
             string lockPath = Path.Combine(
                 Folder, UserStorageIdentity.GetDirectoryName(user.Id) + ".2fa.lock");
+            string root = Path.Combine(ApplicationDataPath.Root, "PersonalInfoManager");
+            string legacy = UserStorageIdentity.GetLegacyPath(root, user.Username, LegacyUserStorageKind.TwoFactor);
+            string target = Path.Combine(Folder, UserStorageIdentity.GetDirectoryName(user.Id) + ".2fa");
+            UserStorageIdentity.ValidateMigrationPaths(root, Folder, lockPath, legacy, target);
+            Directory.CreateDirectory(Folder);
             long deadline = Environment.TickCount64 + 15_000;
             while (true)
             {
@@ -439,17 +444,20 @@ namespace PersonalInfoManager.Services
             string legacyPath = UserStorageIdentity.GetLegacyPath(
                 Path.GetDirectoryName(Folder)!, user.Username,
                 LegacyUserStorageKind.TwoFactor);
+            string root = Path.Combine(ApplicationDataPath.Root, "PersonalInfoManager");
+            UserStorageIdentity.ValidateMigrationPaths(root, legacyPath, isolatedPath);
             if (string.Equals(isolatedPath, legacyPath, StringComparison.OrdinalIgnoreCase) ||
-                !File.Exists(legacyPath))
+                !UserStorageIdentity.MigrationPathExists(legacyPath))
                 return isolatedPath;
             using var migrationLock = UserStorageIdentity.AcquireMigrationLock(user.Id);
-            if (!File.Exists(legacyPath)) return isolatedPath;
+            UserStorageIdentity.ValidateMigrationPaths(root, legacyPath, isolatedPath);
+            if (!UserStorageIdentity.MigrationPathExists(legacyPath)) return isolatedPath;
             if (userService.HasLegacyStoragePathCollision(
                 user.Id, user.Username, LegacyUserStorageKind.TwoFactor))
                 throw new AmbiguousLegacyUserStorageException(
                     "File xác thực 2 bước cũ trùng đường dẫn với tài khoản khác. File cũ được giữ nguyên; " +
                     "không thể tự chọn chủ sở hữu an toàn.");
-            UserStorageIdentity.MoveLegacyFile(legacyPath, isolatedPath, user.Id);
+            UserStorageIdentity.MoveLegacyFile(legacyPath, isolatedPath, user.Id, root);
             return isolatedPath;
         }
         private static bool FileExistsOrThrow(string path)
@@ -468,6 +476,7 @@ namespace PersonalInfoManager.Services
         }
         private static void Save(string username, TwoFactorData data)
         {
+            UserStorageIdentity.ValidateMigrationPaths(Path.Combine(ApplicationDataPath.Root, "PersonalInfoManager"), Folder);
             Directory.CreateDirectory(Folder);
             byte[] json = JsonSerializer.SerializeToUtf8Bytes(data);
             byte[]? encrypted = null;

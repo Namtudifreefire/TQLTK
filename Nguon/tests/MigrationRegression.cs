@@ -38,6 +38,7 @@ internal static partial class Program
             Case("vault-migration-idempotency", () => TestGl13Vault(root));
             Case("vault-backup-move-failure-retry", () => TestGl13VaultBackupFailure(root));
             Case("vault-backup-destination-collision", () => TestGl13VaultBackupCollision(root));
+            Case("vault-backup-invalid-destination-preflight", () => TestGl13VaultInvalidBackup(root));
             if (!r5First) Case("vault-backup-between-moves-interruption", () => TestGl13VaultBetweenMoves(root));
             Case("users-protection-recovery-io", () => TestGl13Users(root));
             Case("vault-collision-preserves-source", () => TestGl13Collision(root));
@@ -52,6 +53,8 @@ internal static partial class Program
             Case("migration-parent-creation-failure", () => TestGl13ParentCreationFailure(root));
             Case("migration-locked-source-archive-retry", () => TestGl13LockedArchiveRetry(root));
             Case("migration-stale-observation-existing-destination", () => TestGl13StaleDestination(root));
+            Case("migration-path-guard-outside-root", () => TestGl13MigrationGuard(root));
+            Case("migration-personal-invalid-parent", () => TestGl13PersonalInvalidParent(root));
             Case("migration-child-interruption-retry", () => TestGl13ChildInterruption(root));
             Case("migration-child-after-move-retry", () => TestGl13ChildAfterMove(root));
             Case("migration-child-exit-and-timeout", () => TestGl13ChildFailure(root));
@@ -61,7 +64,10 @@ internal static partial class Program
             Case("twofactor-cross-process-migration-lock-contention", () => TestGl13MigrationLockContention(root, terminateHolder: false));
             Case("twofactor-cross-process-migration-lock-abandonment", () => TestGl13MigrationLockContention(root, terminateHolder: true));
             if (!crossOnly && Environment.GetEnvironmentVariable("TQLTK_GL13_JUNCTION_TEST") == "1")
+            {
                 Case("junction-detection-cleanup", () => TestGl13Junction(root));
+                Case("migration-product-junction-guard", () => TestGl13ProductJunction(root));
+            }
             if (crossOnly && cases.Count != 5) throw new InvalidDataException("Expected five cross-process cases.");
             string fullReport = Path.GetFullPath(reportPath);
             Directory.CreateDirectory(Path.GetDirectoryName(fullReport)!);
@@ -75,6 +81,43 @@ internal static partial class Program
             Gl13RejectReparsePoints(root);
             Directory.Delete(root, recursive: true);
         }
+    }
+
+    private static void TestGl13PersonalInvalidParent(string parent)
+    {
+        Gl13Isolated(parent, "personal-invalid-parent", folder =>
+        {
+            const string username = "gl13badparent";
+            var users = new UserService();
+            Gl13Check(users.CreateInitialAdmin(username, "Synthetic-GL13-password-2026!", "Synthetic", "gl13@example.invalid", "").ok, "create user");
+            string blocker = Path.Combine(folder, "Storage");
+            byte[] data = { 2, 7, 1, 8 };
+            File.WriteAllBytes(blocker, data);
+            bool rejected = false;
+            try { _ = new LocalFileService().GetUserFolder(username); } catch (IOException) { rejected = true; }
+            Gl13Check(rejected && File.ReadAllBytes(blocker).SequenceEqual(data), "invalid parent rejected and data retained");
+            File.Delete(blocker);
+            string target = new LocalFileService().GetUserFolder(username);
+            Gl13Check(Directory.Exists(target), "retry after invalid parent removed");
+        });
+    }
+
+    private static void TestGl13MigrationGuard(string root)
+    {
+        string folder = Path.Combine(root, "guard-fixture");
+        Directory.CreateDirectory(folder);
+        string source = Path.Combine(folder, "source.dat");
+        string target = Path.Combine(folder, "target.dat");
+        byte[] original = { 3, 1, 4, 1, 5 };
+        File.WriteAllBytes(source, original);
+        bool rejected = false;
+        try { UserStorageIdentity.MoveLegacyFile(source, Path.Combine(folder, "..", "outside.dat"), Guid.Empty, folder); }
+        catch (IOException) { rejected = true; }
+        Gl13Check(rejected && File.ReadAllBytes(source).SequenceEqual(original) && !File.Exists(target), "guard rejects outside destination and preserves source");
+        UserStorageIdentity.MoveLegacyFile(source, target, Guid.Empty, folder);
+        Gl13Check(!File.Exists(source) && File.ReadAllBytes(target).SequenceEqual(original), "guard permits normal migration");
+        UserStorageIdentity.MoveLegacyFile(source, target, Guid.Empty, folder);
+        Gl13Check(File.ReadAllBytes(target).SequenceEqual(original), "guarded retry preserves destination");
     }
 
     private static void TestGl13StaleDestination(string root)
@@ -464,6 +507,96 @@ internal static partial class Program
         }
     }
 
+    private static void TestGl13ProductJunction(string root)
+    {
+        string? runnerTemp = Environment.GetEnvironmentVariable("RUNNER_TEMP");
+        if (Environment.GetEnvironmentVariable("GITHUB_ACTIONS") != "true" ||
+            Environment.GetEnvironmentVariable("RUNNER_ENVIRONMENT") != "github-hosted" ||
+            string.IsNullOrWhiteSpace(runnerTemp) ||
+            !string.Equals(Path.GetFullPath(Path.GetDirectoryName(root)!), Path.GetFullPath(runnerTemp).TrimEnd(Path.DirectorySeparatorChar), StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("Junction fixture requires a GitHub-hosted runner temporary root.");
+
+        Gl13Isolated(root, "product-junction", folder =>
+        {
+            const string username = "gl13junction";
+            var users = new UserService();
+            Gl13Check(users.CreateInitialAdmin(username, "Synthetic-GL13-password-2026!", "Synthetic", "gl13@example.invalid", "").ok, "create junction user");
+            var user = users.FindByUsername(username)!;
+            var vault = new AccountVaultService();
+            vault.Save(username, new List<SavedAccount> { new() { ServiceName = "fixture" } });
+            string target = Path.Combine(folder, "vault_" + UserStorageIdentity.GetDirectoryName(user.Id) + ".dat");
+            string legacy = UserStorageIdentity.GetLegacyPath(folder, username, LegacyUserStorageKind.Vault);
+            byte[] data = File.ReadAllBytes(target);
+            File.Move(target, legacy);
+            string control = Path.Combine(folder, "junction-control");
+            Directory.CreateDirectory(control);
+            string sentinel = Path.Combine(control, "sentinel.bin");
+            byte[] expected = { 31, 42, 53, 64 };
+            File.WriteAllBytes(sentinel, expected);
+
+            void CheckLink(string link, Action action, string scenario)
+            {
+                if (link.IndexOfAny(new[] { '"', '%', '!', '&', '|', '<', '>', '^' }) >= 0 ||
+                    control.IndexOfAny(new[] { '"', '%', '!', '&', '|', '<', '>', '^' }) >= 0)
+                    throw new InvalidDataException("Unsafe fixture path.");
+                using var process = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = Path.Combine(Environment.SystemDirectory, "cmd.exe"),
+                    Arguments = "/d /c mklink /J \"" + link + "\" \"" + control + "\"",
+                    UseShellExecute = false, CreateNoWindow = true,
+                    RedirectStandardOutput = true, RedirectStandardError = true
+                }) ?? throw new IOException("Unable to create fixture process.");
+                if (!process.WaitForExit(10000)) { process.Kill(); process.WaitForExit(); throw new IOException("Junction creation timed out."); }
+                if (process.ExitCode != 0) throw new IOException("Junction creation unavailable on runner.");
+                try
+                {
+                    var created = new DirectoryInfo(link);
+                    Gl13Check((created.Attributes & FileAttributes.ReparsePoint) != 0 &&
+                        string.Equals(Path.GetFullPath(created.ResolveLinkTarget(false)!.FullName).TrimEnd(Path.DirectorySeparatorChar), Path.GetFullPath(control).TrimEnd(Path.DirectorySeparatorChar), StringComparison.OrdinalIgnoreCase), "fixture junction verified");
+                    bool rejected = false;
+                    try { action(); } catch (IOException) { rejected = true; }
+                    Gl13Check(rejected, scenario);
+                    Gl13Check(File.ReadAllBytes(sentinel).SequenceEqual(expected), "junction control unchanged");
+                    Gl13Check(Directory.GetFiles(control).Length == 1, "no unexpected writes to control");
+                }
+                finally
+                {
+                    var info = new DirectoryInfo(link);
+                    if ((info.Attributes & FileAttributes.ReparsePoint) == 0 ||
+                        !string.Equals(Path.GetFullPath(info.ResolveLinkTarget(false)!.FullName).TrimEnd(Path.DirectorySeparatorChar), Path.GetFullPath(control).TrimEnd(Path.DirectorySeparatorChar), StringComparison.OrdinalIgnoreCase))
+                        throw new IOException("Unsafe junction cleanup refused.");
+                    Directory.Delete(link, recursive: false);
+                }
+                Gl13Check(File.ReadAllBytes(sentinel).SequenceEqual(expected), "control preserved after unlink");
+            }
+
+            CheckLink(target + ".bak", () => { AccountVaultService.ClearCache(); _ = vault.Load(username); }, "vault rejects backup junction");
+            Gl13Check(!File.Exists(target) && File.ReadAllBytes(legacy).SequenceEqual(data), "vault retained before backup rejection");
+            Gl13Check(Directory.GetFiles(folder, Path.GetFileName(legacy) + ".migrated-*").Length == 0, "no vault archive after rejection");
+            AccountVaultService.ClearCache();
+            Gl13Check(vault.Load(username).Single().ServiceName == "fixture" && File.ReadAllBytes(target).SequenceEqual(data) &&
+                Directory.GetFiles(folder, Path.GetFileName(legacy) + ".migrated-*").Length == 0, "vault retry after unlink without archive");
+            CheckLink(Path.Combine(folder, "2fa"), () => _ = TwoFactorService.IsEnabled(username), "2FA rejects junction before lock creation");
+            string twoFactorFolder = Path.Combine(folder, "2fa");
+            Directory.CreateDirectory(twoFactorFolder);
+            string legacy2fa = UserStorageIdentity.GetLegacyPath(folder, username, LegacyUserStorageKind.TwoFactor);
+            string target2fa = Path.Combine(twoFactorFolder, UserStorageIdentity.GetDirectoryName(user.Id) + ".2fa");
+            string lockPath = Path.Combine(twoFactorFolder, UserStorageIdentity.GetDirectoryName(user.Id) + ".2fa.lock");
+            CheckLink(legacy2fa, () => _ = TwoFactorService.IsEnabled(username), "2FA rejects source junction");
+            Gl13Check(!File.Exists(lockPath), "2FA did not create lock before rejecting source");
+            CheckLink(target2fa, () => _ = TwoFactorService.IsEnabled(username), "2FA rejects destination junction");
+            Gl13Check(!File.Exists(lockPath), "2FA did not create lock before rejecting destination");
+            Gl13Check(!TwoFactorService.IsEnabled(username), "2FA retry after unlink");
+            CheckLink(Path.Combine(folder, "Storage"), () => _ = new LocalFileService().GetUserFolder(username), "personal files reject junction");
+            Directory.CreateDirectory(Path.Combine(folder, "Storage"));
+            string legacyFiles = UserStorageIdentity.GetLegacyPath(folder, username, LegacyUserStorageKind.LocalFiles);
+            string targetFiles = Path.Combine(folder, "Storage", UserStorageIdentity.GetDirectoryName(user.Id));
+            CheckLink(legacyFiles, () => _ = new LocalFileService().GetUserFolder(username), "personal files reject source junction");
+            Gl13Check(!Directory.Exists(targetFiles), "personal file destination not created after rejection");
+            Gl13Check(string.Equals(new LocalFileService().GetUserFolder(username), targetFiles, StringComparison.OrdinalIgnoreCase), "personal files retry after unlink");
+        });
+    }
+
     private static void TestGl13Junction(string root)
     {
         string? runnerTemp = Environment.GetEnvironmentVariable("RUNNER_TEMP");
@@ -503,6 +636,17 @@ internal static partial class Program
             rejected = false;
             try { Gl13RejectReparsePoints(link); } catch (IOException) { rejected = true; }
             Gl13Check(rejected, "source or destination junction rejected");
+            rejected = false;
+            try { UserStorageIdentity.MoveLegacyDirectory(link, Path.Combine(fixture, "new-folder"), Guid.Empty, fixture); }
+            catch (IOException) { rejected = true; }
+            Gl13Check(rejected && !Directory.Exists(Path.Combine(fixture, "new-folder")), "product rejects junction source");
+            string safeSource = Path.Combine(fixture, "synthetic-source.bin");
+            byte[] safeBytes = { 11, 12, 13 };
+            File.WriteAllBytes(safeSource, safeBytes);
+            rejected = false;
+            try { UserStorageIdentity.MoveLegacyFile(safeSource, Path.Combine(link, "new-target.bin"), Guid.Empty, fixture); }
+            catch (IOException) { rejected = true; }
+            Gl13Check(rejected && File.ReadAllBytes(safeSource).SequenceEqual(safeBytes), "product rejects junction destination parent");
             Gl13Check(File.ReadAllBytes(sentinel).SequenceEqual(expected), "control preserved before cleanup");
         }
         finally
@@ -854,6 +998,31 @@ internal static partial class Program
         string[] before = Directory.GetFiles(folder).OrderBy(x => x).ToArray();
         using (var again = Gl13StartChild(root, "vault-retry")) Gl13Check(Gl13WaitChild(again, 15000) == 0, "second retry succeeds");
         Gl13Check(before.SequenceEqual(Directory.GetFiles(folder).OrderBy(x => x)) && File.ReadAllBytes(target).SequenceEqual(original) && File.ReadAllBytes(target + ".bak").SequenceEqual(original), "retry is idempotent");
+    }
+
+    private static void TestGl13VaultInvalidBackup(string parent)
+    {
+        Gl13Isolated(parent, "vault-invalid-backup", folder =>
+        {
+            const string username = "gl13invalidbackup";
+            var users = new UserService();
+            Gl13Check(users.CreateInitialAdmin(username, "Synthetic-GL13-password-2026!", "Synthetic", "gl13@example.invalid", "").ok, "create user");
+            var user = users.FindByUsername(username)!;
+            var vault = new AccountVaultService();
+            vault.Save(username, new List<SavedAccount> { new() { ServiceName = "fixture" } });
+            string target = Path.Combine(folder, "vault_" + UserStorageIdentity.GetDirectoryName(user.Id) + ".dat");
+            string legacy = UserStorageIdentity.GetLegacyPath(folder, username, LegacyUserStorageKind.Vault);
+            byte[] original = File.ReadAllBytes(target);
+            File.Move(target, legacy);
+            Directory.CreateDirectory(target + ".bak");
+            AccountVaultService.ClearCache();
+            bool rejected = false;
+            try { _ = vault.Load(username); } catch (IOException) { rejected = true; }
+            Gl13Check(rejected && File.ReadAllBytes(legacy).SequenceEqual(original) && !File.Exists(target), "invalid backup target rejected before primary move");
+            Directory.Delete(target + ".bak", recursive: false);
+            AccountVaultService.ClearCache();
+            Gl13Check(vault.Load(username).Single().ServiceName == "fixture" && File.ReadAllBytes(target).SequenceEqual(original), "retry after invalid target removed");
+        });
     }
 
     private static void TestGl13VaultBackupFailure(string parent)

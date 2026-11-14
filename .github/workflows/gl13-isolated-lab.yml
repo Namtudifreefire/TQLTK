@@ -35,8 +35,8 @@ jobs:
           [xml]$results = Get-Content -LiteralPath $report -Raw
           if ($results.DocumentElement.LocalName -ne 'testsuite' -or @($results.DocumentElement.Attributes | Where-Object { $_.LocalName -notin @('name','tests','failures','skipped') }).Count -ne 0 -or @($results.DocumentElement.ChildNodes | Where-Object { $_.LocalName -ne 'testcase' }).Count -ne 0) { throw 'Unexpected JUnit structure.' }
           $cases = @($results.testsuite.testcase)
-          $requiredCases = @('junction-detection-cleanup', 'migration-stale-observation-existing-destination', 'migration-child-after-move-retry', 'vault-backup-move-failure-retry', 'vault-backup-destination-collision', 'vault-backup-between-moves-interruption')
-          if ($results.testsuite.name -ne 'TQLTK.Windows.GL13' -or $cases.Count -ne 26 -or @($requiredCases | Where-Object { $required = $_; @($cases | Where-Object { $_.name -eq $required }).Count -ne 1 }).Count -ne 0 -or [int]$results.testsuite.tests -ne $cases.Count -or [int]$results.testsuite.failures -ne 0 -or [int]$results.testsuite.skipped -ne 0) { throw 'Invalid or unsuccessful GL-13 report.' }
+          $requiredCases = @('junction-detection-cleanup', 'migration-product-junction-guard', 'migration-stale-observation-existing-destination', 'migration-child-after-move-retry', 'vault-backup-move-failure-retry', 'vault-backup-destination-collision', 'vault-backup-between-moves-interruption')
+          if ($results.testsuite.name -ne 'TQLTK.Windows.GL13' -or $cases.Count -ne 30 -or @($requiredCases | Where-Object { $required = $_; @($cases | Where-Object { $_.name -eq $required }).Count -ne 1 }).Count -ne 0 -or [int]$results.testsuite.tests -ne $cases.Count -or [int]$results.testsuite.failures -ne 0 -or [int]$results.testsuite.skipped -ne 0) { throw 'Invalid or unsuccessful GL-13 report.' }
           foreach ($case in $cases) {
             if ($case.classname -ne 'TQLTK.Windows.GL13' -or $case.name -notmatch '^[a-z0-9-]+$' -or $case.ChildNodes.Count -ne 0 -or @($case.Attributes | Where-Object { $_.LocalName -notin @('name','classname') }).Count -ne 0) { throw 'Unexpected JUnit content.' }
           }
