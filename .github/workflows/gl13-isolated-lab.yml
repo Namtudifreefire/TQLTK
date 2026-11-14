@@ -25,7 +25,11 @@ jobs:
         env:
           TQLTK_GL13_JUNCTION_TEST: '1'
         run: |
-          $report = Join-Path $env:RUNNER_TEMP 'gl13-report.xml'
+          $testRoot = [System.IO.Path]::GetFullPath($env:RUNNER_TEMP)
+          if (-not [System.IO.Directory]::Exists($testRoot)) { throw 'RUNNER_TEMP is unavailable.' }
+          $env:TEMP = $testRoot
+          $env:TMP = $testRoot
+          $report = Join-Path $testRoot 'gl13-report.xml'
           dotnet run --no-build --project Nguon/tests/PersonalInfoManager.SecurityRegression.csproj --configuration Release -- --gl13 $report
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           [xml]$results = Get-Content -LiteralPath $report -Raw
