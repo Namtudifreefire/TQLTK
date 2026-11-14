@@ -16,6 +16,8 @@ internal static partial class Program
         int failures = 0;
         void Case(string name, Action action)
         {
+            string? filter = Environment.GetEnvironmentVariable("TQLTK_GL13_CASE");
+            if (!string.IsNullOrEmpty(filter) && !string.Equals(filter, name, StringComparison.Ordinal)) return;
             if (crossOnly && !name.StartsWith("twofactor-cross-process-", StringComparison.Ordinal)) return;
             var item = new XElement("testcase", new XAttribute("classname", "TQLTK.Windows.GL13"), new XAttribute("name", name));
             try { Gl13RejectReparsePoints(root); action(); Gl13RejectReparsePoints(root); Console.WriteLine("PASS " + name); }
@@ -31,7 +33,12 @@ internal static partial class Program
         try
         {
             Gl13Check(string.Equals(ApplicationDataPath.Root, root, StringComparison.OrdinalIgnoreCase), "test isolation");
+            bool r5First = Environment.GetEnvironmentVariable("TQLTK_GL13_R5_FIRST") == "1";
+            if (r5First) Case("vault-backup-between-moves-interruption", () => TestGl13VaultBetweenMoves(root));
             Case("vault-migration-idempotency", () => TestGl13Vault(root));
+            Case("vault-backup-move-failure-retry", () => TestGl13VaultBackupFailure(root));
+            Case("vault-backup-destination-collision", () => TestGl13VaultBackupCollision(root));
+            if (!r5First) Case("vault-backup-between-moves-interruption", () => TestGl13VaultBetweenMoves(root));
             Case("users-protection-recovery-io", () => TestGl13Users(root));
             Case("vault-collision-preserves-source", () => TestGl13Collision(root));
             Case("users-corrupt-no-valid-backup", () => TestGl13CorruptUsers(root));
@@ -102,6 +109,30 @@ internal static partial class Program
                 !File.Exists(Path.Combine(root, "child-fixture", "fixture.marker"))) return 80;
             Gl13RejectReparsePoints(root);
             string dir = Path.Combine(root, "child-fixture");
+            if (mode == "vault-setup")
+            {
+                var users = new UserService();
+                if (!users.CreateInitialAdmin("gl13r5child", "Synthetic-GL13-password-2026!", "Synthetic", "gl13@example.invalid", "").ok) return 91;
+                new AccountVaultService().Save("gl13r5child", new List<SavedAccount> { new() { ServiceName = "r5-child", Password = "fixture-password" } });
+                return 0;
+            }
+            if (mode == "vault-between" || mode == "vault-retry")
+            {
+                if (mode == "vault-between")
+                {
+                    using var reached = Gl13OpenChildEvent("vault-reached");
+                    using var release = Gl13OpenChildEvent("vault-release");
+                    Action checkpoint = () => { reached.Set(); if (!release.WaitOne(TimeSpan.FromSeconds(20))) throw new TimeoutException(); };
+                    typeof(AccountVaultService).GetField("Gl13VaultMoveCheckpoint", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic)!.SetValue(null, checkpoint);
+                    _ = new AccountVaultService().Load("gl13r5child");
+                    return 89;
+                }
+                var accounts = new AccountVaultService().Load("gl13r5child");
+                var user = new UserService().FindByUsername("gl13r5child")!;
+                string file = Path.Combine(root, "PersonalInfoManager", "vault_" + UserStorageIdentity.GetDirectoryName(user.Id) + ".dat.bak");
+                var backup = JsonSerializer.Deserialize<List<SavedAccount>>(AesCrypto.Decrypt(File.ReadAllText(file)));
+                return accounts.Single().ServiceName == "r5-child" && accounts[0].Password == "fixture-password" && backup?.Single().ServiceName == "r5-child" && backup[0].Password == "fixture-password" ? 0 : 90;
+            }
             if (mode == "abnormal") return 47;
             if (mode == "migration-lock-holder")
             {
@@ -160,7 +191,7 @@ internal static partial class Program
             UserStorageIdentity.MoveLegacyFile(Path.Combine(dir, "source"), Path.Combine(dir, "destination"), Guid.Empty);
             return 0;
         }
-        catch { return 82; }
+        catch (Exception ex) { Console.Error.WriteLine("GL13 child failure: " + ex.GetType().Name + " (0x" + ex.HResult.ToString("X8") + ")"); return 82; }
     }
 
     private static EventWaitHandle Gl13OpenChildEvent(string suffix)
@@ -786,6 +817,114 @@ internal static partial class Program
             Gl13Check(archived.Length == 1 && File.ReadAllBytes(archived[0]).SequenceEqual(original), "legacy source archived intact");
             AccountVaultService.ClearCache();
             Gl13Check(vault.Load(username).Count == 1 && Directory.GetFiles(folder, Path.GetFileName(legacy) + ".migrated-*").Length == 1, "repeat after archive adds nothing");
+        });
+    }
+
+    private static void TestGl13VaultBetweenMoves(string root)
+    {
+        string fixture = Path.Combine(root, "child-fixture");
+        Directory.CreateDirectory(fixture);
+        File.WriteAllText(Path.Combine(fixture, "fixture.marker"), "synthetic");
+        const string username = "gl13r5child";
+        using (var setup = Gl13StartChild(root, "vault-setup")) Gl13Check(Gl13WaitChild(setup, 15000) == 0, "isolated child creates fixture");
+        var user = new UserService().FindByUsername(username)!;
+        string folder = Path.Combine(root, "PersonalInfoManager");
+        string target = Path.Combine(folder, "vault_" + UserStorageIdentity.GetDirectoryName(user.Id) + ".dat");
+        string legacy = UserStorageIdentity.GetLegacyPath(folder, username, LegacyUserStorageKind.Vault);
+        byte[] original = File.ReadAllBytes(target);
+        File.Move(target, legacy);
+        File.WriteAllBytes(legacy + ".bak", original);
+        string prefix = @"Local\TQLTK.GL13." + Guid.NewGuid().ToString("N");
+        using var reached = new EventWaitHandle(false, EventResetMode.ManualReset, prefix + ".vault-reached");
+        using var release = new EventWaitHandle(false, EventResetMode.ManualReset, prefix + ".vault-release");
+        using (var child = Gl13StartChild(root, "vault-between", prefix))
+        {
+            try
+            {
+                Gl13Check(reached.WaitOne(TimeSpan.FromSeconds(15)) && !child.HasExited, "checkpoint reached between moves");
+                Gl13Check(!File.Exists(legacy) && File.ReadAllBytes(target).SequenceEqual(original) && File.ReadAllBytes(legacy + ".bak").SequenceEqual(original) && !File.Exists(target + ".bak"), "intermediate vault and backup state");
+                child.Kill();
+                Gl13Check(child.WaitForExit(5000) && child.ExitCode != 0, "checkpoint child terminated");
+            }
+            finally { if (!child.HasExited) { child.Kill(); child.WaitForExit(); } }
+        }
+        Gl13Check(File.ReadAllBytes(target).SequenceEqual(original) && File.ReadAllBytes(legacy + ".bak").SequenceEqual(original) && !File.Exists(target + ".bak"), "intermediate files preserved after termination");
+        using (var retry = Gl13StartChild(root, "vault-retry")) Gl13Check(Gl13WaitChild(retry, 15000) == 0, "new process retry succeeds");
+        Gl13Check(!File.Exists(legacy + ".bak") && File.ReadAllBytes(target + ".bak").SequenceEqual(original), "retry moves backup intact");
+        string[] before = Directory.GetFiles(folder).OrderBy(x => x).ToArray();
+        using (var again = Gl13StartChild(root, "vault-retry")) Gl13Check(Gl13WaitChild(again, 15000) == 0, "second retry succeeds");
+        Gl13Check(before.SequenceEqual(Directory.GetFiles(folder).OrderBy(x => x)) && File.ReadAllBytes(target).SequenceEqual(original) && File.ReadAllBytes(target + ".bak").SequenceEqual(original), "retry is idempotent");
+    }
+
+    private static void TestGl13VaultBackupFailure(string parent)
+    {
+        Gl13Isolated(parent, "vault-backup-failure", folder =>
+        {
+            const string username = "gl13r5synthetic";
+            var users = new UserService();
+            Gl13Check(users.CreateInitialAdmin(username, "Synthetic-GL13-password-2026!", "Synthetic", "gl13@example.invalid", "").ok, "create synthetic user");
+            var user = users.FindByUsername(username)!;
+            var vault = new AccountVaultService();
+            vault.Save(username, new List<SavedAccount> { new() { ServiceName = "r5-fixture", Username = "fixture", Password = "fixture-password" } });
+            string target = Path.Combine(folder, "vault_" + UserStorageIdentity.GetDirectoryName(user.Id) + ".dat");
+            string legacy = UserStorageIdentity.GetLegacyPath(folder, username, LegacyUserStorageKind.Vault);
+            byte[] original = File.ReadAllBytes(target);
+            File.Move(target, legacy);
+            File.WriteAllBytes(legacy + ".bak", original);
+            AccountVaultService.ClearCache();
+            bool failed = false;
+            using (var locked = new FileStream(legacy + ".bak", FileMode.Open, FileAccess.Read, FileShare.None))
+            {
+                try { _ = vault.Load(username); }
+                catch (IOException) { failed = true; }
+            }
+            Gl13Check(failed, "locked legacy backup reports failure");
+            Gl13Check(!File.Exists(legacy) && File.ReadAllBytes(target).SequenceEqual(original), "vault moved intact before backup failure");
+            Gl13Check(File.ReadAllBytes(legacy + ".bak").SequenceEqual(original) && !File.Exists(target + ".bak"), "legacy backup preserved after failure");
+            AccountVaultService.ClearCache();
+            Gl13Check(vault.Load(username).Count == 1, "retry reads migrated vault");
+            Gl13Check(!File.Exists(legacy + ".bak") && File.ReadAllBytes(target + ".bak").SequenceEqual(original), "retry migrates backup intact");
+            var backupAccounts = JsonSerializer.Deserialize<List<SavedAccount>>(AesCrypto.Decrypt(File.ReadAllText(target + ".bak")));
+            Gl13Check(backupAccounts?.Count == 1 && backupAccounts[0].ServiceName == "r5-fixture" && backupAccounts[0].Password == "fixture-password", "backup independently decrypts and matches fixture");
+            var before = Directory.GetFiles(folder).OrderBy(x => x).ToArray();
+            AccountVaultService.ClearCache();
+            Gl13Check(vault.Load(username).Count == 1 && before.SequenceEqual(Directory.GetFiles(folder).OrderBy(x => x)), "repeat creates no extra archive");
+        });
+    }
+
+    private static void TestGl13VaultBackupCollision(string parent)
+    {
+        Gl13Isolated(parent, "vault-backup-collision", folder =>
+        {
+            const string username = "gl13r5collision";
+            var users = new UserService();
+            Gl13Check(users.CreateInitialAdmin(username, "Synthetic-GL13-password-2026!", "Synthetic", "gl13@example.invalid", "").ok, "create collision user");
+            var user = users.FindByUsername(username)!;
+            var vault = new AccountVaultService();
+            vault.Save(username, new List<SavedAccount> { new() { ServiceName = "destination" } });
+            string target = Path.Combine(folder, "vault_" + UserStorageIdentity.GetDirectoryName(user.Id) + ".dat");
+            string legacy = UserStorageIdentity.GetLegacyPath(folder, username, LegacyUserStorageKind.Vault);
+            byte[] current = File.ReadAllBytes(target);
+            byte[] old = System.Text.Encoding.UTF8.GetBytes(AesCrypto.Encrypt(JsonSerializer.Serialize(new List<SavedAccount> { new() { ServiceName = "legacy" } })));
+            File.WriteAllBytes(target + ".bak", current);
+            File.WriteAllBytes(legacy, old);
+            File.WriteAllBytes(legacy + ".bak", old);
+            AccountVaultService.ClearCache();
+            Gl13Check(vault.Load(username).Single().ServiceName == "destination", "existing vault readable");
+            Gl13Check(File.ReadAllBytes(target).SequenceEqual(current) && File.ReadAllBytes(target + ".bak").SequenceEqual(current), "both destinations preserved");
+            string[] vaultArchives = Directory.GetFiles(folder, Path.GetFileName(legacy) + ".migrated-*");
+            string[] backupArchives = Directory.GetFiles(folder, Path.GetFileName(legacy) + ".bak.migrated-*");
+            Gl13Check(vaultArchives.Length == 1 && backupArchives.Length == 1, "exactly one archive per source");
+            foreach (string path in vaultArchives.Concat(backupArchives))
+            {
+                Gl13Check(File.ReadAllBytes(path).SequenceEqual(old), "archived bytes preserved");
+                var accounts = JsonSerializer.Deserialize<List<SavedAccount>>(AesCrypto.Decrypt(File.ReadAllText(path)));
+                Gl13Check(accounts?.Single().ServiceName == "legacy", "archive decrypts");
+            }
+            var backup = JsonSerializer.Deserialize<List<SavedAccount>>(AesCrypto.Decrypt(File.ReadAllText(target + ".bak")));
+            Gl13Check(backup?.Single().ServiceName == "destination", "destination backup decrypts");
+            AccountVaultService.ClearCache();
+            Gl13Check(vault.Load(username).Single().ServiceName == "destination" && Directory.GetFiles(folder, Path.GetFileName(legacy) + ".migrated-*").Length == 1 && Directory.GetFiles(folder, Path.GetFileName(legacy) + ".bak.migrated-*").Length == 1, "retry creates no duplicate archives");
         });
     }
 

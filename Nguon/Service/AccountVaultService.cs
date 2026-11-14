@@ -14,6 +14,9 @@ namespace PersonalInfoManager.Services
     }
     public class AccountVaultService
     {
+#if SECURITY_TEST
+        internal static Action? Gl13VaultMoveCheckpoint;
+#endif
         public const int TrashRetentionDays = 30;
         private static readonly JsonSerializerOptions JsonOpts =
             new JsonSerializerOptions { WriteIndented = true };
@@ -52,6 +55,9 @@ namespace PersonalInfoManager.Services
                     "File vault cũ trùng đường dẫn với tài khoản khác. File cũ được giữ nguyên; " +
                     "không thể tự chọn chủ sở hữu an toàn.");
             UserStorageIdentity.MoveLegacyFile(legacyPath, isolatedPath, user.Id);
+#if SECURITY_TEST
+            Gl13VaultMoveCheckpoint?.Invoke();
+#endif
             UserStorageIdentity.MoveLegacyFile(
                 legacyPath + ".bak", isolatedPath + ".bak", user.Id);
             return isolatedPath;
