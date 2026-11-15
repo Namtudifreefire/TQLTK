@@ -8,7 +8,7 @@ permissions:
   contents: read
 
 jobs:
-  gl13:
+  gl13-isolated:
     runs-on: windows-latest
     timeout-minutes: 30
     steps:
