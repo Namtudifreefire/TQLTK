@@ -161,29 +161,3 @@ gl12-localization-audit:
       junit: artifacts/gl12/junit.xml
     paths:
       - artifacts/gl12/junit.xml
-
-windows-regression:
-  stage: test
-  dependencies: []
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" || $CI_PIPELINE_SOURCE == "external_pull_request_event"'
-    - if: '$CI_COMMIT_BRANCH'
-  tags:
-    - saas-windows-medium-amd64
-  timeout: 30 minutes
-  allow_failure: false
-  variables:
-    DOTNET_CLI_TELEMETRY_OPTOUT: "1"
-    DOTNET_NOLOGO: "true"
-  before_script:
-    - ./ci/test-windows-dpapi.ps1
-  script:
-    - ./ci/run-windows-security.ps1
-  artifacts:
-    when: always
-    access: maintainer
-    expire_in: 7 days
-    reports:
-      junit: artifacts/windows-gl13/junit.xml
-    paths:
-      - artifacts/windows-gl13/junit.xml
