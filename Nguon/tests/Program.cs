@@ -11,6 +11,45 @@ using Microsoft.Win32;
 using PersonalInfoManager;
 using PersonalInfoManager.Models;
 using PersonalInfoManager.Services;
+
+/// <summary>
+/// Fake time provider for deterministic time control in tests.
+/// Allows precise control over time advancement for testing time-dependent logic.
+/// </summary>
+internal sealed class FakeTimeProvider : TimeProvider
+{
+    private DateTimeOffset _utcNow;
+    private readonly object _lock = new();
+
+    public FakeTimeProvider(DateTimeOffset startTime = default)
+    {
+        _utcNow = startTime == default ? DateTimeOffset.UtcNow : startTime;
+    }
+
+    public override DateTimeOffset GetUtcNow()
+    {
+        lock (_lock)
+        {
+            return _utcNow;
+        }
+    }
+
+    public void Advance(TimeSpan delta)
+    {
+        lock (_lock)
+        {
+            _utcNow += delta;
+        }
+    }
+
+    public void SetUtcNow(DateTimeOffset utcNow)
+    {
+        lock (_lock)
+        {
+            _utcNow = utcNow;
+        }
+    }
+}
 internal static partial class Program
 {
     private static int _passed;
@@ -715,47 +754,64 @@ internal static partial class Program
         SavedAccount account = original.Clone();
         var accounts = new Dictionary<Guid, SavedAccount> { [account.Id] = account };
         var findings = new[] { new PasswordSecurityFinding(account.Id, PasswordSecurityFindingKind.Weak) };
-        var state = SecurityFindingReviewService.SyncFindings(username, findings, accounts);
-        string key = SecurityFindingReviewService.Key(account.Id, PasswordSecurityFindingKind.Weak);
-        if (state[key].Status != SecurityFindingReviewStatus.Open)
-            throw new InvalidDataException("New findings must start open.");
-        const string reason = "Reviewed regression finding";
-        SecurityFindingReviewService.Set(username, account, PasswordSecurityFindingKind.Weak,
-            SecurityFindingReviewStatus.Ignored, null, reason);
-        state = SecurityFindingReviewService.SyncFindings(username, findings, accounts);
-        if (state[key].Status != SecurityFindingReviewStatus.Ignored || state[key].Reason != reason)
-            throw new InvalidDataException("Ignored status and reason did not persist.");
+
+        // Use fake time provider for deterministic time control
+        var fakeTime = new FakeTimeProvider();
+        var originalProvider = SecurityFindingReviewService.TimeProvider;
+        SecurityFindingReviewService.TimeProvider = fakeTime;
+
         try
         {
+            var state = SecurityFindingReviewService.SyncFindings(username, findings, accounts);
+            string key = SecurityFindingReviewService.Key(account.Id, PasswordSecurityFindingKind.Weak);
+            if (state[key].Status != SecurityFindingReviewStatus.Open)
+                throw new InvalidDataException("New findings must start open.");
+            const string reason = "Reviewed regression finding";
             SecurityFindingReviewService.Set(username, account, PasswordSecurityFindingKind.Weak,
-                SecurityFindingReviewStatus.Ignored, null, "  ");
-            throw new InvalidDataException("Ignoring a finding without a reason was accepted.");
+                SecurityFindingReviewStatus.Ignored, null, reason);
+            state = SecurityFindingReviewService.SyncFindings(username, findings, accounts);
+            if (state[key].Status != SecurityFindingReviewStatus.Ignored || state[key].Reason != reason)
+                throw new InvalidDataException("Ignored status and reason did not persist.");
+            try
+            {
+                SecurityFindingReviewService.Set(username, account, PasswordSecurityFindingKind.Weak,
+                    SecurityFindingReviewStatus.Ignored, null, "  ");
+                throw new InvalidDataException("Ignoring a finding without a reason was accepted.");
+            }
+            catch (ArgumentException) { }
+            string reviewFile = Directory.GetFiles(
+                Path.Combine(Environment.GetEnvironmentVariable("TQLTK_SECURITY_TEST_ROOT")!, "PersonalInfoManager"),
+                "security_reviews_*.dat").Single();
+            if (Encoding.UTF8.GetString(File.ReadAllBytes(reviewFile)).Contains(reason, StringComparison.Ordinal))
+                throw new InvalidDataException("The finding reason was stored without DPAPI protection.");
+            account.Password += "changed";
+            account.UpdatedAt = fakeTime.GetUtcNow().UtcDateTime.AddSeconds(1);
+            state = SecurityFindingReviewService.SyncFindings(username, findings, accounts);
+            if (state[key].Status != SecurityFindingReviewStatus.Open || state[key].Reason.Length != 0)
+                throw new InvalidDataException("A changed account did not reopen the finding.");
+            // Set snoozed with a reminder 250ms in the future
+            var snoozeRemindAt = fakeTime.GetUtcNow().AddMilliseconds(250);
+            SecurityFindingReviewService.Set(username, account, PasswordSecurityFindingKind.Weak,
+                SecurityFindingReviewStatus.Snoozed, snoozeRemindAt.UtcDateTime, null);
+            state = SecurityFindingReviewService.SyncFindings(username, findings, accounts);
+            if (state[key].Status != SecurityFindingReviewStatus.Snoozed)
+                throw new InvalidDataException("Snoozed finding state did not persist.");
+            // Advance time past the snooze expiration
+            fakeTime.Advance(TimeSpan.FromMilliseconds(350));
+            state = SecurityFindingReviewService.SyncFindings(username, findings, accounts);
+            if (state[key].Status != SecurityFindingReviewStatus.Open)
+                throw new InvalidDataException("Expired snooze did not reopen the finding.");
+            SecurityFindingReviewService.Set(username, account, PasswordSecurityFindingKind.Weak,
+                SecurityFindingReviewStatus.Fixed, null, null);
+            state = SecurityFindingReviewService.SyncFindings(username, findings, accounts);
+            if (state[key].Status != SecurityFindingReviewStatus.Fixed)
+                throw new InvalidDataException("Fixed status did not persist.");
         }
-        catch (ArgumentException) { }
-        string reviewFile = Directory.GetFiles(
-            Path.Combine(Environment.GetEnvironmentVariable("TQLTK_SECURITY_TEST_ROOT")!, "PersonalInfoManager"),
-            "security_reviews_*.dat").Single();
-        if (Encoding.UTF8.GetString(File.ReadAllBytes(reviewFile)).Contains(reason, StringComparison.Ordinal))
-            throw new InvalidDataException("The finding reason was stored without DPAPI protection.");
-        account.Password += "changed";
-        account.UpdatedAt = DateTime.UtcNow.AddSeconds(1);
-        state = SecurityFindingReviewService.SyncFindings(username, findings, accounts);
-        if (state[key].Status != SecurityFindingReviewStatus.Open || state[key].Reason.Length != 0)
-            throw new InvalidDataException("A changed account did not reopen the finding.");
-        SecurityFindingReviewService.Set(username, account, PasswordSecurityFindingKind.Weak,
-            SecurityFindingReviewStatus.Snoozed, DateTime.UtcNow.AddMilliseconds(250), null);
-        state = SecurityFindingReviewService.SyncFindings(username, findings, accounts);
-        if (state[key].Status != SecurityFindingReviewStatus.Snoozed)
-            throw new InvalidDataException("Snoozed finding state did not persist.");
-        Thread.Sleep(350);
-        state = SecurityFindingReviewService.SyncFindings(username, findings, accounts);
-        if (state[key].Status != SecurityFindingReviewStatus.Open)
-            throw new InvalidDataException("Expired snooze did not reopen the finding.");
-        SecurityFindingReviewService.Set(username, account, PasswordSecurityFindingKind.Weak,
-            SecurityFindingReviewStatus.Fixed, null, null);
-        state = SecurityFindingReviewService.SyncFindings(username, findings, accounts);
-        if (state[key].Status != SecurityFindingReviewStatus.Fixed)
-            throw new InvalidDataException("Fixed status did not persist.");
+        finally
+        {
+            // Restore original time provider
+            SecurityFindingReviewService.TimeProvider = originalProvider;
+        }
     }
     private static void TestBackupHealth()
     {

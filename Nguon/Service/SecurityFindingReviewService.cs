@@ -5,6 +5,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Threading;
 using PersonalInfoManager.Models;
 
 namespace PersonalInfoManager.Services
@@ -28,6 +29,13 @@ namespace PersonalInfoManager.Services
         private static readonly object Sync = new();
         private static readonly byte[] Entropy = Encoding.UTF8.GetBytes("TQLTK.SecurityFindingReview.v1");
 
+        /// <summary>
+        /// Time provider for controlling time in tests. Defaults to system time.
+        /// In production, this is always <see cref="TimeProvider.System"/>.
+        /// In tests, can be replaced with a <see cref="FakeTimeProvider"/> for deterministic time control.
+        /// </summary>
+        internal static TimeProvider TimeProvider { get; set; } = TimeProvider.System;
+
         private sealed class ReviewRecord
         {
             public Guid AccountId { get; set; }
@@ -47,7 +55,7 @@ namespace PersonalInfoManager.Services
             lock (Sync)
             {
                 List<ReviewRecord> records = Load(username);
-                DateTime now = DateTime.UtcNow;
+                DateTimeOffset now = TimeProvider.GetUtcNow();
                 var active = new Dictionary<string, SecurityFindingReviewState>(StringComparer.Ordinal);
                 foreach (PasswordSecurityFinding finding in findings)
                 {
@@ -76,13 +84,13 @@ namespace PersonalInfoManager.Services
                     }
 
                     if (record.Status == SecurityFindingReviewStatus.Snoozed &&
-                        record.RemindAtUtc <= now)
+                        record.RemindAtUtc.HasValue && record.RemindAtUtc.Value <= now)
                     {
                         record.Status = SecurityFindingReviewStatus.Open;
                         record.RemindAtUtc = null;
                     }
 
-                    record.LastCheckedUtc = now;
+                    record.LastCheckedUtc = now.UtcDateTime;
                     active[key] = ToState(record);
                 }
 
@@ -103,7 +111,8 @@ namespace PersonalInfoManager.Services
             DateTime? remindAtUtc,
             string? reason)
         {
-            if (status == SecurityFindingReviewStatus.Snoozed && (!remindAtUtc.HasValue || remindAtUtc.Value <= DateTime.UtcNow))
+            DateTimeOffset now = TimeProvider.GetUtcNow();
+            if (status == SecurityFindingReviewStatus.Snoozed && (!remindAtUtc.HasValue || remindAtUtc.Value <= now.UtcDateTime))
                 throw new ArgumentException("Thời điểm nhắc lại phải nằm trong tương lai.", nameof(remindAtUtc));
             if (status == SecurityFindingReviewStatus.Ignored && string.IsNullOrWhiteSpace(reason))
                 throw new ArgumentException("Cần ghi lý do khi bỏ qua cảnh báo.", nameof(reason));
@@ -120,7 +129,7 @@ namespace PersonalInfoManager.Services
                 }
                 record.AccountVersion = ComputeAccountVersion(account);
                 record.Status = status;
-                record.LastCheckedUtc = DateTime.UtcNow;
+                record.LastCheckedUtc = now.UtcDateTime;
                 record.RemindAtUtc = status == SecurityFindingReviewStatus.Snoozed ? remindAtUtc?.ToUniversalTime() : null;
                 record.Reason = status == SecurityFindingReviewStatus.Ignored
                     ? new string((reason ?? "").Where(character => !char.IsControl(character)).Take(300).ToArray()).Trim()
