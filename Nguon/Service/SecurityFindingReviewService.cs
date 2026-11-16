@@ -29,11 +29,6 @@ namespace PersonalInfoManager.Services
         private static readonly object Sync = new();
         private static readonly byte[] Entropy = Encoding.UTF8.GetBytes("TQLTK.SecurityFindingReview.v1");
 
-        /// <summary>
-        /// Time provider for controlling time in tests. Defaults to system time.
-        /// In production, this is always <see cref="TimeProvider.System"/>.
-        /// In tests, can be replaced with a <see cref="FakeTimeProvider"/> for deterministic time control.
-        /// </summary>
         internal static TimeProvider TimeProvider { get; set; } = TimeProvider.System;
 
         private sealed class ReviewRecord
@@ -210,6 +205,128 @@ namespace PersonalInfoManager.Services
                 CryptographicOperations.ZeroMemory(json);
                 CryptographicOperations.ZeroMemory(protectedData);
             }
+        }
+
+        public sealed record VaultHealthSummary(
+            int SafetyScore,
+            int TotalAccounts,
+            int WeakPasswordCount,
+            int ReusedPasswordCount,
+            int BreachedPasswordCount,
+            int OldPasswordCount,
+            int NoTwoFactorCount,
+            IReadOnlyList<VaultHealthItem> Items);
+
+        public sealed record VaultHealthItem(
+            Guid AccountId,
+            string ServiceName,
+            string Username,
+            int RiskLevel,
+            string RiskDescription,
+            SecurityFindingReviewStatus ReviewStatus,
+            string ReviewReason,
+            bool HasTwoFactorEnabled);
+
+        public static VaultHealthSummary GetVaultHealthSummary(
+            string username,
+            IReadOnlyList<PasswordSecurityFinding> findings,
+            IReadOnlyDictionary<Guid, SavedAccount> accounts,
+            IReadOnlyDictionary<string, SecurityFindingReviewState> reviewStates,
+            IReadOnlyDictionary<Guid, bool> twoFactorStatus)
+        {
+            var items = new List<VaultHealthItem>();
+
+            var findingsByAccount = findings
+                .Where(f => !string.IsNullOrEmpty(f.AccountId.ToString()))
+                .GroupBy(f => f.AccountId)
+                .ToDictionary(g => g.Key, g => g.ToList());
+
+            foreach (var account in accounts.Values.Where(a => !a.IsDeleted))
+            {
+                var findingsForAccount = findingsByAccount.TryGetValue(account.Id, out var fs) ? fs : new List<PasswordSecurityFinding>();
+
+                var descriptions = new List<string>();
+                int riskLevel = 0;
+
+                var breachedFinding = findingsForAccount.FirstOrDefault(f => f.Kind == PasswordSecurityFindingKind.Breached);
+                if (breachedFinding != null)
+                {
+                    riskLevel = Math.Max(riskLevel, 2);
+                }
+
+                var reusedFinding = findingsForAccount.FirstOrDefault(f => f.Kind == PasswordSecurityFindingKind.Reused);
+                if (reusedFinding != null)
+                {
+                    riskLevel = Math.Max(riskLevel, 1);
+                }
+
+                var weakFinding = findingsForAccount.FirstOrDefault(f => f.Kind == PasswordSecurityFindingKind.Weak);
+                if (weakFinding != null)
+                {
+                    riskLevel = Math.Max(riskLevel, 1);
+                }
+
+                var oldFinding = findingsForAccount.FirstOrDefault(f => f.Kind == PasswordSecurityFindingKind.OlderThanYear);
+                if (oldFinding != null)
+                {
+                    riskLevel = Math.Max(riskLevel, 1);
+                }
+
+                if (findingsForAccount.Any(f => f.Kind == PasswordSecurityFindingKind.Breached))
+                    descriptions.Add(LocalizationAuditService.Get("ui.vaulthealthdashboard.text006", "vi"));
+                if (findingsForAccount.Any(f => f.Kind == PasswordSecurityFindingKind.Reused))
+                    descriptions.Add(LocalizationAuditService.Get("ui.vaulthealthdashboard.text005", "vi"));
+                if (findingsForAccount.Any(f => f.Kind == PasswordSecurityFindingKind.Weak))
+                    descriptions.Add(LocalizationAuditService.Get("ui.vaulthealthdashboard.text004", "vi"));
+                if (findingsForAccount.Any(f => f.Kind == PasswordSecurityFindingKind.OlderThanYear))
+                    descriptions.Add(LocalizationAuditService.Get("ui.vaulthealthdashboard.text007", "vi"));
+
+                string riskDescription = descriptions.Count > 0 ? string.Join(", ", descriptions) : LocalizationAuditService.Get("ui.vaulthealthdashboard.text027", "vi");
+
+                bool has2fa = false;
+                if (twoFactorStatus.TryGetValue(account.Id, out var has2faValue))
+                {
+                    has2fa = has2faValue;
+                }
+
+                var reviewState = reviewStates.TryGetValue(Key(account.Id, PasswordSecurityFindingKind.Weak), out var rs) ? rs : null;
+
+                items.Add(new VaultHealthItem(
+                    account.Id,
+                    account.ServiceName ?? "",
+                    account.Username ?? "",
+                    riskLevel,
+                    riskDescription,
+                    reviewState?.Status ?? SecurityFindingReviewStatus.Open,
+                    reviewState?.Reason ?? "",
+                    has2fa
+                ));
+            }
+
+            int totalAccounts = accounts.Values.Count(a => !a.IsDeleted);
+            int weakCount = findings.Count(f => f.Kind == PasswordSecurityFindingKind.Weak && accounts.Values.Any(a => a.Id == f.AccountId && !a.IsDeleted));
+            int reusedCount = findings.Count(f => f.Kind == PasswordSecurityFindingKind.Reused && accounts.Values.Any(a => a.Id == f.AccountId && !a.IsDeleted));
+            int breachedCount = findings.Count(f => f.Kind == PasswordSecurityFindingKind.Breached && accounts.Values.Any(a => a.Id == f.AccountId && !a.IsDeleted));
+            int oldCount = findings.Count(f => f.Kind == PasswordSecurityFindingKind.OlderThanYear && accounts.Values.Any(a => a.Id == f.AccountId && !a.IsDeleted));
+            int noTwoFactorCount = accounts.Values.Count(a => !a.IsDeleted && !twoFactorStatus.GetValueOrDefault(a.Id, false));
+
+            int score = 100;
+            score -= Math.Min(40, 10 * breachedCount);
+            score -= Math.Min(20, 5 * reusedCount);
+            score -= Math.Min(15, 3 * weakCount);
+            score -= Math.Min(15, 3 * oldCount);
+            int safetyScore = Math.Max(0, Math.Min(100, score));
+
+            return new VaultHealthSummary(
+                safetyScore,
+                totalAccounts,
+                weakCount,
+                reusedCount,
+                breachedCount,
+                oldCount,
+                noTwoFactorCount,
+                items
+            );
         }
     }
 }
