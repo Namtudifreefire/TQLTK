@@ -20,7 +20,7 @@ namespace PersonalInfoManager
 
         private static readonly HashSet<string> SettingsTags = new()
         {
-            "profile", "security", "appearance", "backup", "drive", "system", "admin"
+            "profile", "security", "vaulthealth", "appearance", "backup", "drive", "system", "admin"
         };
 
         private string? _currentSettingsTag;
@@ -33,6 +33,7 @@ namespace PersonalInfoManager
                 ["files"] = pageFiles,
                 ["profile"] = pageProfile,
                 ["security"] = pageSecurity,
+                ["vaulthealth"] = pageVaultHealth,
                 ["appearance"] = pageAppearance,
                 ["backup"] = pageBackup,
                 ["drive"] = pageDrive,
@@ -66,6 +67,7 @@ namespace PersonalInfoManager
             if (tag == "files") RefreshFiles();
             if (tag == "security") RefreshSecurityOverview();
             if (tag == "drive") RefreshDriveTokenStatus();
+            if (tag == "vaulthealth") RefreshVaultHealth();
         }
 
         private DateTime _userMenuClosedAt = DateTime.MinValue;

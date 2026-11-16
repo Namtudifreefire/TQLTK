@@ -38,6 +38,15 @@ namespace PersonalInfoManager.Services
                     PasswordStrengthService.CalculateScore(account.Password) <= 2)
                     findings.Add(new PasswordSecurityFinding(account.Id, PasswordSecurityFindingKind.Weak));
 
+                // Password age checks run independently of breach results (offline-capable)
+                if (!account.PasswordChangedAt.HasValue)
+                {
+                    findings.Add(new PasswordSecurityFinding(account.Id, PasswordSecurityFindingKind.UnknownChangeDate));
+                }
+                else if ((localNow - account.PasswordChangedAt.Value).TotalDays > PasswordReviewAgeDays)
+                {
+                    findings.Add(new PasswordSecurityFinding(account.Id, PasswordSecurityFindingKind.OlderThanYear));
+                }
             }
 
             foreach (var group in activeAccounts
@@ -55,7 +64,8 @@ namespace PersonalInfoManager.Services
                 PasswordSecurityFindingKind.Reused => 1,
                 PasswordSecurityFindingKind.Weak => 2,
                 PasswordSecurityFindingKind.OlderThanYear => 3,
-                _ => 4
+                PasswordSecurityFindingKind.UnknownChangeDate => 4,
+                _ => 5
             };
 
             return findings

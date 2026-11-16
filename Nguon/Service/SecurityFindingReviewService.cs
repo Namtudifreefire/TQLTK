@@ -225,7 +225,7 @@ namespace PersonalInfoManager.Services
             string RiskDescription,
             SecurityFindingReviewStatus ReviewStatus,
             string ReviewReason,
-            bool HasTwoFactorEnabled);
+            bool? HasTwoFactorEnabled);
 
         public static VaultHealthSummary GetVaultHealthSummary(
             string username,
@@ -272,6 +272,12 @@ namespace PersonalInfoManager.Services
                     riskLevel = Math.Max(riskLevel, 1);
                 }
 
+                var unknownDateFinding = findingsForAccount.FirstOrDefault(f => f.Kind == PasswordSecurityFindingKind.UnknownChangeDate);
+                if (unknownDateFinding != null)
+                {
+                    riskLevel = Math.Max(riskLevel, 1);
+                }
+
                 if (findingsForAccount.Any(f => f.Kind == PasswordSecurityFindingKind.Breached))
                     descriptions.Add(LocalizationAuditService.Get("ui.vaulthealthdashboard.text006", "vi"));
                 if (findingsForAccount.Any(f => f.Kind == PasswordSecurityFindingKind.Reused))
@@ -280,16 +286,34 @@ namespace PersonalInfoManager.Services
                     descriptions.Add(LocalizationAuditService.Get("ui.vaulthealthdashboard.text004", "vi"));
                 if (findingsForAccount.Any(f => f.Kind == PasswordSecurityFindingKind.OlderThanYear))
                     descriptions.Add(LocalizationAuditService.Get("ui.vaulthealthdashboard.text007", "vi"));
+                if (findingsForAccount.Any(f => f.Kind == PasswordSecurityFindingKind.UnknownChangeDate))
+                    descriptions.Add(LocalizationAuditService.Get("ui.vaulthealthdashboard.text023", "vi"));
 
                 string riskDescription = descriptions.Count > 0 ? string.Join(", ", descriptions) : LocalizationAuditService.Get("ui.vaulthealthdashboard.text027", "vi");
 
-                bool has2fa = false;
-                if (twoFactorStatus.TryGetValue(account.Id, out var has2faValue))
-                {
-                    has2fa = has2faValue;
-                }
+                // Check if the account has TOTP configured (website 2FA), not TQLTK login 2FA
+                // null = unknown/not configured in TQLTK, true = has TOTP, false = known no TOTP
+                bool? hasWebsite2fa = string.IsNullOrWhiteSpace(account.TotpSecret) ? false : true;
 
-                var reviewState = reviewStates.TryGetValue(Key(account.Id, PasswordSecurityFindingKind.Weak), out var rs) ? rs : null;
+                // Get the highest severity review state for this account across all finding kinds
+                var accountReviewStates = new List<SecurityFindingReviewState>();
+                foreach (var kind in new[] { PasswordSecurityFindingKind.Breached, PasswordSecurityFindingKind.Reused, PasswordSecurityFindingKind.Weak, PasswordSecurityFindingKind.OlderThanYear, PasswordSecurityFindingKind.UnknownChangeDate })
+                {
+                    var key = Key(account.Id, kind);
+                    if (reviewStates.TryGetValue(key, out var rs))
+                        accountReviewStates.Add(rs);
+                }
+                // Use the most severe status (Open > Snoozed > Fixed > Ignored)
+                var reviewState = accountReviewStates
+                    .OrderBy(rs => rs.Status switch
+                    {
+                        SecurityFindingReviewStatus.Open => 0,
+                        SecurityFindingReviewStatus.Snoozed => 1,
+                        SecurityFindingReviewStatus.Fixed => 2,
+                        SecurityFindingReviewStatus.Ignored => 3,
+                        _ => 4
+                    })
+                    .FirstOrDefault();
 
                 items.Add(new VaultHealthItem(
                     account.Id,
@@ -299,7 +323,7 @@ namespace PersonalInfoManager.Services
                     riskDescription,
                     reviewState?.Status ?? SecurityFindingReviewStatus.Open,
                     reviewState?.Reason ?? "",
-                    has2fa
+                    hasWebsite2fa
                 ));
             }
 
@@ -308,13 +332,26 @@ namespace PersonalInfoManager.Services
             int reusedCount = findings.Count(f => f.Kind == PasswordSecurityFindingKind.Reused && accounts.Values.Any(a => a.Id == f.AccountId && !a.IsDeleted));
             int breachedCount = findings.Count(f => f.Kind == PasswordSecurityFindingKind.Breached && accounts.Values.Any(a => a.Id == f.AccountId && !a.IsDeleted));
             int oldCount = findings.Count(f => f.Kind == PasswordSecurityFindingKind.OlderThanYear && accounts.Values.Any(a => a.Id == f.AccountId && !a.IsDeleted));
-            int noTwoFactorCount = accounts.Values.Count(a => !a.IsDeleted && !twoFactorStatus.GetValueOrDefault(a.Id, false));
+            int unknownDateCount = findings.Count(f => f.Kind == PasswordSecurityFindingKind.UnknownChangeDate && accounts.Values.Any(a => a.Id == f.AccountId && !a.IsDeleted));
+            // NoTwoFactorCount: only accounts where we KNOW 2FA is not configured (TotpSecret is empty)
+            // Accounts with unknown status are not counted here
+            int noTwoFactorCount = accounts.Values.Count(a => !a.IsDeleted && string.IsNullOrWhiteSpace(a.TotpSecret));
 
+            // Safety Score formula:
+            // Start at 100, deduct for each risk factor (capped per category)
+            // Breached: -10 per account, max -40
+            // Reused: -5 per account, max -20
+            // Weak: -3 per account, max -15
+            // Old (>365 days): -3 per account, max -15
+            // Unknown change date: -2 per account, max -10
+            // No website 2FA: not deducted from score (informational only)
+            // NOTE: Score is an indicator, not a guarantee of absolute safety
             int score = 100;
             score -= Math.Min(40, 10 * breachedCount);
             score -= Math.Min(20, 5 * reusedCount);
             score -= Math.Min(15, 3 * weakCount);
             score -= Math.Min(15, 3 * oldCount);
+            score -= Math.Min(10, 2 * unknownDateCount);
             int safetyScore = Math.Max(0, Math.Min(100, score));
 
             return new VaultHealthSummary(

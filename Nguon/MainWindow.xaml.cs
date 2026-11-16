@@ -3520,5 +3520,190 @@ namespace PersonalInfoManager
                     MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
+        private void RefreshVaultHealth()
+        {
+            if (!EnsureActiveSession()) return;
+            lblVaultHealthLoading.Visibility = Visibility.Visible;
+            dgVaultHealth.Visibility = Visibility.Collapsed;
+            lblVaultHealthEmpty.Visibility = Visibility.Collapsed;
+
+            string username = SessionService.CurrentUser!.Username;
+
+            Task.Run(() =>
+            {
+                try
+                {
+                    var accounts = _vaultService.Load(username);
+                    var activeAccounts = accounts.Where(a => !a.IsDeleted).ToList();
+
+                    // Check if HIBP audit results are current
+                    EnsurePwnedAuditLoaded(username);
+                    bool breachResultsAreCurrent = _pwnedResultsAreCurrent;
+
+                    var findings = PasswordSecurityAuditService.Analyze(activeAccounts, _pwnedBreachedAccountIds, breachResultsAreCurrent, DateTime.Now);
+                    var reviewStates = SecurityFindingReviewService.SyncFindings(username, findings, activeAccounts.ToDictionary(a => a.Id, a => a));
+
+                    var twoFactorStatus = new Dictionary<Guid, bool>();
+                    foreach (var account in activeAccounts)
+                    {
+                        twoFactorStatus[account.Id] = TwoFactorService.IsEnabled(username) && TwoFactorService.HasUsableConfiguration(username);
+                    }
+
+                    var summary = SecurityFindingReviewService.GetVaultHealthSummary(
+                        username, findings, activeAccounts.ToDictionary(a => a.Id, a => a), reviewStates, twoFactorStatus);
+
+                    Dispatcher.Invoke(() =>
+                    {
+                        if (_isLocked || !EnsureActiveSession()) return;
+
+                        lblSafetyScore.Text = summary.SafetyScore.ToString();
+                        lblSafetyScoreLabel.Text = LanguageService.Format("ui.vaulthealthdashboard.text016", summary.SafetyScore);
+                        lblSafetyScoreDetail.Text = LanguageService.Translate("ui.vaulthealthdashboard.text018");
+
+                        lblWeakCount.Text = summary.WeakPasswordCount.ToString();
+                        lblReusedCount.Text = summary.ReusedPasswordCount.ToString();
+                        lblBreachedCount.Text = summary.BreachedPasswordCount.ToString();
+                        lblOldCount.Text = summary.OldPasswordCount.ToString();
+                        lblNoTwoFactorCount.Text = summary.NoTwoFactorCount.ToString();
+
+                        var items = summary.Items.Select(item => new VaultHealthViewItem
+                        {
+                            AccountId = item.AccountId,
+                            ServiceName = item.ServiceName,
+                            Username = item.Username,
+                            RiskLevel = item.RiskLevel,
+                            RiskLevelText = item.RiskLevel switch
+                            {
+                                2 => LanguageService.Translate("ui.vaulthealthdashboard.text012"),
+                                1 => LanguageService.Translate("ui.vaulthealthdashboard.text013"),
+                                _ => LanguageService.Translate("ui.vaulthealthdashboard.text014")
+                            },
+                            RiskDescription = item.RiskDescription,
+                            HasTwoFactorText = item.HasTwoFactorEnabled switch
+                            {
+                                true => LanguageService.Translate("ui.vaulthealthdashboard.text029"),
+                                false => LanguageService.Translate("ui.vaulthealthdashboard.text030"),
+                                _ => LanguageService.Translate("ui.vaulthealthdashboard.text031")
+                            },
+                            ReviewStatus = item.ReviewStatus switch
+                            {
+                                SecurityFindingReviewStatus.Fixed => LanguageService.Translate("ui.mainwindow.message063"),
+                                SecurityFindingReviewStatus.Snoozed => LanguageService.Translate("ui.mainwindow.message064"),
+                                SecurityFindingReviewStatus.Ignored => LanguageService.Translate("ui.mainwindow.message065"),
+                                _ => LanguageService.Translate("ui.mainwindow.message066")
+                            }
+                        }).ToList();
+
+                        ApplyVaultHealthFilter(items);
+                    });
+                }
+                catch (Exception ex)
+                {
+                    Dispatcher.Invoke(() =>
+                    {
+                        if (!_isLocked && EnsureActiveSession())
+                        {
+                            lblVaultHealthLoading.Visibility = Visibility.Collapsed;
+                            PersonalInfoManager.Services.LocalizedMessageBox.Show(this, ex.Message,
+                                LanguageService.Translate("ui.vaulthealthdashboard.text001"), MessageBoxButton.OK, MessageBoxImage.Warning);
+                        }
+                    });
+                }
+            });
+        }
+
+        private sealed class VaultHealthViewItem
+        {
+            public Guid AccountId { get; set; }
+            public string ServiceName { get; set; } = "";
+            public string Username { get; set; } = "";
+            public int RiskLevel { get; set; }
+            public string RiskLevelText { get; set; } = "";
+            public string RiskDescription { get; set; } = "";
+            public string HasTwoFactorText { get; set; } = "";
+            public string ReviewStatus { get; set; } = "";
+        }
+
+        private void ApplyVaultHealthFilter(List<VaultHealthViewItem> items)
+        {
+            string filter = (cmbRiskFilter.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "all";
+            IEnumerable<VaultHealthViewItem> filtered = filter switch
+            {
+                "high" => items.Where(i => i.RiskLevel == 2),
+                "medium" => items.Where(i => i.RiskLevel == 1 && !i.RiskDescription.Contains("Không có")),
+                "low" => items.Where(i => i.RiskLevel == 0 || i.RiskDescription.Contains("Không có")),
+                "none" => items.Where(i => i.RiskLevel == 0),
+                _ => items
+            };
+
+            var list = filtered.ToList();
+            dgVaultHealth.ItemsSource = list;
+
+            lblVaultHealthLoading.Visibility = Visibility.Collapsed;
+            if (list.Count == 0)
+            {
+                dgVaultHealth.Visibility = Visibility.Collapsed;
+                lblVaultHealthEmpty.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                dgVaultHealth.Visibility = Visibility.Visible;
+                lblVaultHealthEmpty.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        private void VaultHealthRiskFilter_Changed(object sender, SelectionChangedEventArgs e)
+        {
+            if (!IsLoaded) return;
+            if (dgVaultHealth.ItemsSource is List<VaultHealthViewItem> items)
+            {
+                ApplyVaultHealthFilter(items);
+            }
+        }
+
+        private void BtnRefreshVaultHealth_Click(object sender, RoutedEventArgs e)
+        {
+            RefreshVaultHealth();
+        }
+
+        private void DgVaultHealth_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+        }
+
+        private void DgVaultHealth_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            if (dgVaultHealth.SelectedItem is VaultHealthViewItem item)
+            {
+                OpenVaultHealthAccount(item.AccountId);
+            }
+        }
+
+        private void BtnOpenVaultHealthAccount_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button { Tag: Guid accountId })
+            {
+                OpenVaultHealthAccount(accountId);
+            }
+        }
+
+        private void OpenVaultHealthAccount(Guid accountId)
+        {
+            CloseSettings();
+            txtSearch.Clear();
+            _searchTimer.Stop();
+            if (chkFavoritesOnly.IsChecked == true) chkFavoritesOnly.IsChecked = false;
+            ShowPage("accounts");
+            navAccounts.IsChecked = true;
+            RefreshAccounts();
+            foreach (var item in dgAccounts.Items)
+            {
+                var original = item.GetType().GetProperty("_original")?.GetValue(item) as SavedAccount;
+                if (original?.Id != accountId) continue;
+                dgAccounts.SelectedItem = item;
+                dgAccounts.ScrollIntoView(item);
+                dgAccounts.Focus();
+                return;
+            }
+        }
     }
 }

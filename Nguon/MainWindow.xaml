@@ -737,6 +737,8 @@
                                                          Style="{StaticResource NavItem}" Checked="Nav_Checked" />
                                             <RadioButton GroupName="SettingsNav" Tag="security" Content="{DynamicResource xaml.mainwindow.text063}"
                                                          Style="{StaticResource NavItem}" Checked="Nav_Checked" />
+                                            <RadioButton GroupName="SettingsNav" Tag="vaulthealth" Content="{DynamicResource ui.vaulthealthdashboard.text001}"
+                                                         Style="{StaticResource NavItem}" Checked="Nav_Checked" />
                                         </StackPanel>
                                         <StackPanel>
                                             <TextBlock Text="{DynamicResource xaml.mainwindow.text064}" Style="{StaticResource NavGroup}" />
@@ -1289,6 +1291,152 @@
                                                 <TextBlock Text="{DynamicResource xaml.mainwindow.text236}" Style="{StaticResource RowDesc}" />
                                             </StackPanel>
                                         </DockPanel>
+                                    </Border>
+                                </StackPanel>
+                            </ScrollViewer>
+                            <ScrollViewer x:Name="pageVaultHealth" Visibility="Collapsed"
+                                          VerticalScrollBarVisibility="Auto" PanningMode="VerticalOnly">
+                                <StackPanel Margin="28,8,28,24">
+                                    <TextBlock Text="{DynamicResource ui.vaulthealthdashboard.text001}" Style="{StaticResource PageTitle}" />
+                                    <TextBlock Text="{DynamicResource ui.vaulthealthdashboard.text003}" Style="{StaticResource PageSub}" />
+                                    <Border Style="{StaticResource SettingRow}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,24,0">
+                                                <TextBlock x:Name="lblSafetyScore" FontSize="48" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" TextAlignment="Center" MinWidth="100" />
+                                                <TextBlock x:Name="lblSafetyScoreLabel" FontSize="14" Foreground="{DynamicResource TextSecondaryBrush}" TextAlignment="Center" Margin="0,4,0,0" />
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                <TextBlock Text="{DynamicResource ui.vaulthealthdashboard.text002}" Style="{StaticResource RowTitle}" />
+                                                <TextBlock x:Name="lblSafetyScoreDetail" Style="{StaticResource RowDesc}" TextWrapping="Wrap" />
+                                            </StackPanel>
+                                            <Button Grid.Column="2" Content="{DynamicResource ui.vaulthealthdashboard.text019}" Style="{StaticResource RowButton}" Click="BtnRefreshVaultHealth_Click" VerticalAlignment="Top" Margin="0,0,0,8" />
+                                        </Grid>
+                                    </Border>
+                                    <Border Style="{StaticResource SettingRow}" Margin="0,0,0,14">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0" Background="{DynamicResource BackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12,8" Margin="0,0,4,0">
+                                                <StackPanel>
+                                                    <TextBlock Text="{DynamicResource ui.vaulthealthdashboard.text004}" Style="{StaticResource RowDesc}" HorizontalAlignment="Center" />
+                                                    <TextBlock x:Name="lblWeakCount" FontSize="24" FontWeight="Bold" Foreground="#F59E0B" HorizontalAlignment="Center" Margin="0,4,0,0" />
+                                                </StackPanel>
+                                            </Border>
+                                            <Border Grid.Column="1" Background="{DynamicResource BackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12,8" Margin="4,0,4,0">
+                                                <StackPanel>
+                                                    <TextBlock Text="{DynamicResource ui.vaulthealthdashboard.text005}" Style="{StaticResource RowDesc}" HorizontalAlignment="Center" />
+                                                    <TextBlock x:Name="lblReusedCount" FontSize="24" FontWeight="Bold" Foreground="#EF4444" HorizontalAlignment="Center" Margin="0,4,0,0" />
+                                                </StackPanel>
+                                            </Border>
+                                            <Border Grid.Column="2" Background="{DynamicResource BackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12,8" Margin="4,0,4,0">
+                                                <StackPanel>
+                                                    <TextBlock Text="{DynamicResource ui.vaulthealthdashboard.text006}" Style="{StaticResource RowDesc}" HorizontalAlignment="Center" />
+                                                    <TextBlock x:Name="lblBreachedCount" FontSize="24" FontWeight="Bold" Foreground="#DC2626" HorizontalAlignment="Center" Margin="0,4,0,0" />
+                                                </StackPanel>
+                                            </Border>
+                                            <Border Grid.Column="3" Background="{DynamicResource BackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12,8" Margin="4,0,4,0">
+                                                <StackPanel>
+                                                    <TextBlock Text="{DynamicResource ui.vaulthealthdashboard.text007}" Style="{StaticResource RowDesc}" HorizontalAlignment="Center" />
+                                                    <TextBlock x:Name="lblOldCount" FontSize="24" FontWeight="Bold" Foreground="#6366F1" HorizontalAlignment="Center" Margin="0,4,0,0" />
+                                                </StackPanel>
+                                            </Border>
+                                            <Border Grid.Column="4" Background="{DynamicResource BackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12,8" Margin="4,0,0,0">
+                                                <StackPanel>
+                                                    <TextBlock Text="{DynamicResource ui.vaulthealthdashboard.text008}" Style="{StaticResource RowDesc}" HorizontalAlignment="Center" />
+                                                    <TextBlock x:Name="lblNoTwoFactorCount" FontSize="24" FontWeight="Bold" Foreground="#EC4899" HorizontalAlignment="Center" Margin="0,4,0,0" />
+                                                </StackPanel>
+                                            </Border>
+                                        </Grid>
+                                    </Border>
+                                    <Border Style="{StaticResource SettingRow}" Margin="0,0,0,14">
+                                        <DockPanel>
+                                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                                                <TextBlock Text="{DynamicResource ui.vaulthealthdashboard.text010}" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="{DynamicResource TextSecondaryBrush}" />
+                                                <ComboBox x:Name="cmbRiskFilter" Width="140" Height="36" VerticalContentAlignment="Center" SelectionChanged="VaultHealthRiskFilter_Changed">
+                                                    <ComboBoxItem Content="{DynamicResource ui.vaulthealthdashboard.text011}" Tag="all" IsSelected="True" />
+                                                    <ComboBoxItem Content="{DynamicResource ui.vaulthealthdashboard.text012}" Tag="high" />
+                                                    <ComboBoxItem Content="{DynamicResource ui.vaulthealthdashboard.text013}" Tag="medium" />
+                                                    <ComboBoxItem Content="{DynamicResource ui.vaulthealthdashboard.text014}" Tag="low" />
+                                                    <ComboBoxItem Content="{DynamicResource ui.vaulthealthdashboard.text023}" Tag="none" />
+                                                </ComboBox>
+                                            </StackPanel>
+                                            <TextBlock Text="{DynamicResource ui.vaulthealthdashboard.text009}" Style="{StaticResource RowTitle}" />
+                                        </DockPanel>
+                                    </Border>
+                                    <Border Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8">
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="*" />
+                                            </Grid.RowDefinitions>
+                                            <DataGrid x:Name="dgVaultHealth"
+                                                      Style="{StaticResource FadeInDataGrid}"
+                                                      CellStyle="{StaticResource AccountGridCell}"
+                                                      CanUserResizeColumns="True"
+                                                      HorizontalScrollBarVisibility="Auto"
+                                                      VerticalScrollBarVisibility="Auto"
+                                                      SelectionMode="Extended"
+                                                      SelectionUnit="FullRow"
+                                                      EnableRowVirtualization="True"
+                                                      VirtualizingPanel.IsVirtualizing="True"
+                                                      VirtualizingPanel.VirtualizationMode="Recycling"
+                                                      Grid.Row="1"
+                                                      SelectionChanged="DgVaultHealth_SelectionChanged"
+                                                      MouseDoubleClick="DgVaultHealth_MouseDoubleClick">
+                                                <DataGrid.Columns>
+                                                    <DataGridTextColumn Header="{DynamicResource ui.vaulthealthdashboard.text022}" Binding="{Binding RiskLevelText}" Width="Auto" MinWidth="100"
+                                                                        ElementStyle="{StaticResource AccountGridCenteredText}" />
+                                                    <DataGridTextColumn Header="{DynamicResource xaml.mainwindow.text026}" Binding="{Binding ServiceName}" Width="*"
+                                                                        ElementStyle="{StaticResource AccountGridText}" />
+                                                    <DataGridTextColumn Header="{DynamicResource xaml.mainwindow.text027}" Binding="{Binding Username}" Width="*"
+                                                                        ElementStyle="{StaticResource AccountGridText}" />
+                                                    <DataGridTextColumn Header="{DynamicResource ui.vaulthealthdashboard.text024}" Binding="{Binding RiskDescription}" Width="2*"
+                                                                        ElementStyle="{StaticResource AccountGridText}" />
+                                                    <DataGridTextColumn Header="{DynamicResource ui.vaulthealthdashboard.text025}" Binding="{Binding HasTwoFactorText}" Width="Auto" MinWidth="80"
+                                                                        ElementStyle="{StaticResource AccountGridCenteredText}" />
+                                                    <DataGridTextColumn Header="{DynamicResource xaml.mainwindow.text096}" Binding="{Binding ReviewStatus}" Width="Auto" MinWidth="120"
+                                                                        ElementStyle="{StaticResource AccountGridCenteredText}" />
+                                                    <DataGridTemplateColumn Header="{DynamicResource ui.vaulthealthdashboard.text015}" Width="Auto" MinWidth="100">
+                                                        <DataGridTemplateColumn.CellTemplate>
+                                                            <DataTemplate>
+                                                                <Button Content="{DynamicResource ui.vaulthealthdashboard.text015}"
+                                                                        Tag="{Binding AccountId}"
+                                                                        Style="{StaticResource AccountActionPopupButton}"
+                                                                        Click="BtnOpenVaultHealthAccount_Click"
+                                                                        Padding="8,4" Margin="2"
+                                                                        MinWidth="80" />
+                                                            </DataTemplate>
+                                                        </DataGridTemplateColumn.CellTemplate>
+                                                    </DataGridTemplateColumn>
+                                                </DataGrid.Columns>
+                                            </DataGrid>
+                                            <TextBlock x:Name="lblVaultHealthEmpty"
+                                                       Text="{DynamicResource ui.vaulthealthdashboard.text017}"
+                                                       Style="{StaticResource RowDesc}"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"
+                                                       Grid.Row="1"
+                                                       Visibility="Collapsed"
+                                                       Margin="20" />
+                                            <TextBlock x:Name="lblVaultHealthLoading"
+                                                       Text="{DynamicResource ui.vaulthealthdashboard.text020}"
+                                                       Style="{StaticResource RowDesc}"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"
+                                                       Grid.Row="1"
+                                                       Visibility="Collapsed"
+                                                       Margin="20" />
+                                        </Grid>
                                     </Border>
                                 </StackPanel>
                             </ScrollViewer>
