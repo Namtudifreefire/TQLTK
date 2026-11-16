@@ -3543,11 +3543,8 @@ namespace PersonalInfoManager
                     var findings = PasswordSecurityAuditService.Analyze(activeAccounts, _pwnedBreachedAccountIds, breachResultsAreCurrent, DateTime.Now);
                     var reviewStates = SecurityFindingReviewService.SyncFindings(username, findings, activeAccounts.ToDictionary(a => a.Id, a => a));
 
+                    // Pass empty twoFactorStatus - GetVaultHealthSummary computes HasTwoFactorEnabled from account.TotpSecret (website 2FA)
                     var twoFactorStatus = new Dictionary<Guid, bool>();
-                    foreach (var account in activeAccounts)
-                    {
-                        twoFactorStatus[account.Id] = TwoFactorService.IsEnabled(username) && TwoFactorService.HasUsableConfiguration(username);
-                    }
 
                     var summary = SecurityFindingReviewService.GetVaultHealthSummary(
                         username, findings, activeAccounts.ToDictionary(a => a.Id, a => a), reviewStates, twoFactorStatus);
@@ -3587,14 +3584,15 @@ namespace PersonalInfoManager
                             },
                             ReviewStatus = item.ReviewStatus switch
                             {
-                                SecurityFindingReviewStatus.Fixed => LanguageService.Translate("ui.mainwindow.message063"),
-                                SecurityFindingReviewStatus.Snoozed => LanguageService.Translate("ui.mainwindow.message064"),
-                                SecurityFindingReviewStatus.Ignored => LanguageService.Translate("ui.mainwindow.message065"),
-                                _ => LanguageService.Translate("ui.mainwindow.message066")
+                                SecurityFindingReviewStatus.Fixed => LanguageService.Translate("ui.vaulthealthdashboard.text033"),
+                                SecurityFindingReviewStatus.Snoozed => LanguageService.Translate("ui.vaulthealthdashboard.text034"),
+                                SecurityFindingReviewStatus.Ignored => LanguageService.Translate("ui.vaulthealthdashboard.text035"),
+                                _ => LanguageService.Translate("ui.vaulthealthdashboard.text032")
                             }
                         }).ToList();
 
-                        ApplyVaultHealthFilter(items);
+                        _allVaultHealthItems = items;
+                        ApplyVaultHealthFilter();
                     });
                 }
                 catch (Exception ex)
@@ -3624,16 +3622,18 @@ namespace PersonalInfoManager
             public string ReviewStatus { get; set; } = "";
         }
 
-        private void ApplyVaultHealthFilter(List<VaultHealthViewItem> items)
+        private List<VaultHealthViewItem> _allVaultHealthItems = new();
+
+        private void ApplyVaultHealthFilter()
         {
             string filter = (cmbRiskFilter.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "all";
             IEnumerable<VaultHealthViewItem> filtered = filter switch
             {
-                "high" => items.Where(i => i.RiskLevel == 2),
-                "medium" => items.Where(i => i.RiskLevel == 1 && !i.RiskDescription.Contains("Không có")),
-                "low" => items.Where(i => i.RiskLevel == 0 || i.RiskDescription.Contains("Không có")),
-                "none" => items.Where(i => i.RiskLevel == 0),
-                _ => items
+                "high" => _allVaultHealthItems.Where(i => i.RiskLevel == 2),
+                "medium" => _allVaultHealthItems.Where(i => i.RiskLevel == 1),
+                "low" => _allVaultHealthItems.Where(i => i.RiskLevel == 0),
+                "none" => _allVaultHealthItems.Where(i => i.RiskLevel == 0),
+                _ => _allVaultHealthItems
             };
 
             var list = filtered.ToList();
@@ -3655,10 +3655,7 @@ namespace PersonalInfoManager
         private void VaultHealthRiskFilter_Changed(object sender, SelectionChangedEventArgs e)
         {
             if (!IsLoaded) return;
-            if (dgVaultHealth.ItemsSource is List<VaultHealthViewItem> items)
-            {
-                ApplyVaultHealthFilter(items);
-            }
+            ApplyVaultHealthFilter();
         }
 
         private void BtnRefreshVaultHealth_Click(object sender, RoutedEventArgs e)

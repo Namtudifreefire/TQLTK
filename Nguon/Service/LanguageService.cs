@@ -184,7 +184,7 @@ public static class LanguageService
     public static void RefreshResources()
     {
         if (Application.Current is not { } app) return;
-        foreach (var message in LocalizationAuditService.Catalog.Where(message => message.Id.StartsWith("xaml.", StringComparison.Ordinal)))
+        foreach (var message in LocalizationAuditService.Catalog.Where(message => message.Id.StartsWith("xaml.", StringComparison.Ordinal) || message.Id.StartsWith("ui.", StringComparison.Ordinal)))
         {
             string text = LocalizationAuditService.Get(message.Id, CurrentCode);
             if (!Equals(app.Resources[message.Id], text)) app.Resources[message.Id] = text;

@@ -2142,7 +2142,7 @@ internal static class EnglishCatalog
         new KeyValuePair<string, string>(" vào kho mật khẩu của '", " into the password vault for '"),
         new KeyValuePair<string, string>("Bảng điều khiển an toàn", "Vault Health Dashboard"),
         new KeyValuePair<string, string>("Điểm an toàn", "Safety Score"),
-        new KeyValuePair<string, string>("Điểm an toàn của vault được tính dựa trên các yếu tố: mật khẩu yếu, trùng lặp, bị lộ, cũ và trạng thái 2FA. Điểm càng cao thì vault càng an toàn.", "The vault safety score is calculated from factors such as weak, reused, breached, old passwords, and 2FA status. Higher score means better security."),
+        new KeyValuePair<string, string>("Điểm an toàn của vault được tính dựa trên: mật khẩu yếu, trùng lặp, bị lộ, cũ, và ngày đổi không rõ. Trạng thái 2FA website chỉ hiển thị tham khảo, không vào điểm. Điểm càng cao thì rủi ro càng thấp.", "The vault safety score is calculated from: weak, reused, breached, old passwords, and unknown change dates. Website 2FA status is informational only, not scored. Higher score means lower risk."),
         new KeyValuePair<string, string>("Mật khẩu yếu", "Weak Passwords"),
         new KeyValuePair<string, string>("Mật khẩu trùng lặp", "Reused Passwords"),
         new KeyValuePair<string, string>("Mật khẩu bị lộ", "Breached Passwords"),
@@ -2158,6 +2158,7 @@ internal static class EnglishCatalog
         new KeyValuePair<string, string>("Điểm an toàn: {0}/100", "Safety Score: {0}/100"),
         new KeyValuePair<string, string>("Không có tài khoản nào có rủi ro.", "No accounts at risk."),
         new KeyValuePair<string, string>("Điểm an toàn được tính từ: Mật khẩu yếu, Trùng lặp, Bị lộ, Cũ, và Trạng thái 2FA.", "Safety score is calculated from: Weak, Reused, Breached, Old passwords, and 2FA status."),
+        new KeyValuePair<string, string>("Điểm an toàn: Yếu, Trùng, Bị lộ, Cũ, Không rõ ngày đổi. 2FA website chỉ tham khảo.", "Safety score: Weak, Reused, Breached, Old, Unknown date. Website 2FA is informational only."),
         new KeyValuePair<string, string>("Làm mới", "Refresh"),
         new KeyValuePair<string, string>("Đang tính toán...", "Calculating..."),
         new KeyValuePair<string, string>("Không có tài khoản.", "No accounts."),
@@ -2171,5 +2172,9 @@ internal static class EnglishCatalog
         new KeyValuePair<string, string>("Đã bật 2FA", "2FA enabled"),
         new KeyValuePair<string, string>("Chưa bật 2FA", "No 2FA"),
         new KeyValuePair<string, string>("2FA chưa cấu hình trong TQLTK", "2FA not configured in TQLTK"),
+        new KeyValuePair<string, string>("Đang mở", "Open"),
+        new KeyValuePair<string, string>("Đã xử lý", "Fixed"),
+        new KeyValuePair<string, string>("Nhắc lại", "Snoozed"),
+        new KeyValuePair<string, string>("Đã bỏ qua", "Ignored"),
     };
 }
