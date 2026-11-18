@@ -1,11 +1,15 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Data;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using Microsoft.Win32;
@@ -66,6 +70,7 @@ namespace PersonalInfoManager
                         RefreshAccounts(updateStatus: false);
                         RefreshSecurityOverview();
                         LoadBackupPolicyUi();
+                        RefreshVaultHealth();
                     }
                 }
             };
@@ -3575,7 +3580,8 @@ namespace PersonalInfoManager
                                 1 => LanguageService.Translate("ui.vaulthealthdashboard.text013"),
                                 _ => LanguageService.Translate("ui.vaulthealthdashboard.text014")
                             },
-                            RiskDescription = item.RiskDescription,
+                            RiskFactorKinds = item.RiskFactorKinds,
+                            RiskDescription = BuildRiskDescription(item.RiskFactorKinds),
                             HasTwoFactorText = item.HasTwoFactorEnabled switch
                             {
                                 true => LanguageService.Translate("ui.vaulthealthdashboard.text029"),
@@ -3617,9 +3623,37 @@ namespace PersonalInfoManager
             public string Username { get; set; } = "";
             public int RiskLevel { get; set; }
             public string RiskLevelText { get; set; } = "";
+            public string RiskFactorKinds { get; set; } = "";
             public string RiskDescription { get; set; } = "";
             public string HasTwoFactorText { get; set; } = "";
             public string ReviewStatus { get; set; } = "";
+        }
+
+        private static string BuildRiskDescription(string riskFactorKinds)
+        {
+            if (string.IsNullOrWhiteSpace(riskFactorKinds) || riskFactorKinds == "None")
+                return LanguageService.Translate("ui.vaulthealthdashboard.text027"); // "No risk factors"
+
+            var kinds = riskFactorKinds.Split(',', StringSplitOptions.RemoveEmptyEntries);
+            var descriptions = new List<string>();
+
+            foreach (var kind in kinds)
+            {
+                string? key = kind.Trim() switch
+                {
+                    "Breached" => "ui.vaulthealthdashboard.text006",
+                    "Reused" => "ui.vaulthealthdashboard.text005",
+                    "Weak" => "ui.vaulthealthdashboard.text004",
+                    "OlderThanYear" => "ui.vaulthealthdashboard.text007",
+                    "UnknownChangeDate" => "ui.vaulthealthdashboard.text028", // "Password change date unknown"
+                    _ => null
+                };
+
+                if (!string.IsNullOrEmpty(key))
+                    descriptions.Add(LanguageService.Translate(key!));
+            }
+
+            return descriptions.Count > 0 ? string.Join(", ", descriptions) : LanguageService.Translate("ui.vaulthealthdashboard.text027");
         }
 
         private List<VaultHealthViewItem> _allVaultHealthItems = new();
@@ -3650,6 +3684,162 @@ namespace PersonalInfoManager
                 dgVaultHealth.Visibility = Visibility.Visible;
                 lblVaultHealthEmpty.Visibility = Visibility.Collapsed;
             }
+            // Sync top horizontal ScrollBar with DataGrid's internal ScrollViewer
+            SyncVaultHealthTopScrollBar();
+        }
+
+        private ScrollViewer? _vaultHealthScrollViewer;
+        private bool _isSyncingScrollBar;
+
+        private void SyncVaultHealthTopScrollBar()
+        {
+            if (dgVaultHealthTopScrollBar == null) return;
+
+            // Find the DataGrid's internal ScrollViewer - try DG_ScrollViewer first (standard WPF DataGrid template part)
+            var scrollViewer = dgVaultHealth.Template?.FindName("DG_ScrollViewer", dgVaultHealth) as ScrollViewer
+                ?? dgVaultHealth.Template?.FindName("PART_ScrollViewer", dgVaultHealth) as ScrollViewer
+                ?? FindVisualChild<ScrollViewer>(dgVaultHealth);
+
+            if (scrollViewer == null)
+            {
+                // DataGrid template might not be applied yet, defer with LayoutUpdated for more reliable timing
+                dgVaultHealth.LayoutUpdated -= OnVaultHealthDataGridLayoutUpdated;
+                dgVaultHealth.LayoutUpdated += OnVaultHealthDataGridLayoutUpdated;
+                return;
+            }
+
+            // Cache the scroll viewer for event subscriptions
+            if (_vaultHealthScrollViewer != scrollViewer)
+            {
+                if (_vaultHealthScrollViewer != null)
+                {
+                    _vaultHealthScrollViewer.ScrollChanged -= OnVaultHealthScrollViewerScrollChanged;
+                }
+                _vaultHealthScrollViewer = scrollViewer;
+                _vaultHealthScrollViewer.ScrollChanged += OnVaultHealthScrollViewerScrollChanged;
+            }
+
+            // Update both ScrollBar properties from ScrollViewer
+            UpdateBothScrollBarsFromScrollViewer(scrollViewer);
+        }
+
+        private void OnVaultHealthDataGridLayoutUpdated(object sender, EventArgs e)
+        {
+            // Keep trying until template is applied and ScrollViewer is found
+            var scrollViewer = dgVaultHealth.Template?.FindName("DG_ScrollViewer", dgVaultHealth) as ScrollViewer
+                ?? dgVaultHealth.Template?.FindName("PART_ScrollViewer", dgVaultHealth) as ScrollViewer
+                ?? FindVisualChild<ScrollViewer>(dgVaultHealth);
+
+            if (scrollViewer != null)
+            {
+                dgVaultHealth.LayoutUpdated -= OnVaultHealthDataGridLayoutUpdated;
+                SyncVaultHealthTopScrollBar();
+            }
+        }
+
+        private void UpdateBothScrollBarsFromScrollViewer(ScrollViewer scrollViewer)
+        {
+            if (dgVaultHealthTopScrollBar == null || _isSyncingScrollBar) return;
+
+            _isSyncingScrollBar = true;
+            try
+            {
+                // Sync Value (horizontal offset)
+                double offset = scrollViewer.HorizontalOffset;
+                dgVaultHealthTopScrollBar.Value = offset;
+                dgVaultHealthBottomScrollBar.Value = offset;
+
+                // Sync Maximum (scrollable extent)
+                double max = scrollViewer.ScrollableWidth;
+                dgVaultHealthTopScrollBar.Maximum = max;
+                dgVaultHealthBottomScrollBar.Maximum = max;
+
+                // Sync ViewportSize and LargeChange
+                double viewport = scrollViewer.ViewportWidth;
+                dgVaultHealthTopScrollBar.ViewportSize = viewport;
+                dgVaultHealthBottomScrollBar.ViewportSize = viewport;
+                dgVaultHealthTopScrollBar.LargeChange = viewport;
+                dgVaultHealthBottomScrollBar.LargeChange = viewport;
+                dgVaultHealthTopScrollBar.SmallChange = Math.Max(1, viewport / 10);
+                dgVaultHealthBottomScrollBar.SmallChange = Math.Max(1, viewport / 10);
+
+                // Visibility: show when there's content to scroll horizontally
+                double epsilon = 0.5;
+                bool isVisible = scrollViewer.ScrollableWidth > epsilon;
+                dgVaultHealthTopScrollBar.Visibility = isVisible ? Visibility.Visible : Visibility.Collapsed;
+                dgVaultHealthBottomScrollBar.Visibility = isVisible ? Visibility.Visible : Visibility.Collapsed;
+
+                // Diagnostic output for runtime verification
+                System.Diagnostics.Debug.WriteLine($"[VaultHealth] ScrollViewer: ExtentWidth={scrollViewer.ExtentWidth:F1}, ViewportWidth={scrollViewer.ViewportWidth:F1}, ScrollableWidth={scrollViewer.ScrollableWidth:F1}, HorizontalOffset={scrollViewer.HorizontalOffset:F1}, TopScrollBar.Max={dgVaultHealthTopScrollBar.Maximum:F1}, TopScrollBar.Value={dgVaultHealthTopScrollBar.Value:F1}, TopScrollBar.ViewportSize={dgVaultHealthTopScrollBar.ViewportSize:F1}, Visible={dgVaultHealthTopScrollBar.Visibility}");
+            }
+            finally
+            {
+                _isSyncingScrollBar = false;
+            }
+        }
+
+        private void OnVaultHealthScrollViewerScrollChanged(object sender, ScrollChangedEventArgs e)
+        {
+            if (e.HorizontalChange != 0 || e.ExtentWidthChange != 0 || e.ViewportWidthChange != 0)
+            {
+                var scrollViewer = (ScrollViewer)sender;
+                UpdateBothScrollBarsFromScrollViewer(scrollViewer);
+            }
+        }
+
+        private void dgVaultHealthTopScrollBar_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (_isSyncingScrollBar || _vaultHealthScrollViewer == null) return;
+
+            _isSyncingScrollBar = true;
+            try
+            {
+                // User dragged the top scrollbar - scroll the DataGrid's ScrollViewer
+                _vaultHealthScrollViewer.ScrollToHorizontalOffset(e.NewValue);
+            }
+            finally
+            {
+                _isSyncingScrollBar = false;
+            }
+        }
+
+        private void dgVaultHealthBottomScrollBar_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (_isSyncingScrollBar || _vaultHealthScrollViewer == null) return;
+
+            _isSyncingScrollBar = true;
+            try
+            {
+                // User dragged the bottom scrollbar - scroll the DataGrid's ScrollViewer
+                _vaultHealthScrollViewer.ScrollToHorizontalOffset(e.NewValue);
+            }
+            finally
+            {
+                _isSyncingScrollBar = false;
+            }
+        }
+
+        private static T? FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
+        {
+            if (parent == null) return null;
+            int childrenCount = VisualTreeHelper.GetChildrenCount(parent);
+            for (int i = 0; i < childrenCount; i++)
+            {
+                var child = VisualTreeHelper.GetChild(parent, i);
+                if (child is T typedChild) return typedChild;
+                var result = FindVisualChild<T>(child);
+                if (result != null) return result;
+            }
+            return null;
+        }
+
+        private class ScrollBarVisibilityToVisibilityConverter : IValueConverter
+        {
+            public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+            {
+                return value is Visibility.Visible ? Visibility.Visible : Visibility.Collapsed;
+            }
+            public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => Binding.DoNothing;
         }
 
         private void VaultHealthRiskFilter_Changed(object sender, SelectionChangedEventArgs e)

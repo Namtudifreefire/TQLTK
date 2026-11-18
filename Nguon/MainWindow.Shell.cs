@@ -64,6 +64,14 @@ namespace PersonalInfoManager
 
             if (isSettings) _currentSettingsTag = tag;
 
+            // Adjust sidebar width for Vault Health Dashboard
+            if (settingsSidebarColumn != null)
+            {
+                settingsSidebarColumn.Width = tag == "vaulthealth"
+                    ? new GridLength(210)
+                    : new GridLength(240);
+            }
+
             if (tag == "files") RefreshFiles();
             if (tag == "security") RefreshSecurityOverview();
             if (tag == "drive") RefreshDriveTokenStatus();

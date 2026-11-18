@@ -222,7 +222,7 @@ namespace PersonalInfoManager.Services
             string ServiceName,
             string Username,
             int RiskLevel,
-            string RiskDescription,
+            string RiskFactorKinds,  // Comma-separated PasswordSecurityFindingKind names for UI localization
             SecurityFindingReviewStatus ReviewStatus,
             string ReviewReason,
             bool? HasTwoFactorEnabled);
@@ -278,18 +278,24 @@ namespace PersonalInfoManager.Services
                     riskLevel = Math.Max(riskLevel, 1);
                 }
 
+                // Risk descriptions will be localized at UI layer via LanguageService
+                // Store risk factor kinds instead of pre-localized strings
+                var riskFactorKinds = new List<PasswordSecurityFindingKind>();
                 if (findingsForAccount.Any(f => f.Kind == PasswordSecurityFindingKind.Breached))
-                    descriptions.Add(LocalizationAuditService.Get("ui.vaulthealthdashboard.text006", "vi"));
+                    riskFactorKinds.Add(PasswordSecurityFindingKind.Breached);
                 if (findingsForAccount.Any(f => f.Kind == PasswordSecurityFindingKind.Reused))
-                    descriptions.Add(LocalizationAuditService.Get("ui.vaulthealthdashboard.text005", "vi"));
+                    riskFactorKinds.Add(PasswordSecurityFindingKind.Reused);
                 if (findingsForAccount.Any(f => f.Kind == PasswordSecurityFindingKind.Weak))
-                    descriptions.Add(LocalizationAuditService.Get("ui.vaulthealthdashboard.text004", "vi"));
+                    riskFactorKinds.Add(PasswordSecurityFindingKind.Weak);
                 if (findingsForAccount.Any(f => f.Kind == PasswordSecurityFindingKind.OlderThanYear))
-                    descriptions.Add(LocalizationAuditService.Get("ui.vaulthealthdashboard.text007", "vi"));
+                    riskFactorKinds.Add(PasswordSecurityFindingKind.OlderThanYear);
                 if (findingsForAccount.Any(f => f.Kind == PasswordSecurityFindingKind.UnknownChangeDate))
-                    descriptions.Add(LocalizationAuditService.Get("ui.vaulthealthdashboard.text023", "vi"));
+                    riskFactorKinds.Add(PasswordSecurityFindingKind.UnknownChangeDate);
 
-                string riskDescription = descriptions.Count > 0 ? string.Join(", ", descriptions) : LocalizationAuditService.Get("ui.vaulthealthdashboard.text027", "vi");
+                // Store risk factor kinds as comma-separated string for UI to localize
+                string riskFactorKindsString = riskFactorKinds.Count > 0
+                    ? string.Join(",", riskFactorKinds.Select(k => k.ToString()))
+                    : "None";
 
                 // Check if the account has TOTP configured (website 2FA), not TQLTK login 2FA
                 // null = unknown/not configured in TQLTK, true = has TOTP, false = known no TOTP
@@ -320,7 +326,7 @@ namespace PersonalInfoManager.Services
                     account.ServiceName ?? "",
                     account.Username ?? "",
                     riskLevel,
-                    riskDescription,
+                    riskFactorKindsString,
                     reviewState?.Status ?? SecurityFindingReviewStatus.Open,
                     reviewState?.Reason ?? "",
                     hasWebsite2fa

@@ -43,7 +43,7 @@ internal static class EnglishCatalog
         Add("Băm mật khẩu đăng nhập", "Sign-in password hashing");
         Add("Mặc định dùng Argon2id. Có thể bật PBKDF2-HMAC-SHA256 cho môi trường cần tương thích FIPS; hash cũ được nâng cấp sau lần đăng nhập thành công.", "Argon2id is used by default. PBKDF2-HMAC-SHA256 is available for environments that require FIPS-compatible hashing; existing hashes are upgraded after a successful sign-in.");
         Add("Dùng PBKDF2-HMAC-SHA256 (tương thích FIPS)", "Use PBKDF2-HMAC-SHA256 (FIPS-compatible)");
-        Add("Xoay khóa vault", "rotate the vault key");
+        Add("Xoay khóa vault", "Rotate Vault Key");
         Add("Chỉ quản trị viên đang hoạt động mới được phép xoay khóa vault.", "Only an active administrator can rotate the vault key.");
         Add("Không đủ quyền", "Insufficient permissions");
         Add("Mã hóa lại vault, ghi chú và bản sao lưu cục bộ đã nhận diện. Hãy đặt cụm mật khẩu sao lưu trước; khóa cũ được giữ mã hóa để mở các bản xuất lịch sử.", "Re-encrypt the vault, notes, and recognized local backups. Set a backup passphrase first; the old key is retained in protected form for historical exports.");
@@ -1459,7 +1459,7 @@ internal static class EnglishCatalog
         Add("Windows chuyển sang chế độ ngủ.", "Windows entered sleep mode.");
         Add("Windows vừa tiếp tục sau chế độ ngủ.", "Windows resumed from sleep.");
         Add("Chỉ quản trị viên đang hoạt động được xoay khóa dùng chung.", "Only an active administrator can rotate the shared key.");
-        Add("xoay khóa vault", "rotate the vault key");
+        Add("xoay khóa vault", "Rotate Vault Key");
         Add("quản lý tệp đính kèm", "manage attachments");
         Add("xem và hoàn tác lịch sử chỉnh sửa", "view and undo edit history");
         Add("thay đổi nhiều tài khoản cùng lúc", "change multiple accounts at once");
@@ -2165,7 +2165,7 @@ internal static class EnglishCatalog
         new KeyValuePair<string, string>("Mức độ rủi ro", "Risk Level"),
         new KeyValuePair<string, string>("Mọi rủi ro", "All Risks"),
         new KeyValuePair<string, string>("Yếu tố", "Factor"),
-        new KeyValuePair<string, string>("Số lượng", "Count"),
+        new KeyValuePair<string, string>("Trạng thái 2FA", "2FA Status"),
         new KeyValuePair<string, string>("Làm mới điểm an toàn", "Refresh Safety Score"),
         new KeyValuePair<string, string>("Không có mật khẩu.", "No password."),
         new KeyValuePair<string, string>("Chưa rõ ngày đổi mật khẩu", "Password change date unknown"),

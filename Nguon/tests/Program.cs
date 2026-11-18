@@ -507,7 +507,7 @@ internal static partial class Program
             ("Windows chuyển sang chế độ ngủ.", "Windows entered sleep mode."),
             ("Windows vừa tiếp tục sau chế độ ngủ.", "Windows resumed from sleep."),
             ("Chỉ quản trị viên đang hoạt động được xoay khóa dùng chung.", "Only an active administrator can rotate the shared key."),
-            ("xoay khóa vault", "rotate the vault key"),
+            ("xoay khóa vault", "Rotate Vault Key"),
             ("quản lý tệp đính kèm", "manage attachments"),
             ("xem và hoàn tác lịch sử chỉnh sửa", "view and undo edit history"),
             ("thay đổi nhiều tài khoản cùng lúc", "change multiple accounts at once"),
