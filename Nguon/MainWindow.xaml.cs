@@ -3723,7 +3723,7 @@ namespace PersonalInfoManager
             UpdateBothScrollBarsFromScrollViewer(scrollViewer);
         }
 
-        private void OnVaultHealthDataGridLayoutUpdated(object sender, EventArgs e)
+        private void OnVaultHealthDataGridLayoutUpdated(object? sender, EventArgs e)
         {
             // Keep trying until template is applied and ScrollViewer is found
             var scrollViewer = dgVaultHealth.Template?.FindName("DG_ScrollViewer", dgVaultHealth) as ScrollViewer
