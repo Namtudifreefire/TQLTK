@@ -29,11 +29,6 @@ namespace PersonalInfoManager.Services
         private static readonly object Sync = new();
         private static readonly byte[] Entropy = Encoding.UTF8.GetBytes("TQLTK.SecurityFindingReview.v1");
 
-        /// <summary>
-        /// Time provider for controlling time in tests. Defaults to system time.
-        /// In production, this is always <see cref="TimeProvider.System"/>.
-        /// In tests, can be replaced with a <see cref="FakeTimeProvider"/> for deterministic time control.
-        /// </summary>
         internal static TimeProvider TimeProvider { get; set; } = TimeProvider.System;
 
         private sealed class ReviewRecord
@@ -210,6 +205,171 @@ namespace PersonalInfoManager.Services
                 CryptographicOperations.ZeroMemory(json);
                 CryptographicOperations.ZeroMemory(protectedData);
             }
+        }
+
+        public sealed record VaultHealthSummary(
+            int SafetyScore,
+            int TotalAccounts,
+            int WeakPasswordCount,
+            int ReusedPasswordCount,
+            int BreachedPasswordCount,
+            int OldPasswordCount,
+            int NoTwoFactorCount,
+            IReadOnlyList<VaultHealthItem> Items);
+
+        public sealed record VaultHealthItem(
+            Guid AccountId,
+            string ServiceName,
+            string Username,
+            int RiskLevel,
+            string RiskFactorKinds,  // Comma-separated PasswordSecurityFindingKind names for UI localization
+            SecurityFindingReviewStatus ReviewStatus,
+            string ReviewReason,
+            bool? HasTwoFactorEnabled);
+
+        public static VaultHealthSummary GetVaultHealthSummary(
+            string username,
+            IReadOnlyList<PasswordSecurityFinding> findings,
+            IReadOnlyDictionary<Guid, SavedAccount> accounts,
+            IReadOnlyDictionary<string, SecurityFindingReviewState> reviewStates,
+            IReadOnlyDictionary<Guid, bool> twoFactorStatus)
+        {
+            var items = new List<VaultHealthItem>();
+
+            var findingsByAccount = findings
+                .Where(f => !string.IsNullOrEmpty(f.AccountId.ToString()))
+                .GroupBy(f => f.AccountId)
+                .ToDictionary(g => g.Key, g => g.ToList());
+
+            foreach (var account in accounts.Values.Where(a => !a.IsDeleted))
+            {
+                var findingsForAccount = findingsByAccount.TryGetValue(account.Id, out var fs) ? fs : new List<PasswordSecurityFinding>();
+
+                var descriptions = new List<string>();
+                int riskLevel = 0;
+
+                var breachedFinding = findingsForAccount.FirstOrDefault(f => f.Kind == PasswordSecurityFindingKind.Breached);
+                if (breachedFinding != null)
+                {
+                    riskLevel = Math.Max(riskLevel, 2);
+                }
+
+                var reusedFinding = findingsForAccount.FirstOrDefault(f => f.Kind == PasswordSecurityFindingKind.Reused);
+                if (reusedFinding != null)
+                {
+                    riskLevel = Math.Max(riskLevel, 1);
+                }
+
+                var weakFinding = findingsForAccount.FirstOrDefault(f => f.Kind == PasswordSecurityFindingKind.Weak);
+                if (weakFinding != null)
+                {
+                    riskLevel = Math.Max(riskLevel, 1);
+                }
+
+                var oldFinding = findingsForAccount.FirstOrDefault(f => f.Kind == PasswordSecurityFindingKind.OlderThanYear);
+                if (oldFinding != null)
+                {
+                    riskLevel = Math.Max(riskLevel, 1);
+                }
+
+                var unknownDateFinding = findingsForAccount.FirstOrDefault(f => f.Kind == PasswordSecurityFindingKind.UnknownChangeDate);
+                if (unknownDateFinding != null)
+                {
+                    riskLevel = Math.Max(riskLevel, 1);
+                }
+
+                // Risk descriptions will be localized at UI layer via LanguageService
+                // Store risk factor kinds instead of pre-localized strings
+                var riskFactorKinds = new List<PasswordSecurityFindingKind>();
+                if (findingsForAccount.Any(f => f.Kind == PasswordSecurityFindingKind.Breached))
+                    riskFactorKinds.Add(PasswordSecurityFindingKind.Breached);
+                if (findingsForAccount.Any(f => f.Kind == PasswordSecurityFindingKind.Reused))
+                    riskFactorKinds.Add(PasswordSecurityFindingKind.Reused);
+                if (findingsForAccount.Any(f => f.Kind == PasswordSecurityFindingKind.Weak))
+                    riskFactorKinds.Add(PasswordSecurityFindingKind.Weak);
+                if (findingsForAccount.Any(f => f.Kind == PasswordSecurityFindingKind.OlderThanYear))
+                    riskFactorKinds.Add(PasswordSecurityFindingKind.OlderThanYear);
+                if (findingsForAccount.Any(f => f.Kind == PasswordSecurityFindingKind.UnknownChangeDate))
+                    riskFactorKinds.Add(PasswordSecurityFindingKind.UnknownChangeDate);
+
+                // Store risk factor kinds as comma-separated string for UI to localize
+                string riskFactorKindsString = riskFactorKinds.Count > 0
+                    ? string.Join(",", riskFactorKinds.Select(k => k.ToString()))
+                    : "None";
+
+                // Check if the account has TOTP configured (website 2FA), not TQLTK login 2FA
+                // null = unknown/not configured in TQLTK, true = has TOTP, false = known no TOTP
+                bool? hasWebsite2fa = string.IsNullOrWhiteSpace(account.TotpSecret) ? false : true;
+
+                // Get the highest severity review state for this account across all finding kinds
+                var accountReviewStates = new List<SecurityFindingReviewState>();
+                foreach (var kind in new[] { PasswordSecurityFindingKind.Breached, PasswordSecurityFindingKind.Reused, PasswordSecurityFindingKind.Weak, PasswordSecurityFindingKind.OlderThanYear, PasswordSecurityFindingKind.UnknownChangeDate })
+                {
+                    var key = Key(account.Id, kind);
+                    if (reviewStates.TryGetValue(key, out var rs))
+                        accountReviewStates.Add(rs);
+                }
+                // Use the most severe status (Open > Snoozed > Fixed > Ignored)
+                var reviewState = accountReviewStates
+                    .OrderBy(rs => rs.Status switch
+                    {
+                        SecurityFindingReviewStatus.Open => 0,
+                        SecurityFindingReviewStatus.Snoozed => 1,
+                        SecurityFindingReviewStatus.Fixed => 2,
+                        SecurityFindingReviewStatus.Ignored => 3,
+                        _ => 4
+                    })
+                    .FirstOrDefault();
+
+                items.Add(new VaultHealthItem(
+                    account.Id,
+                    account.ServiceName ?? "",
+                    account.Username ?? "",
+                    riskLevel,
+                    riskFactorKindsString,
+                    reviewState?.Status ?? SecurityFindingReviewStatus.Open,
+                    reviewState?.Reason ?? "",
+                    hasWebsite2fa
+                ));
+            }
+
+            int totalAccounts = accounts.Values.Count(a => !a.IsDeleted);
+            int weakCount = findings.Count(f => f.Kind == PasswordSecurityFindingKind.Weak && accounts.Values.Any(a => a.Id == f.AccountId && !a.IsDeleted));
+            int reusedCount = findings.Count(f => f.Kind == PasswordSecurityFindingKind.Reused && accounts.Values.Any(a => a.Id == f.AccountId && !a.IsDeleted));
+            int breachedCount = findings.Count(f => f.Kind == PasswordSecurityFindingKind.Breached && accounts.Values.Any(a => a.Id == f.AccountId && !a.IsDeleted));
+            int oldCount = findings.Count(f => f.Kind == PasswordSecurityFindingKind.OlderThanYear && accounts.Values.Any(a => a.Id == f.AccountId && !a.IsDeleted));
+            int unknownDateCount = findings.Count(f => f.Kind == PasswordSecurityFindingKind.UnknownChangeDate && accounts.Values.Any(a => a.Id == f.AccountId && !a.IsDeleted));
+            // NoTwoFactorCount: only accounts where we KNOW 2FA is not configured (TotpSecret is empty)
+            // Accounts with unknown status are not counted here
+            int noTwoFactorCount = accounts.Values.Count(a => !a.IsDeleted && string.IsNullOrWhiteSpace(a.TotpSecret));
+
+            // Safety Score formula:
+            // Start at 100, deduct for each risk factor (capped per category)
+            // Breached: -10 per account, max -40
+            // Reused: -5 per account, max -20
+            // Weak: -3 per account, max -15
+            // Old (>365 days): -3 per account, max -15
+            // Unknown change date: -2 per account, max -10
+            // No website 2FA: not deducted from score (informational only)
+            // NOTE: Score is an indicator, not a guarantee of absolute safety
+            int score = 100;
+            score -= Math.Min(40, 10 * breachedCount);
+            score -= Math.Min(20, 5 * reusedCount);
+            score -= Math.Min(15, 3 * weakCount);
+            score -= Math.Min(15, 3 * oldCount);
+            score -= Math.Min(10, 2 * unknownDateCount);
+            int safetyScore = Math.Max(0, Math.Min(100, score));
+
+            return new VaultHealthSummary(
+                safetyScore,
+                totalAccounts,
+                weakCount,
+                reusedCount,
+                breachedCount,
+                oldCount,
+                noTwoFactorCount,
+                items
+            );
         }
     }
 }

@@ -199,6 +199,8 @@ internal static partial class Program
                 TestVaultKeyRotation(username, tempRoot, backupDirectory, vaultBackupPath, backupPassphrase));
             Run("Security-finding review persistence and version reset", () =>
                 TestFindingReview(username, account));
+            Run("Vault Health Dashboard - Safety Score and findings", () =>
+                TestVaultHealthSummary(username, account));
             Run("Backup-health decisions", TestBackupHealth);
             Run("Windows lock and sleep event policies", TestAutoLockPolicies);
             Run("Vault-key rotation requires an active administrator", TestRotationAuthorization);
@@ -315,9 +317,13 @@ internal static partial class Program
             Password = "SyntheticStrongPassword!9271",
             PasswordChangedAt = null
         };
+        // Password age checks now run independently of breach results (offline-capable)
         var findings = PasswordSecurityAuditService.Analyze(new[] { undated }, new HashSet<Guid>(), false, DateTime.Now);
-        if (findings.Any(finding => finding.Kind is PasswordSecurityFindingKind.OlderThanYear or PasswordSecurityFindingKind.UnknownChangeDate))
-            throw new InvalidDataException("Password change dates still create fixed-calendar rotation warnings.");
+        if (!findings.Any(finding => finding.Kind == PasswordSecurityFindingKind.UnknownChangeDate))
+            throw new InvalidDataException("UnknownChangeDate finding should be detected offline.");
+        // When breachResultsAreCurrent=false, Breached finding should NOT be present
+        if (findings.Any(finding => finding.Kind == PasswordSecurityFindingKind.Breached))
+            throw new InvalidDataException("Breached finding should not appear when breach results are not current.");
     }
     private static void TestWebsitePasswordPolicy()
     {
@@ -501,7 +507,7 @@ internal static partial class Program
             ("Windows chuyển sang chế độ ngủ.", "Windows entered sleep mode."),
             ("Windows vừa tiếp tục sau chế độ ngủ.", "Windows resumed from sleep."),
             ("Chỉ quản trị viên đang hoạt động được xoay khóa dùng chung.", "Only an active administrator can rotate the shared key."),
-            ("xoay khóa vault", "rotate the vault key"),
+            ("xoay khóa vault", "Rotate Vault Key"),
             ("quản lý tệp đính kèm", "manage attachments"),
             ("xem và hoàn tác lịch sử chỉnh sửa", "view and undo edit history"),
             ("thay đổi nhiều tài khoản cùng lúc", "change multiple accounts at once"),
@@ -830,6 +836,257 @@ internal static partial class Program
             now.AddDays(-10), true, "h", null, "", now);
         if (!none.Warn || !stale.Warn || !modified.Warn || !noDrill.Warn || !oldDrill.Warn || healthy.Warn)
             throw new InvalidDataException("One or more backup-health states were misclassified.");
+    }
+    private static void TestVaultHealthSummary(string username, SavedAccount original)
+    {
+        // Test 1: Empty vault (no accounts)
+        {
+            var emptyAccounts = new Dictionary<Guid, SavedAccount>();
+            var emptyFindings = new List<PasswordSecurityFinding>();
+            var emptyReviewStates = new Dictionary<string, SecurityFindingReviewState>();
+            var emptyTwoFactor = new Dictionary<Guid, bool>();
+
+            var summary = SecurityFindingReviewService.GetVaultHealthSummary(
+                username, emptyFindings, emptyAccounts, emptyReviewStates, emptyTwoFactor);
+
+            if (summary.SafetyScore != 100)
+                throw new InvalidDataException($"Empty vault should have SafetyScore 100, got {summary.SafetyScore}");
+            if (summary.TotalAccounts != 0)
+                throw new InvalidDataException($"Empty vault should have 0 total accounts, got {summary.TotalAccounts}");
+            if (summary.Items.Count != 0)
+                throw new InvalidDataException($"Empty vault should have 0 items, got {summary.Items.Count}");
+        }
+
+        // Test 2: Safety Score bounds (0-100)
+        {
+            var accounts = new Dictionary<Guid, SavedAccount>();
+            var findings = new List<PasswordSecurityFinding>();
+            var reviewStates = new Dictionary<string, SecurityFindingReviewState>();
+            var twoFactor = new Dictionary<Guid, bool>();
+
+            // Add many breached accounts to push score below 0
+            for (int i = 0; i < 10; i++)
+            {
+                var id = Guid.NewGuid();
+                accounts[id] = new SavedAccount { Id = id, ServiceName = $"Service{i}", Password = "pass", PasswordChangedAt = DateTime.Now };
+                findings.Add(new PasswordSecurityFinding(id, PasswordSecurityFindingKind.Breached));
+            }
+
+            var summary = SecurityFindingReviewService.GetVaultHealthSummary(
+                username, findings, accounts, reviewStates, twoFactor);
+
+            if (summary.SafetyScore < 0 || summary.SafetyScore > 100)
+                throw new InvalidDataException($"SafetyScore must be 0-100, got {summary.SafetyScore}");
+            // Max deduction for breached is 40, so 10 breached -> 100 - 40 = 60
+            if (summary.SafetyScore != 60)
+                throw new InvalidDataException($"With 10 breached accounts (max -40), score should be 60, got {summary.SafetyScore}");
+        }
+
+        // Test 3: Weak, Reused, Breached passwords
+        {
+            var accounts = new Dictionary<Guid, SavedAccount>();
+            var findings = new List<PasswordSecurityFinding>();
+            var reviewStates = new Dictionary<string, SecurityFindingReviewState>();
+            var twoFactor = new Dictionary<Guid, bool>();
+
+            var id1 = Guid.NewGuid();
+            accounts[id1] = new SavedAccount { Id = id1, ServiceName = "Weak", Password = "123", PasswordChangedAt = DateTime.Now };
+            findings.Add(new PasswordSecurityFinding(id1, PasswordSecurityFindingKind.Weak));
+
+            var id2 = Guid.NewGuid();
+            accounts[id2] = new SavedAccount { Id = id2, ServiceName = "Reused1", Password = "SharedPass123!", PasswordChangedAt = DateTime.Now };
+            var id3 = Guid.NewGuid();
+            accounts[id3] = new SavedAccount { Id = id3, ServiceName = "Reused2", Password = "SharedPass123!", PasswordChangedAt = DateTime.Now };
+            findings.Add(new PasswordSecurityFinding(id2, PasswordSecurityFindingKind.Reused));
+            findings.Add(new PasswordSecurityFinding(id3, PasswordSecurityFindingKind.Reused));
+
+            var id4 = Guid.NewGuid();
+            accounts[id4] = new SavedAccount { Id = id4, ServiceName = "Breached", Password = "StrongPass123!", PasswordChangedAt = DateTime.Now };
+            findings.Add(new PasswordSecurityFinding(id4, PasswordSecurityFindingKind.Breached));
+
+            var summary = SecurityFindingReviewService.GetVaultHealthSummary(
+                username, findings, accounts, reviewStates, twoFactor);
+
+            if (summary.WeakPasswordCount != 1)
+                throw new InvalidDataException($"Expected 1 weak, got {summary.WeakPasswordCount}");
+            if (summary.ReusedPasswordCount != 2)
+                throw new InvalidDataException($"Expected 2 reused, got {summary.ReusedPasswordCount}");
+            if (summary.BreachedPasswordCount != 1)
+                throw new InvalidDataException($"Expected 1 breached, got {summary.BreachedPasswordCount}");
+            // Score: 100 - 3(weak) - 10(reused: 2*5, max 20) - 10(breached) = 77
+            if (summary.SafetyScore != 77)
+                throw new InvalidDataException($"Expected score 77, got {summary.SafetyScore}");
+        }
+
+        // Test 4: Deleted accounts should not be counted
+        {
+            var accounts = new Dictionary<Guid, SavedAccount>();
+            var findings = new List<PasswordSecurityFinding>();
+            var reviewStates = new Dictionary<string, SecurityFindingReviewState>();
+            var twoFactor = new Dictionary<Guid, bool>();
+
+            var id1 = Guid.NewGuid();
+            var deletedAccount = new SavedAccount { Id = id1, ServiceName = "Deleted", Password = "123", PasswordChangedAt = DateTime.Now, IsDeleted = true };
+            accounts[id1] = deletedAccount;
+            findings.Add(new PasswordSecurityFinding(id1, PasswordSecurityFindingKind.Weak));
+
+            var id2 = Guid.NewGuid();
+            accounts[id2] = new SavedAccount { Id = id2, ServiceName = "Active", Password = "StrongPass123!", PasswordChangedAt = DateTime.Now };
+
+            var summary = SecurityFindingReviewService.GetVaultHealthSummary(
+                username, findings, accounts, reviewStates, twoFactor);
+
+            if (summary.TotalAccounts != 1)
+                throw new InvalidDataException($"Deleted accounts should not count, got {summary.TotalAccounts}");
+            if (summary.WeakPasswordCount != 0)
+                throw new InvalidDataException($"Deleted account findings should not count, got {summary.WeakPasswordCount}");
+        }
+
+        // Test 5: UnknownChangeDate and OlderThanYear
+        {
+            var accounts = new Dictionary<Guid, SavedAccount>();
+            var findings = new List<PasswordSecurityFinding>();
+            var reviewStates = new Dictionary<string, SecurityFindingReviewState>();
+            var twoFactor = new Dictionary<Guid, bool>();
+
+            var id1 = Guid.NewGuid();
+            accounts[id1] = new SavedAccount { Id = id1, ServiceName = "NoDate", Password = "StrongPass123!", PasswordChangedAt = null };
+            findings.Add(new PasswordSecurityFinding(id1, PasswordSecurityFindingKind.UnknownChangeDate));
+
+            var id2 = Guid.NewGuid();
+            accounts[id2] = new SavedAccount { Id = id2, ServiceName = "OldPass", Password = "StrongPass123!", PasswordChangedAt = DateTime.Now.AddDays(-400) };
+            findings.Add(new PasswordSecurityFinding(id2, PasswordSecurityFindingKind.OlderThanYear));
+
+            var summary = SecurityFindingReviewService.GetVaultHealthSummary(
+                username, findings, accounts, reviewStates, twoFactor);
+
+            if (summary.OldPasswordCount != 1)
+                throw new InvalidDataException($"Expected 1 old password, got {summary.OldPasswordCount}");
+            // unknownDateCount is not in summary but we can verify via findings
+            // Score: 100 - 3(old) - 2(unknown date) = 95
+            if (summary.SafetyScore != 95)
+                throw new InvalidDataException($"Expected score 95, got {summary.SafetyScore}");
+        }
+
+        // Test 6: Review statuses (Open, Fixed, Snoozed, Ignored)
+        {
+            var accounts = new Dictionary<Guid, SavedAccount>();
+            var findings = new List<PasswordSecurityFinding>();
+            var reviewStates = new Dictionary<string, SecurityFindingReviewState>();
+            var twoFactor = new Dictionary<Guid, bool>();
+
+            var id = Guid.NewGuid();
+            accounts[id] = new SavedAccount { Id = id, ServiceName = "Test", Password = "WeakPass123", PasswordChangedAt = DateTime.Now };
+            findings.Add(new PasswordSecurityFinding(id, PasswordSecurityFindingKind.Weak));
+
+            // Test Fixed status
+            var fixedKey = SecurityFindingReviewService.Key(id, PasswordSecurityFindingKind.Weak);
+            reviewStates[fixedKey] = new SecurityFindingReviewState(
+                SecurityFindingReviewStatus.Fixed, DateTime.UtcNow, null, "Fixed it");
+
+            var summary = SecurityFindingReviewService.GetVaultHealthSummary(
+                username, findings, accounts, reviewStates, twoFactor);
+
+            var item = summary.Items.First();
+            if (item.ReviewStatus != SecurityFindingReviewStatus.Fixed)
+                throw new InvalidDataException($"Expected Fixed status, got {item.ReviewStatus}");
+
+            // Test that Open is most severe
+            reviewStates[fixedKey] = new SecurityFindingReviewState(
+                SecurityFindingReviewStatus.Open, DateTime.UtcNow, null, "Open again");
+
+            summary = SecurityFindingReviewService.GetVaultHealthSummary(
+                username, findings, accounts, reviewStates, twoFactor);
+            item = summary.Items.First();
+            if (item.ReviewStatus != SecurityFindingReviewStatus.Open)
+                throw new InvalidDataException($"Expected Open (most severe), got {item.ReviewStatus}");
+        }
+
+        // Test 7: 2FA status - true, false
+        {
+            var accounts = new Dictionary<Guid, SavedAccount>();
+            var findings = new List<PasswordSecurityFinding>();
+            var reviewStates = new Dictionary<string, SecurityFindingReviewState>();
+            var twoFactor = new Dictionary<Guid, bool>();
+
+            var id1 = Guid.NewGuid();
+            accounts[id1] = new SavedAccount { Id = id1, ServiceName = "With2FA", Password = "StrongPass123!", PasswordChangedAt = DateTime.Now, TotpSecret = "JBSWY3DPEHPK3PXP" };
+            twoFactor[id1] = true;
+
+            var id2 = Guid.NewGuid();
+            accounts[id2] = new SavedAccount { Id = id2, ServiceName = "No2FA", Password = "StrongPass123!", PasswordChangedAt = DateTime.Now, TotpSecret = "" };
+            twoFactor[id2] = false;
+
+            var summary = SecurityFindingReviewService.GetVaultHealthSummary(
+                username, findings, accounts, reviewStates, twoFactor);
+
+            var item1 = summary.Items.First(i => i.AccountId == id1);
+            var item2 = summary.Items.First(i => i.AccountId == id2);
+
+            if (item1.HasTwoFactorEnabled != true)
+                throw new InvalidDataException($"Account with TotpSecret should have HasTwoFactorEnabled=true, got {item1.HasTwoFactorEnabled}");
+            if (item2.HasTwoFactorEnabled != false)
+                throw new InvalidDataException($"Account without TotpSecret should have HasTwoFactorEnabled=false, got {item2.HasTwoFactorEnabled}");
+
+            if (summary.NoTwoFactorCount != 1)
+                throw new InvalidDataException($"Expected NoTwoFactorCount=1, got {summary.NoTwoFactorCount}");
+        }
+
+        // Test 8: Multiple findings on same account - risk level should be max
+        {
+            var accounts = new Dictionary<Guid, SavedAccount>();
+            var findings = new List<PasswordSecurityFinding>();
+            var reviewStates = new Dictionary<string, SecurityFindingReviewState>();
+            var twoFactor = new Dictionary<Guid, bool>();
+
+            var id = Guid.NewGuid();
+            accounts[id] = new SavedAccount { Id = id, ServiceName = "MultiRisk", Password = "weak", PasswordChangedAt = DateTime.Now.AddDays(-400) };
+            findings.Add(new PasswordSecurityFinding(id, PasswordSecurityFindingKind.Weak));
+            findings.Add(new PasswordSecurityFinding(id, PasswordSecurityFindingKind.Reused));
+            findings.Add(new PasswordSecurityFinding(id, PasswordSecurityFindingKind.Breached));
+            findings.Add(new PasswordSecurityFinding(id, PasswordSecurityFindingKind.OlderThanYear));
+            findings.Add(new PasswordSecurityFinding(id, PasswordSecurityFindingKind.UnknownChangeDate));
+
+            var summary = SecurityFindingReviewService.GetVaultHealthSummary(
+                username, findings, accounts, reviewStates, twoFactor);
+
+            var item = summary.Items.First();
+            if (item.RiskLevel != 2)
+                throw new InvalidDataException($"Multiple findings should give max RiskLevel=2 (Breached), got {item.RiskLevel}");
+            if (summary.BreachedPasswordCount != 1)
+                throw new InvalidDataException($"Should count 1 breached");
+            if (summary.WeakPasswordCount != 1)
+                throw new InvalidDataException($"Should count 1 weak");
+        }
+
+        // Test 9: No sensitive data leakage in summary
+        {
+            var accounts = new Dictionary<Guid, SavedAccount>();
+            var findings = new List<PasswordSecurityFinding>();
+            var reviewStates = new Dictionary<string, SecurityFindingReviewState>();
+            var twoFactor = new Dictionary<Guid, bool>();
+
+            var id = Guid.NewGuid();
+            var secretPassword = "MySecretPassword123!";
+            accounts[id] = new SavedAccount
+            {
+                Id = id,
+                ServiceName = "Secret",
+                Password = secretPassword,
+                Username = "secretuser",
+                TotpSecret = "JBSWY3DPEHPK3PXP",
+                PasswordChangedAt = DateTime.Now
+            };
+
+            var summary = SecurityFindingReviewService.GetVaultHealthSummary(
+                username, findings, accounts, reviewStates, twoFactor);
+
+            var json = System.Text.Json.JsonSerializer.Serialize(summary);
+            if (json.Contains(secretPassword, StringComparison.Ordinal))
+                throw new InvalidDataException("Password leaked in serialized summary!");
+            if (json.Contains("JBSWY3DPEHPK3PXP", StringComparison.Ordinal))
+                throw new InvalidDataException("TOTP secret leaked in serialized summary!");
+        }
     }
     private static void TestLocalizationAudit()
     {

@@ -1,11 +1,15 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Data;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using Microsoft.Win32;
@@ -66,6 +70,7 @@ namespace PersonalInfoManager
                         RefreshAccounts(updateStatus: false);
                         RefreshSecurityOverview();
                         LoadBackupPolicyUi();
+                        RefreshVaultHealth();
                     }
                 }
             };
@@ -3518,6 +3523,373 @@ namespace PersonalInfoManager
             {
                 PersonalInfoManager.Services.LocalizedMessageBox.Show(this, ex.Message, LanguageService.Translate("ui.mainwindow.message101"),
                     MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+        private void RefreshVaultHealth()
+        {
+            if (!EnsureActiveSession()) return;
+            lblVaultHealthLoading.Visibility = Visibility.Visible;
+            dgVaultHealth.Visibility = Visibility.Collapsed;
+            lblVaultHealthEmpty.Visibility = Visibility.Collapsed;
+
+            string username = SessionService.CurrentUser!.Username;
+
+            Task.Run(() =>
+            {
+                try
+                {
+                    var accounts = _vaultService.Load(username);
+                    var activeAccounts = accounts.Where(a => !a.IsDeleted).ToList();
+
+                    // Check if HIBP audit results are current
+                    EnsurePwnedAuditLoaded(username);
+                    bool breachResultsAreCurrent = _pwnedResultsAreCurrent;
+
+                    var findings = PasswordSecurityAuditService.Analyze(activeAccounts, _pwnedBreachedAccountIds, breachResultsAreCurrent, DateTime.Now);
+                    var reviewStates = SecurityFindingReviewService.SyncFindings(username, findings, activeAccounts.ToDictionary(a => a.Id, a => a));
+
+                    // Pass empty twoFactorStatus - GetVaultHealthSummary computes HasTwoFactorEnabled from account.TotpSecret (website 2FA)
+                    var twoFactorStatus = new Dictionary<Guid, bool>();
+
+                    var summary = SecurityFindingReviewService.GetVaultHealthSummary(
+                        username, findings, activeAccounts.ToDictionary(a => a.Id, a => a), reviewStates, twoFactorStatus);
+
+                    Dispatcher.Invoke(() =>
+                    {
+                        if (_isLocked || !EnsureActiveSession()) return;
+
+                        lblSafetyScore.Text = summary.SafetyScore.ToString();
+                        lblSafetyScoreLabel.Text = LanguageService.Format("ui.vaulthealthdashboard.text016", summary.SafetyScore);
+                        lblSafetyScoreDetail.Text = LanguageService.Translate("ui.vaulthealthdashboard.text018");
+
+                        lblWeakCount.Text = summary.WeakPasswordCount.ToString();
+                        lblReusedCount.Text = summary.ReusedPasswordCount.ToString();
+                        lblBreachedCount.Text = summary.BreachedPasswordCount.ToString();
+                        lblOldCount.Text = summary.OldPasswordCount.ToString();
+                        lblNoTwoFactorCount.Text = summary.NoTwoFactorCount.ToString();
+
+                        var items = summary.Items.Select(item => new VaultHealthViewItem
+                        {
+                            AccountId = item.AccountId,
+                            ServiceName = item.ServiceName,
+                            Username = item.Username,
+                            RiskLevel = item.RiskLevel,
+                            RiskLevelText = item.RiskLevel switch
+                            {
+                                2 => LanguageService.Translate("ui.vaulthealthdashboard.text012"),
+                                1 => LanguageService.Translate("ui.vaulthealthdashboard.text013"),
+                                _ => LanguageService.Translate("ui.vaulthealthdashboard.text014")
+                            },
+                            RiskFactorKinds = item.RiskFactorKinds,
+                            RiskDescription = BuildRiskDescription(item.RiskFactorKinds),
+                            HasTwoFactorText = item.HasTwoFactorEnabled switch
+                            {
+                                true => LanguageService.Translate("ui.vaulthealthdashboard.text029"),
+                                false => LanguageService.Translate("ui.vaulthealthdashboard.text030"),
+                                _ => LanguageService.Translate("ui.vaulthealthdashboard.text031")
+                            },
+                            ReviewStatus = item.ReviewStatus switch
+                            {
+                                SecurityFindingReviewStatus.Fixed => LanguageService.Translate("ui.vaulthealthdashboard.text033"),
+                                SecurityFindingReviewStatus.Snoozed => LanguageService.Translate("ui.vaulthealthdashboard.text034"),
+                                SecurityFindingReviewStatus.Ignored => LanguageService.Translate("ui.vaulthealthdashboard.text035"),
+                                _ => LanguageService.Translate("ui.vaulthealthdashboard.text032")
+                            }
+                        }).ToList();
+
+                        _allVaultHealthItems = items;
+                        ApplyVaultHealthFilter();
+                    });
+                }
+                catch (Exception ex)
+                {
+                    Dispatcher.Invoke(() =>
+                    {
+                        if (!_isLocked && EnsureActiveSession())
+                        {
+                            lblVaultHealthLoading.Visibility = Visibility.Collapsed;
+                            PersonalInfoManager.Services.LocalizedMessageBox.Show(this, ex.Message,
+                                LanguageService.Translate("ui.vaulthealthdashboard.text001"), MessageBoxButton.OK, MessageBoxImage.Warning);
+                        }
+                    });
+                }
+            });
+        }
+
+        private sealed class VaultHealthViewItem
+        {
+            public Guid AccountId { get; set; }
+            public string ServiceName { get; set; } = "";
+            public string Username { get; set; } = "";
+            public int RiskLevel { get; set; }
+            public string RiskLevelText { get; set; } = "";
+            public string RiskFactorKinds { get; set; } = "";
+            public string RiskDescription { get; set; } = "";
+            public string HasTwoFactorText { get; set; } = "";
+            public string ReviewStatus { get; set; } = "";
+        }
+
+        private static string BuildRiskDescription(string riskFactorKinds)
+        {
+            if (string.IsNullOrWhiteSpace(riskFactorKinds) || riskFactorKinds == "None")
+                return LanguageService.Translate("ui.vaulthealthdashboard.text027"); // "No risk factors"
+
+            var kinds = riskFactorKinds.Split(',', StringSplitOptions.RemoveEmptyEntries);
+            var descriptions = new List<string>();
+
+            foreach (var kind in kinds)
+            {
+                string? key = kind.Trim() switch
+                {
+                    "Breached" => "ui.vaulthealthdashboard.text006",
+                    "Reused" => "ui.vaulthealthdashboard.text005",
+                    "Weak" => "ui.vaulthealthdashboard.text004",
+                    "OlderThanYear" => "ui.vaulthealthdashboard.text007",
+                    "UnknownChangeDate" => "ui.vaulthealthdashboard.text028", // "Password change date unknown"
+                    _ => null
+                };
+
+                if (!string.IsNullOrEmpty(key))
+                    descriptions.Add(LanguageService.Translate(key!));
+            }
+
+            return descriptions.Count > 0 ? string.Join(", ", descriptions) : LanguageService.Translate("ui.vaulthealthdashboard.text027");
+        }
+
+        private List<VaultHealthViewItem> _allVaultHealthItems = new();
+
+        private void ApplyVaultHealthFilter()
+        {
+            string filter = (cmbRiskFilter.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "all";
+            IEnumerable<VaultHealthViewItem> filtered = filter switch
+            {
+                "high" => _allVaultHealthItems.Where(i => i.RiskLevel == 2),
+                "medium" => _allVaultHealthItems.Where(i => i.RiskLevel == 1),
+                "low" => _allVaultHealthItems.Where(i => i.RiskLevel == 0),
+                "none" => _allVaultHealthItems.Where(i => i.RiskLevel == 0),
+                _ => _allVaultHealthItems
+            };
+
+            var list = filtered.ToList();
+            dgVaultHealth.ItemsSource = list;
+
+            lblVaultHealthLoading.Visibility = Visibility.Collapsed;
+            if (list.Count == 0)
+            {
+                dgVaultHealth.Visibility = Visibility.Collapsed;
+                lblVaultHealthEmpty.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                dgVaultHealth.Visibility = Visibility.Visible;
+                lblVaultHealthEmpty.Visibility = Visibility.Collapsed;
+            }
+            // Sync top horizontal ScrollBar with DataGrid's internal ScrollViewer
+            SyncVaultHealthTopScrollBar();
+        }
+
+        private ScrollViewer? _vaultHealthScrollViewer;
+        private bool _isSyncingScrollBar;
+
+        private void SyncVaultHealthTopScrollBar()
+        {
+            if (dgVaultHealthTopScrollBar == null) return;
+
+            // Find the DataGrid's internal ScrollViewer - try DG_ScrollViewer first (standard WPF DataGrid template part)
+            var scrollViewer = dgVaultHealth.Template?.FindName("DG_ScrollViewer", dgVaultHealth) as ScrollViewer
+                ?? dgVaultHealth.Template?.FindName("PART_ScrollViewer", dgVaultHealth) as ScrollViewer
+                ?? FindVisualChild<ScrollViewer>(dgVaultHealth);
+
+            if (scrollViewer == null)
+            {
+                // DataGrid template might not be applied yet, defer with LayoutUpdated for more reliable timing
+                dgVaultHealth.LayoutUpdated -= OnVaultHealthDataGridLayoutUpdated;
+                dgVaultHealth.LayoutUpdated += OnVaultHealthDataGridLayoutUpdated;
+                return;
+            }
+
+            // Cache the scroll viewer for event subscriptions
+            if (_vaultHealthScrollViewer != scrollViewer)
+            {
+                if (_vaultHealthScrollViewer != null)
+                {
+                    _vaultHealthScrollViewer.ScrollChanged -= OnVaultHealthScrollViewerScrollChanged;
+                }
+                _vaultHealthScrollViewer = scrollViewer;
+                _vaultHealthScrollViewer.ScrollChanged += OnVaultHealthScrollViewerScrollChanged;
+            }
+
+            // Update both ScrollBar properties from ScrollViewer
+            UpdateBothScrollBarsFromScrollViewer(scrollViewer);
+        }
+
+        private void OnVaultHealthDataGridLayoutUpdated(object? sender, EventArgs e)
+        {
+            // Keep trying until template is applied and ScrollViewer is found
+            var scrollViewer = dgVaultHealth.Template?.FindName("DG_ScrollViewer", dgVaultHealth) as ScrollViewer
+                ?? dgVaultHealth.Template?.FindName("PART_ScrollViewer", dgVaultHealth) as ScrollViewer
+                ?? FindVisualChild<ScrollViewer>(dgVaultHealth);
+
+            if (scrollViewer != null)
+            {
+                dgVaultHealth.LayoutUpdated -= OnVaultHealthDataGridLayoutUpdated;
+                SyncVaultHealthTopScrollBar();
+            }
+        }
+
+        private void UpdateBothScrollBarsFromScrollViewer(ScrollViewer scrollViewer)
+        {
+            if (dgVaultHealthTopScrollBar == null || _isSyncingScrollBar) return;
+
+            _isSyncingScrollBar = true;
+            try
+            {
+                // Sync Value (horizontal offset)
+                double offset = scrollViewer.HorizontalOffset;
+                dgVaultHealthTopScrollBar.Value = offset;
+                dgVaultHealthBottomScrollBar.Value = offset;
+
+                // Sync Maximum (scrollable extent)
+                double max = scrollViewer.ScrollableWidth;
+                dgVaultHealthTopScrollBar.Maximum = max;
+                dgVaultHealthBottomScrollBar.Maximum = max;
+
+                // Sync ViewportSize and LargeChange
+                double viewport = scrollViewer.ViewportWidth;
+                dgVaultHealthTopScrollBar.ViewportSize = viewport;
+                dgVaultHealthBottomScrollBar.ViewportSize = viewport;
+                dgVaultHealthTopScrollBar.LargeChange = viewport;
+                dgVaultHealthBottomScrollBar.LargeChange = viewport;
+                dgVaultHealthTopScrollBar.SmallChange = Math.Max(1, viewport / 10);
+                dgVaultHealthBottomScrollBar.SmallChange = Math.Max(1, viewport / 10);
+
+                // Visibility: show when there's content to scroll horizontally
+                double epsilon = 0.5;
+                bool isVisible = scrollViewer.ScrollableWidth > epsilon;
+                dgVaultHealthTopScrollBar.Visibility = isVisible ? Visibility.Visible : Visibility.Collapsed;
+                dgVaultHealthBottomScrollBar.Visibility = isVisible ? Visibility.Visible : Visibility.Collapsed;
+
+                // Diagnostic output for runtime verification
+                System.Diagnostics.Debug.WriteLine($"[VaultHealth] ScrollViewer: ExtentWidth={scrollViewer.ExtentWidth:F1}, ViewportWidth={scrollViewer.ViewportWidth:F1}, ScrollableWidth={scrollViewer.ScrollableWidth:F1}, HorizontalOffset={scrollViewer.HorizontalOffset:F1}, TopScrollBar.Max={dgVaultHealthTopScrollBar.Maximum:F1}, TopScrollBar.Value={dgVaultHealthTopScrollBar.Value:F1}, TopScrollBar.ViewportSize={dgVaultHealthTopScrollBar.ViewportSize:F1}, Visible={dgVaultHealthTopScrollBar.Visibility}");
+            }
+            finally
+            {
+                _isSyncingScrollBar = false;
+            }
+        }
+
+        private void OnVaultHealthScrollViewerScrollChanged(object sender, ScrollChangedEventArgs e)
+        {
+            if (e.HorizontalChange != 0 || e.ExtentWidthChange != 0 || e.ViewportWidthChange != 0)
+            {
+                var scrollViewer = (ScrollViewer)sender;
+                UpdateBothScrollBarsFromScrollViewer(scrollViewer);
+            }
+        }
+
+        private void dgVaultHealthTopScrollBar_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (_isSyncingScrollBar || _vaultHealthScrollViewer == null) return;
+
+            _isSyncingScrollBar = true;
+            try
+            {
+                // User dragged the top scrollbar - scroll the DataGrid's ScrollViewer
+                _vaultHealthScrollViewer.ScrollToHorizontalOffset(e.NewValue);
+            }
+            finally
+            {
+                _isSyncingScrollBar = false;
+            }
+        }
+
+        private void dgVaultHealthBottomScrollBar_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (_isSyncingScrollBar || _vaultHealthScrollViewer == null) return;
+
+            _isSyncingScrollBar = true;
+            try
+            {
+                // User dragged the bottom scrollbar - scroll the DataGrid's ScrollViewer
+                _vaultHealthScrollViewer.ScrollToHorizontalOffset(e.NewValue);
+            }
+            finally
+            {
+                _isSyncingScrollBar = false;
+            }
+        }
+
+        private static T? FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
+        {
+            if (parent == null) return null;
+            int childrenCount = VisualTreeHelper.GetChildrenCount(parent);
+            for (int i = 0; i < childrenCount; i++)
+            {
+                var child = VisualTreeHelper.GetChild(parent, i);
+                if (child is T typedChild) return typedChild;
+                var result = FindVisualChild<T>(child);
+                if (result != null) return result;
+            }
+            return null;
+        }
+
+        private class ScrollBarVisibilityToVisibilityConverter : IValueConverter
+        {
+            public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+            {
+                return value is Visibility.Visible ? Visibility.Visible : Visibility.Collapsed;
+            }
+            public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => Binding.DoNothing;
+        }
+
+        private void VaultHealthRiskFilter_Changed(object sender, SelectionChangedEventArgs e)
+        {
+            if (!IsLoaded) return;
+            ApplyVaultHealthFilter();
+        }
+
+        private void BtnRefreshVaultHealth_Click(object sender, RoutedEventArgs e)
+        {
+            RefreshVaultHealth();
+        }
+
+        private void DgVaultHealth_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+        }
+
+        private void DgVaultHealth_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            if (dgVaultHealth.SelectedItem is VaultHealthViewItem item)
+            {
+                OpenVaultHealthAccount(item.AccountId);
+            }
+        }
+
+        private void BtnOpenVaultHealthAccount_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button { Tag: Guid accountId })
+            {
+                OpenVaultHealthAccount(accountId);
+            }
+        }
+
+        private void OpenVaultHealthAccount(Guid accountId)
+        {
+            CloseSettings();
+            txtSearch.Clear();
+            _searchTimer.Stop();
+            if (chkFavoritesOnly.IsChecked == true) chkFavoritesOnly.IsChecked = false;
+            ShowPage("accounts");
+            navAccounts.IsChecked = true;
+            RefreshAccounts();
+            foreach (var item in dgAccounts.Items)
+            {
+                var original = item.GetType().GetProperty("_original")?.GetValue(item) as SavedAccount;
+                if (original?.Id != accountId) continue;
+                dgAccounts.SelectedItem = item;
+                dgAccounts.ScrollIntoView(item);
+                dgAccounts.Focus();
+                return;
             }
         }
     }

@@ -43,7 +43,7 @@ internal static class EnglishCatalog
         Add("Băm mật khẩu đăng nhập", "Sign-in password hashing");
         Add("Mặc định dùng Argon2id. Có thể bật PBKDF2-HMAC-SHA256 cho môi trường cần tương thích FIPS; hash cũ được nâng cấp sau lần đăng nhập thành công.", "Argon2id is used by default. PBKDF2-HMAC-SHA256 is available for environments that require FIPS-compatible hashing; existing hashes are upgraded after a successful sign-in.");
         Add("Dùng PBKDF2-HMAC-SHA256 (tương thích FIPS)", "Use PBKDF2-HMAC-SHA256 (FIPS-compatible)");
-        Add("Xoay khóa vault", "rotate the vault key");
+        Add("Xoay khóa vault", "Rotate Vault Key");
         Add("Chỉ quản trị viên đang hoạt động mới được phép xoay khóa vault.", "Only an active administrator can rotate the vault key.");
         Add("Không đủ quyền", "Insufficient permissions");
         Add("Mã hóa lại vault, ghi chú và bản sao lưu cục bộ đã nhận diện. Hãy đặt cụm mật khẩu sao lưu trước; khóa cũ được giữ mã hóa để mở các bản xuất lịch sử.", "Re-encrypt the vault, notes, and recognized local backups. Set a backup passphrase first; the old key is retained in protected form for historical exports.");
@@ -1459,7 +1459,7 @@ internal static class EnglishCatalog
         Add("Windows chuyển sang chế độ ngủ.", "Windows entered sleep mode.");
         Add("Windows vừa tiếp tục sau chế độ ngủ.", "Windows resumed from sleep.");
         Add("Chỉ quản trị viên đang hoạt động được xoay khóa dùng chung.", "Only an active administrator can rotate the shared key.");
-        Add("xoay khóa vault", "rotate the vault key");
+        Add("xoay khóa vault", "Rotate Vault Key");
         Add("quản lý tệp đính kèm", "manage attachments");
         Add("xem và hoàn tác lịch sử chỉnh sửa", "view and undo edit history");
         Add("thay đổi nhiều tài khoản cùng lúc", "change multiple accounts at once");
@@ -2140,5 +2140,41 @@ internal static class EnglishCatalog
         new KeyValuePair<string, string>("'. Khóa mới chưa được kích hoạt.", "'. The new key has not been activated."),
         new KeyValuePair<string, string>("Nội dung kiểm tra sau khôi phục không khớp: ", "Content verification after restore did not match: "),
         new KeyValuePair<string, string>(" vào kho mật khẩu của '", " into the password vault for '"),
+        new KeyValuePair<string, string>("Bảng điều khiển an toàn", "Vault Health Dashboard"),
+        new KeyValuePair<string, string>("Điểm an toàn", "Safety Score"),
+        new KeyValuePair<string, string>("Điểm an toàn của vault được tính dựa trên: mật khẩu yếu, trùng lặp, bị lộ, cũ, và ngày đổi không rõ. Trạng thái 2FA website chỉ hiển thị tham khảo, không vào điểm. Điểm càng cao thì rủi ro càng thấp.", "The vault safety score is calculated from: weak, reused, breached, old passwords, and unknown change dates. Website 2FA status is informational only, not scored. Higher score means lower risk."),
+        new KeyValuePair<string, string>("Mật khẩu yếu", "Weak Passwords"),
+        new KeyValuePair<string, string>("Mật khẩu trùng lặp", "Reused Passwords"),
+        new KeyValuePair<string, string>("Mật khẩu bị lộ", "Breached Passwords"),
+        new KeyValuePair<string, string>("Mật khẩu cũ", "Old Passwords"),
+        new KeyValuePair<string, string>("Chưa bật 2FA", "No 2FA"),
+        new KeyValuePair<string, string>("Tài khoản có rủi ro", "At-Risk Accounts"),
+        new KeyValuePair<string, string>("Lọc theo mức độ rủi ro", "Filter by Risk Level"),
+        new KeyValuePair<string, string>("Tất cả", "All"),
+        new KeyValuePair<string, string>("Cao", "High"),
+        new KeyValuePair<string, string>("Trung bình", "Medium"),
+        new KeyValuePair<string, string>("Thấp", "Low"),
+        new KeyValuePair<string, string>("Mở tài khoản", "Open Account"),
+        new KeyValuePair<string, string>("Điểm an toàn: {0}/100", "Safety Score: {0}/100"),
+        new KeyValuePair<string, string>("Không có tài khoản nào có rủi ro.", "No accounts at risk."),
+        new KeyValuePair<string, string>("Điểm an toàn được tính từ: Mật khẩu yếu, Trùng lặp, Bị lộ, Cũ, và Trạng thái 2FA.", "Safety score is calculated from: Weak, Reused, Breached, Old passwords, and 2FA status."),
+        new KeyValuePair<string, string>("Điểm an toàn: Yếu, Trùng, Bị lộ, Cũ, Không rõ ngày đổi. 2FA website chỉ tham khảo.", "Safety score: Weak, Reused, Breached, Old, Unknown date. Website 2FA is informational only."),
+        new KeyValuePair<string, string>("Làm mới", "Refresh"),
+        new KeyValuePair<string, string>("Đang tính toán...", "Calculating..."),
+        new KeyValuePair<string, string>("Không có tài khoản.", "No accounts."),
+        new KeyValuePair<string, string>("Mức độ rủi ro", "Risk Level"),
+        new KeyValuePair<string, string>("Mọi rủi ro", "All Risks"),
+        new KeyValuePair<string, string>("Yếu tố", "Factor"),
+        new KeyValuePair<string, string>("Trạng thái 2FA", "2FA Status"),
+        new KeyValuePair<string, string>("Làm mới điểm an toàn", "Refresh Safety Score"),
+        new KeyValuePair<string, string>("Không có mật khẩu.", "No password."),
+        new KeyValuePair<string, string>("Chưa rõ ngày đổi mật khẩu", "Password change date unknown"),
+        new KeyValuePair<string, string>("Đã bật 2FA", "2FA enabled"),
+        new KeyValuePair<string, string>("Chưa bật 2FA", "No 2FA"),
+        new KeyValuePair<string, string>("2FA chưa cấu hình trong TQLTK", "2FA not configured in TQLTK"),
+        new KeyValuePair<string, string>("Đang mở", "Open"),
+        new KeyValuePair<string, string>("Đã xử lý", "Fixed"),
+        new KeyValuePair<string, string>("Nhắc lại", "Snoozed"),
+        new KeyValuePair<string, string>("Đã bỏ qua", "Ignored"),
     };
 }

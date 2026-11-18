@@ -16,4 +16,9 @@
     <SolidColorBrush x:Key="TabSelectedForegroundBrush" Color="#60A5FA" />
     <SolidColorBrush x:Key="TabHoverBackgroundBrush" Color="#33334A" />
 
+<SolidColorBrush x:Key="ScrollBarTrackBrush" Color="#2A2A3C" />
+    <SolidColorBrush x:Key="ScrollBarThumbBrush" Color="#8892B0" />
+    <SolidColorBrush x:Key="ScrollBarThumbHoverBrush" Color="#A8B2D0" />
+    <SolidColorBrush x:Key="ScrollBarThumbPressedBrush" Color="#A8B2D0" />
+    <Color x:Key="ScrollBarThumbShadowColor">#000000</Color>
 </ResourceDictionary>
