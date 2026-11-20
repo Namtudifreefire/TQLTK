@@ -1090,8 +1090,7 @@ internal static partial class Program
     }
     private static void TestLocalizationAudit()
     {
-        string projectRoot = Directory.GetCurrentDirectory();
-        if (!File.Exists(Path.Combine(projectRoot, "PersonalInfoManager.csproj"))) projectRoot = Path.Combine(projectRoot, "Nguon");
+        string projectRoot = FindProjectRoot();
         string declaredVersion = XDocument.Load(Path.Combine(projectRoot, "PersonalInfoManager.csproj"))
             .Descendants("Version").Single().Value;
         if (AppVersion.Current != declaredVersion)
@@ -1191,10 +1190,7 @@ internal static partial class Program
     }
     private static void TestUiTranslationSources()
     {
-        string sourceRoot = Directory.GetCurrentDirectory();
-        if (!File.Exists(Path.Combine(sourceRoot, "PersonalInfoManager.csproj"))) sourceRoot = Path.Combine(sourceRoot, "Nguon");
-        if (!File.Exists(Path.Combine(sourceRoot, "PersonalInfoManager.csproj")))
-            throw new DirectoryNotFoundException("Run the regression suite from the project or repository root to audit UI sources.");
+        string sourceRoot = FindProjectRoot();
         var sources = new HashSet<string>(StringComparer.Ordinal);
         var vietnamese = new Regex(@"[\u00C0-\u024F\u1E00-\u1EFF]", RegexOptions.CultureInvariant);
         foreach (string file in Directory.EnumerateFiles(sourceRoot, "*", SearchOption.AllDirectories)

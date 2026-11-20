@@ -7,6 +7,8 @@ namespace PersonalInfoManager
     {
         protected override void OnStartup(StartupEventArgs e)
         {
+            // Initialize dedicated localization ResourceDictionary for batched language switching
+            LanguageService.InitializeLocalizationDictionary();
             LanguageService.RefreshResources();
             base.OnStartup(e);
             ShutdownMode = ShutdownMode.OnMainWindowClose;

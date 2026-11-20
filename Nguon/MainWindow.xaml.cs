@@ -40,6 +40,61 @@ namespace PersonalInfoManager
             PasswordSecurityFindingKind Kind,
             string Description,
             string ReviewStatus);
+
+        private sealed record CommandPaletteItem(
+            string Id,
+            string TitleKey,
+            string DescriptionKey,
+            string Icon,
+            string Shortcut,
+            string CategoryKey,
+            Func<bool> CanExecute,
+            Action Execute,
+            bool RequiresAdmin = false)
+        {
+            // Cached localized values to avoid repeated lookups
+            private string? _cachedTitle;
+            private string? _cachedDescription;
+            private string? _cachedCategory;
+            private string _lastLanguageCode = "";
+
+            public string Title
+            {
+                get
+                {
+                    if (_lastLanguageCode != LanguageService.CurrentCode || _cachedTitle == null)
+                    {
+                        _cachedTitle = LocalizationAuditService.Get(TitleKey, LanguageService.CurrentCode);
+                        _lastLanguageCode = LanguageService.CurrentCode;
+                    }
+                    return _cachedTitle;
+                }
+            }
+            public string Description
+            {
+                get
+                {
+                    if (_lastLanguageCode != LanguageService.CurrentCode || _cachedDescription == null)
+                    {
+                        _cachedDescription = LocalizationAuditService.Get(DescriptionKey, LanguageService.CurrentCode);
+                        _lastLanguageCode = LanguageService.CurrentCode;
+                    }
+                    return _cachedDescription;
+                }
+            }
+            public string Category
+            {
+                get
+                {
+                    if (_lastLanguageCode != LanguageService.CurrentCode || _cachedCategory == null)
+                    {
+                        _cachedCategory = LocalizationAuditService.Get(CategoryKey, LanguageService.CurrentCode);
+                        _lastLanguageCode = LanguageService.CurrentCode;
+                    }
+                    return _cachedCategory;
+                }
+            }
+        }
         private int AutoLockMinutes = 5;
         private bool _lockWhenMinimized;
         private const int AutoHidePasswordSeconds = 30;
@@ -48,7 +103,12 @@ namespace PersonalInfoManager
         private readonly DispatcherTimer _hidePasswordTimer = new() { Interval = TimeSpan.FromSeconds(AutoHidePasswordSeconds) };
         private readonly DispatcherTimer _searchTimer = new() { Interval = TimeSpan.FromMilliseconds(250) };
         private readonly DispatcherTimer _periodicBackupTimer = new() { Interval = TimeSpan.FromMinutes(5) };
+        private readonly DispatcherTimer _commandPaletteSearchTimer = new() { Interval = TimeSpan.FromMilliseconds(150) };
         private bool _periodicBackupRunning;
+        private bool _commandPaletteOpen;
+        private List<CommandPaletteItem> _commandPaletteItems = new();
+        private List<CommandPaletteItem> _filteredCommandPaletteItems = new();
+        private string _commandPaletteLastQuery = "";
         private DateTime _lastActivity = DateTime.UtcNow;
         private DateTime _lastAuthTime = DateTime.MinValue;
         private bool _isLocked = false;
@@ -64,13 +124,36 @@ namespace PersonalInfoManager
             {
                 if (cmbLanguageSettings.SelectedValue is string language)
                 {
-                    LanguageService.SetLanguage(language);
-                    if (SessionService.IsLoggedIn)
+                    var fromLang = LanguageService.CurrentCode;
+                    var toLang = language;
+                    if (fromLang != toLang)
                     {
-                        RefreshAccounts(updateStatus: false);
-                        RefreshSecurityOverview();
-                        LoadBackupPolicyUi();
-                        RefreshVaultHealth();
+                        using (LanguageService.LanguageSwitchProfiler.BeginLanguageSwitch(fromLang, toLang))
+                        {
+                            using (LanguageService.LanguageSwitchProfiler.Measure("Settings.LanguageChanged"))
+                            {
+                                LanguageService.SetLanguage(language);
+                            }
+                            if (SessionService.IsLoggedIn)
+                            {
+                                using (LanguageService.LanguageSwitchProfiler.Measure("Settings.RefreshAccounts"))
+                                {
+                                    RefreshAccounts(updateStatus: false);
+                                }
+                                using (LanguageService.LanguageSwitchProfiler.Measure("Settings.RefreshSecurityOverview"))
+                                {
+                                    RefreshSecurityOverview();
+                                }
+                                using (LanguageService.LanguageSwitchProfiler.Measure("Settings.LoadBackupPolicyUi"))
+                                {
+                                    LoadBackupPolicyUi();
+                                }
+                                using (LanguageService.LanguageSwitchProfiler.Measure("Settings.RefreshVaultHealth"))
+                                {
+                                    RefreshVaultHealth();
+                                }
+                            }
+                        }
                     }
                 }
             };
@@ -109,17 +192,48 @@ namespace PersonalInfoManager
             _periodicBackupTimer.Tick += PeriodicBackupTimer_Tick;
             PreviewKeyDown += (_, e) =>
             {
-                if (e.Key == Key.B && Keyboard.Modifiers == ModifierKeys.Control)
+                if (e.Key == Key.Escape && _commandPaletteOpen)
+                {
+                    // Palette has precedence over settings on Escape
+                    CloseCommandPalette();
+                    e.Handled = true;
+                }
+                else if (e.Key == Key.B && Keyboard.Modifiers == ModifierKeys.Control)
                 {
                     ToggleSidebar();
                     e.Handled = true;
                 }
+                else if (e.Key == Key.K && Keyboard.Modifiers == ModifierKeys.Control)
+                {
+                    ToggleCommandPalette();
+                    e.Handled = true;
+                }
             };
+            _commandPaletteSearchTimer.Tick += (_, _) =>
+            {
+                _commandPaletteSearchTimer.Stop();
+                FilterCommandPaletteResults();
+            };
+            LanguageService.LanguageChanged += OnLanguageChanged;
             Loaded += MainWindow_Loaded;
             Closing += MainWindow_Closing;
             LocationChanged += MainWindow_LocationChanged;
             SizeChanged += MainWindow_SizeChanged;
             StateChanged += MainWindow_StateChanged;
+        }
+
+        private void OnLanguageChanged()
+        {
+            using (LanguageService.LanguageSwitchProfiler.Measure("MainWindow.LanguageChanged"))
+            {
+                if (_commandPaletteOpen)
+                {
+                    using (LanguageService.LanguageSwitchProfiler.Measure("MainWindow.LanguageChanged.FilterCommandPaletteResults"))
+                    {
+                        FilterCommandPaletteResults();
+                    }
+                }
+            }
         }
         private async void MainWindow_Loaded(object? sender, RoutedEventArgs e)
         {
@@ -194,6 +308,8 @@ namespace PersonalInfoManager
             try { _sessionRevocationCts.Cancel(); } catch { }
             try { ClipboardGuard.ClearNow(); } catch { }
             try { AccountVaultService.ClearCache(); } catch { }
+            // Unsubscribe from LanguageChanged to prevent memory leak
+            LanguageService.LanguageChanged -= OnLanguageChanged;
             SaveWindowState();
         }
         private void MainWindow_LocationChanged(object? sender, EventArgs e)
@@ -463,6 +579,7 @@ namespace PersonalInfoManager
                 }
                 catch { }
             }
+            CloseCommandPalette();
             Close();
         }
         private void RefreshAccountsKeepSelection()
@@ -3891,6 +4008,285 @@ namespace PersonalInfoManager
                 dgAccounts.Focus();
                 return;
             }
+        }
+    // ==================== COMMAND PALETTE ====================
+
+        private void ToggleCommandPalette()
+        {
+            if (!_commandPaletteOpen)
+            {
+                OpenCommandPalette();
+            }
+            else
+            {
+                CloseCommandPalette();
+            }
+        }
+
+        private void OpenCommandPalette()
+        {
+            if (_isLocked || !SessionService.IsLoggedIn) return;
+
+            _commandPaletteOpen = true;
+            InitializeCommandPaletteItems();
+            FilterCommandPaletteResults();
+
+            commandPaletteOverlay.Visibility = Visibility.Visible;
+            commandPaletteOverlay.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(120)));
+
+            txtCommandPaletteSearch.Text = "";
+            txtCommandPaletteSearch.Focus();
+            _commandPaletteLastQuery = "";
+            FilterCommandPaletteResults();
+
+            _commandPaletteSearchTimer.Stop();
+        }
+
+        private void CloseCommandPalette()
+        {
+            if (!_commandPaletteOpen) return;
+
+            _commandPaletteOpen = false;
+            _commandPaletteSearchTimer.Stop();
+
+            var fade = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(100));
+            fade.Completed += (_, _) =>
+            {
+                if (_commandPaletteOpen) return;
+                commandPaletteOverlay.BeginAnimation(OpacityProperty, null);
+                commandPaletteOverlay.Visibility = Visibility.Collapsed;
+            };
+            commandPaletteOverlay.BeginAnimation(OpacityProperty, fade);
+        }
+
+        private string GetShortcutForAction(KeyboardShortcutAction action)
+        {
+            var binding = KeyboardShortcutService.GetBindings().FirstOrDefault(b => b.Action == action && b.Enabled);
+            return binding?.Gesture ?? "";
+        }
+
+        private void InitializeCommandPaletteItems()
+        {
+            string lockShortcut = GetShortcutForAction(KeyboardShortcutAction.LockVault);
+            string searchShortcut = GetShortcutForAction(KeyboardShortcutAction.SearchAccounts);
+
+            _commandPaletteItems = new List<CommandPaletteItem>
+            {
+                // Navigation commands - main pages
+                new CommandPaletteItem("navigation.accounts", "ui.commandpalette.item.accounts.title", "ui.commandpalette.item.accounts.desc", "", searchShortcut, "ui.commandpalette.group.navigation", () => true, () => ShowPage("accounts")),
+                new CommandPaletteItem("navigation.files", "ui.commandpalette.item.files.title", "ui.commandpalette.item.files.desc", "", "", "ui.commandpalette.group.navigation", () => true, () => ShowPage("files")),
+
+                // Navigation commands - settings pages (open Settings overlay)
+                new CommandPaletteItem("navigation.profile", "ui.commandpalette.item.profile.title", "ui.commandpalette.item.profile.desc", "", "", "ui.commandpalette.group.navigation", () => true, () => OpenSettings("profile")),
+                new CommandPaletteItem("navigation.settings", "ui.commandpalette.item.settings.title", "ui.commandpalette.item.settings.desc", "", "Ctrl+,", "ui.commandpalette.group.navigation", () => true, () => OpenSettings()),
+                new CommandPaletteItem("navigation.security", "ui.commandpalette.item.security.title", "ui.commandpalette.item.security.desc", "", "", "ui.commandpalette.group.navigation", () => true, () => OpenSettings("security")),
+                new CommandPaletteItem("navigation.vaulthealth", "ui.commandpalette.item.vaulthealth.title", "ui.commandpalette.item.vaulthealth.desc", "", "", "ui.commandpalette.group.navigation", () => true, () => OpenSettings("vaulthealth")),
+                new CommandPaletteItem("navigation.appearance", "ui.commandpalette.item.appearance.title", "ui.commandpalette.item.appearance.desc", "", "", "ui.commandpalette.group.navigation", () => true, () => OpenSettings("appearance")),
+                new CommandPaletteItem("navigation.backup", "ui.commandpalette.item.backup.title", "ui.commandpalette.item.backup.desc", "", "", "ui.commandpalette.group.navigation", () => true, () => OpenSettings("backup")),
+                new CommandPaletteItem("navigation.drive", "ui.commandpalette.item.drive.title", "ui.commandpalette.item.drive.desc", "", "", "ui.commandpalette.group.navigation", () => true, () => OpenSettings("drive")),
+                new CommandPaletteItem("navigation.system", "ui.commandpalette.item.system.title", "ui.commandpalette.item.system.desc", "", "", "ui.commandpalette.group.navigation", () => true, () => OpenSettings("system")),
+
+                // Admin commands
+                new CommandPaletteItem("navigation.admin", "ui.commandpalette.item.admin.title", "ui.commandpalette.item.admin.desc", "", "", "ui.commandpalette.group.admin", () => SessionService.IsAdmin, () => OpenSettings("admin"), true),
+
+                // Actions
+                new CommandPaletteItem("action.focusAccountSearch", "ui.commandpalette.item.focussearch.title", "ui.commandpalette.item.focussearch.desc", "", searchShortcut, "ui.commandpalette.group.actions", () => true, () =>
+                {
+                    ShowPage("accounts");
+                    txtSearch.Focus();
+                }),
+
+                new CommandPaletteItem("action.lockVault", "ui.commandpalette.item.lockvault.title", "ui.commandpalette.item.lockvault.desc", "", GetShortcutForAction(KeyboardShortcutAction.LockVault), "ui.commandpalette.group.actions", () => true, () => LockNow("Vault locked by command palette."))
+            };
+        }
+
+        private void FilterCommandPaletteResults()
+        {
+            string query = txtCommandPaletteSearch.Text?.Trim() ?? "";
+            _commandPaletteLastQuery = query;
+
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                _filteredCommandPaletteItems = _commandPaletteItems
+                    .Where(item => item.CanExecute())
+                    .OrderBy(item => item.Category)
+                    .ThenBy(item => item.Title)
+                    .ToList();
+            }
+            else
+            {
+                string foldedQuery = LanguageService.Fold(query.ToLowerInvariant());
+
+                _filteredCommandPaletteItems = _commandPaletteItems
+                    .Where(item => item.CanExecute())
+                    .Select(item => new
+                    {
+                        Item = item,
+                        TitleMatch = LanguageService.Fold(item.Title.ToLowerInvariant()),
+                        DescMatch = LanguageService.Fold(item.Description.ToLowerInvariant()),
+                        ShortcutMatch = item.Shortcut?.ToLowerInvariant() ?? "",
+                        CategoryMatch = LanguageService.Fold(item.Category.ToLowerInvariant()),
+                        IdMatch = LanguageService.Fold(item.Id.ToLowerInvariant())
+                    })
+                    .Where(x => x.TitleMatch.Contains(foldedQuery)
+                        || x.DescMatch.Contains(foldedQuery)
+                        || x.ShortcutMatch.Contains(foldedQuery)
+                        || x.CategoryMatch.Contains(foldedQuery)
+                        || x.IdMatch.Contains(foldedQuery))
+                    .Select(x => x.Item)
+                    .ToList();
+            }
+
+            lvCommandPaletteResults.ItemsSource = _filteredCommandPaletteItems;
+
+            lblCommandPaletteNoResult.Visibility = _filteredCommandPaletteItems.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+
+            if (_filteredCommandPaletteItems.Count > 0)
+            {
+                lvCommandPaletteResults.SelectedIndex = 0;
+                lvCommandPaletteResults.ScrollIntoView(lvCommandPaletteResults.SelectedItem);
+            }
+        }
+
+        private void TxtCommandPaletteSearch_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            lblCommandPaletteSearchHint.Visibility = string.IsNullOrWhiteSpace(txtCommandPaletteSearch.Text) ? Visibility.Visible : Visibility.Collapsed;
+            _commandPaletteSearchTimer.Stop();
+            _commandPaletteSearchTimer.Start();
+        }
+
+        private void LvCommandPaletteResults_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (lvCommandPaletteResults.SelectedItem is CommandPaletteItem item)
+            {
+                lvCommandPaletteResults.ScrollIntoView(item);
+            }
+        }
+
+        private void LvCommandPaletteResults_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            if (lvCommandPaletteResults.SelectedItem is CommandPaletteItem item && item.CanExecute())
+            {
+                ExecuteCommand(item);
+            }
+        }
+
+        private void TxtCommandPaletteSearch_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (!_commandPaletteOpen) return;
+
+            switch (e.Key)
+            {
+                case Key.Escape:
+                    CloseCommandPalette();
+                    e.Handled = true;
+                    break;
+                case Key.Enter:
+                    // Flush pending search to ensure results match current query
+                    _commandPaletteSearchTimer.Stop();
+                    FilterCommandPaletteResults();
+                    if (_filteredCommandPaletteItems.Count > 0)
+                    {
+                        ExecuteCommand(_filteredCommandPaletteItems[0]);
+                        e.Handled = true;
+                    }
+                    break;
+                case Key.Down:
+                    if (_filteredCommandPaletteItems.Count > 0)
+                    {
+                        lvCommandPaletteResults.Focus();
+                        lvCommandPaletteResults.SelectedIndex = 0;
+                        lvCommandPaletteResults.ScrollIntoView(lvCommandPaletteResults.SelectedItem);
+                        e.Handled = true;
+                    }
+                    break;
+            }
+        }
+
+        private void LvCommandPaletteResults_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (!_commandPaletteOpen) return;
+
+            switch (e.Key)
+            {
+                case Key.Escape:
+                    CloseCommandPalette();
+                    e.Handled = true;
+                    break;
+                case Key.Enter:
+                    if (lvCommandPaletteResults.SelectedItem is CommandPaletteItem item && item.CanExecute())
+                    {
+                        ExecuteCommand(item);
+                        e.Handled = true;
+                    }
+                    break;
+                case Key.Up:
+                    if (lvCommandPaletteResults.SelectedIndex > 0)
+                    {
+                        lvCommandPaletteResults.SelectedIndex--;
+                        lvCommandPaletteResults.ScrollIntoView(lvCommandPaletteResults.SelectedItem);
+                        e.Handled = true;
+                    }
+                    else if (lvCommandPaletteResults.SelectedIndex == 0)
+                    {
+                        // Move focus back to search box
+                        txtCommandPaletteSearch.Focus();
+                        e.Handled = true;
+                    }
+                    break;
+                case Key.Down:
+                    if (lvCommandPaletteResults.SelectedIndex < _filteredCommandPaletteItems.Count - 1)
+                    {
+                        lvCommandPaletteResults.SelectedIndex++;
+                        lvCommandPaletteResults.ScrollIntoView(lvCommandPaletteResults.SelectedItem);
+                        e.Handled = true;
+                    }
+                    break;
+            }
+        }
+
+        private void ExecuteCommand(CommandPaletteItem item)
+        {
+            if (!item.CanExecute()) return;
+
+            if (item.RequiresAdmin && !SessionService.IsAdmin)
+            {
+                PersonalInfoManager.Services.LocalizedMessageBox.Show("Cần quyền quản trị viên.", "Không đủ quyền", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            // Close settings overlay if open so the target page is visible
+            CloseSettings();
+
+            item.Execute();
+            CloseCommandPalette();
+        }
+
+        private void BtnCloseCommandPalette_Click(object sender, RoutedEventArgs e) => CloseCommandPalette();
+
+        private void CommandPaletteScrim_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            if (e.OriginalSource == commandPaletteScrim)
+            {
+                CloseCommandPalette();
+            }
+        }
+    }
+
+    public class StringToVisibilityConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is string s)
+            {
+                return string.IsNullOrWhiteSpace(s) ? Visibility.Collapsed : Visibility.Visible;
+            }
+            return Visibility.Collapsed;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
         }
     }
 }
