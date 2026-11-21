@@ -50,32 +50,92 @@ namespace PersonalInfoManager
 
         private void ShowPage(string tag)
         {
-
-            if (tag == "admin" && !SessionService.IsAdmin) return;
-
-            bool isSettings = SettingsTags.Contains(tag);
-
-            foreach (var kv in _pages)
+            using (LanguageService.LanguageSwitchProfiler.Measure("ShowPage.Total"))
             {
+                if (tag == "admin" && !SessionService.IsAdmin) return;
 
-                if (SettingsTags.Contains(kv.Key) != isSettings) continue;
-                kv.Value.Visibility = kv.Key == tag ? Visibility.Visible : Visibility.Collapsed;
+                bool isSettings = SettingsTags.Contains(tag);
+
+                foreach (var kv in _pages)
+                {
+
+                    if (SettingsTags.Contains(kv.Key) != isSettings) continue;
+                    kv.Value.Visibility = kv.Key == tag ? Visibility.Visible : Visibility.Collapsed;
+                }
+
+                if (isSettings) _currentSettingsTag = tag;
+
+                // Adjust sidebar width for Vault Health Dashboard
+                if (settingsSidebarColumn != null)
+                {
+                    settingsSidebarColumn.Width = tag == "vaulthealth"
+                        ? new GridLength(210)
+                        : new GridLength(240);
+                }
+
+                // Sync sidebar radio button selection
+                using (LanguageService.LanguageSwitchProfiler.Measure("ShowPage.SyncSidebarSelection"))
+                {
+                    SyncSidebarSelection(tag);
+                }
+
+                if (tag == "files") RefreshFiles();
+                if (tag == "security") RefreshSecurityOverview();
+                if (tag == "drive") RefreshDriveTokenStatus();
+                if (tag == "vaulthealth") RefreshVaultHealth();
             }
+        }
 
-            if (isSettings) _currentSettingsTag = tag;
-
-            // Adjust sidebar width for Vault Health Dashboard
-            if (settingsSidebarColumn != null)
+        private void SyncSidebarSelection(string tag)
+        {
+            using (LanguageService.LanguageSwitchProfiler.Measure("SyncSidebarSelection.Total"))
             {
-                settingsSidebarColumn.Width = tag == "vaulthealth"
-                    ? new GridLength(210)
-                    : new GridLength(240);
-            }
+                // Main navigation radio buttons
+                var mainNavButtons = new Dictionary<string, RadioButton>
+                {
+                    ["accounts"] = navAccounts,
+                    ["files"] = navFiles,
+                };
 
-            if (tag == "files") RefreshFiles();
-            if (tag == "security") RefreshSecurityOverview();
-            if (tag == "drive") RefreshDriveTokenStatus();
-            if (tag == "vaulthealth") RefreshVaultHealth();
+                // Settings navigation radio buttons
+                var settingsNavButtons = new Dictionary<string, RadioButton>
+                {
+                    ["profile"] = navProfile,
+                    ["security"] = navSecurity,
+                    ["vaulthealth"] = null, // vaulthealth uses dynamic name, find it
+                    ["appearance"] = null,
+                    ["backup"] = null,
+                    ["drive"] = null,
+                    ["system"] = null,
+                    ["admin"] = navAdmin,
+                };
+
+                // Find settings radio buttons by tag if not already mapped
+                if (settingsNavButtons["vaulthealth"] == null)
+                {
+                    var settingsNavList = new[] { "vaulthealth", "appearance", "backup", "drive", "system" };
+                    foreach (var settingsTag in settingsNavList)
+                    {
+                        if (settingsNavButtons.ContainsKey(settingsTag) && settingsNavButtons[settingsTag] == null)
+                        {
+                            var btn = FindName($"nav{char.ToUpper(settingsTag[0]) + settingsTag.Substring(1)}") as RadioButton;
+                            if (btn != null) settingsNavButtons[settingsTag] = btn;
+                        }
+                    }
+                }
+
+                // Main navigation
+                if (mainNavButtons.TryGetValue(tag, out var mainBtn) && mainBtn != null)
+                {
+                    mainBtn.IsChecked = true;
+                }
+
+                // Settings navigation
+                if (settingsNavButtons.TryGetValue(tag, out var settingsBtn) && settingsBtn != null)
+                {
+                    settingsBtn.IsChecked = true;
+                }
+            }
         }
 
         private DateTime _userMenuClosedAt = DateTime.MinValue;

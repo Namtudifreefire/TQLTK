@@ -1,5 +1,9 @@
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Globalization;
+using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -19,8 +23,315 @@ public static class LanguageService
         public Func<string>? Renderer { get; set; }
         public bool IsUpdating { get; set; }
     }
+
+    public static class LanguageSwitchProfiler
+    {
+        // Check environment variable once at startup
+        private static readonly bool _isEnabled =
+            Environment.GetEnvironmentVariable("TQLTK_PROFILE_LANG_SWITCH") == "1";
+
+        public static bool Enabled => _isEnabled;
+
+        private static readonly object _lock = new();
+        // Per-switch timing data - each switch gets its own dictionaries
+        private static Dictionary<string, long> _currentTimings = new();
+        private static Dictionary<string, int> _currentCounts = new();
+        private static int _currentSwitchId = 0;
+
+        // Track active measurements for nested timing support
+        private static readonly Dictionary<string, int> _activeMeasurements = new();
+
+        // Track current language switch context
+        private static string _currentDirection = "";
+        private static bool _isInLanguageSwitch = false;
+
+        public static void Reset()
+        {
+            lock (_lock)
+            {
+                _currentTimings.Clear();
+                _currentCounts.Clear();
+                _activeMeasurements.Clear();
+                _currentDirection = "";
+                // Do NOT reset _currentSwitchId - it must monotonically increase to prevent stale scope matching
+                _isInLanguageSwitch = false;
+            }
+        }
+
+        public static IDisposable Measure(string name)
+        {
+            if (!_isEnabled) return EmptyDisposable.Instance;
+            var sw = Stopwatch.StartNew();
+            int switchId;
+            lock (_lock)
+            {
+                if (!_isInLanguageSwitch) return EmptyDisposable.Instance;
+                switchId = _currentSwitchId;
+                _activeMeasurements[name] = _activeMeasurements.GetValueOrDefault(name) + 1;
+            }
+            return new TimingScope(name, sw, switchId);
+        }
+
+        // Creates a switch scope that ensures proper begin/end pairing
+        public static IDisposable BeginSwitch(string fromLang, string toLang)
+        {
+            if (!_isEnabled) return EmptyDisposable.Instance;
+            lock (_lock)
+            {
+                _isInLanguageSwitch = true;
+                _currentSwitchId++;
+                _currentDirection = fromLang + " → " + toLang;
+                _currentTimings.Clear();
+                _currentCounts.Clear();
+                _activeMeasurements.Clear();
+            }
+            return new SwitchScope(_currentSwitchId, _currentDirection);
+        }
+
+        sealed class TimingScope : IDisposable
+        {
+            readonly string _name;
+            readonly Stopwatch _sw;
+            readonly int _switchId;
+            bool _disposed = false;
+            public TimingScope(string name, Stopwatch sw, int switchId) { _name = name; _sw = sw; _switchId = switchId; }
+            public void Dispose()
+            {
+                if (_disposed) return;
+                _disposed = true;
+                _sw.Stop();
+                var elapsedTicks = _sw.ElapsedTicks;
+                lock (_lock)
+                {
+                    // Only record if this is still the current switch
+                    if (_isInLanguageSwitch && _currentSwitchId == _switchId)
+                    {
+                        _currentTimings[_name] = _currentTimings.GetValueOrDefault(_name) + elapsedTicks;
+                        _currentCounts[_name] = _currentCounts.GetValueOrDefault(_name) + 1;
+                        _activeMeasurements[_name] = _activeMeasurements.GetValueOrDefault(_name) - 1;
+                        if (_activeMeasurements[_name] <= 0)
+                        {
+                            _activeMeasurements.Remove(_name);
+                        }
+                    }
+                }
+            }
+        }
+
+        sealed class SwitchScope : IDisposable
+        {
+            readonly int _switchId;
+            readonly string _direction;
+            bool _disposed = false;
+            public SwitchScope(int switchId, string direction) { _switchId = switchId; _direction = direction; }
+            public void Dispose()
+            {
+                if (_disposed) return;
+                _disposed = true;
+                // Only log if this is still the current switch
+                Dictionary<string, long> timingsCopy = null;
+                Dictionary<string, int> countsCopy = null;
+                string direction = null;
+                bool completedSuccessfully = true;
+                lock (_lock)
+                {
+                    if (_isInLanguageSwitch && _currentSwitchId == _switchId)
+                    {
+                        direction = _currentDirection;
+                        _isInLanguageSwitch = false;
+                        // Copy data for logging outside the lock
+                        timingsCopy = new Dictionary<string, long>(_currentTimings);
+                        countsCopy = new Dictionary<string, int>(_currentCounts);
+                        _currentTimings.Clear();
+                        _currentCounts.Clear();
+                        _activeMeasurements.Clear();
+                    }
+                    else
+                    {
+                        completedSuccessfully = false;
+                    }
+                }
+                if (direction != null)
+                {
+                    // Fire-and-forget async logging to avoid blocking UI thread
+                    ThreadPool.QueueUserWorkItem(_ => LogLanguageSwitchToFile(direction, timingsCopy, countsCopy, _switchId, completedSuccessfully));
+                }
+            }
+        }
+
+        sealed class EmptyDisposable : IDisposable
+        {
+            public static readonly EmptyDisposable Instance = new();
+            public void Dispose() { }
+        }
+
+        public static void LogResults()
+        {
+            lock (_lock)
+            {
+                if (!_currentTimings.Any()) return;
+                var sb = new StringBuilder();
+                sb.AppendLine("=== Language Switch Performance Profile ===");
+                foreach (var kv in _currentTimings.OrderByDescending(kv => kv.Value))
+                {
+                    var count = _currentCounts[kv.Key];
+                    // Convert ticks to milliseconds
+                    var totalMs = (double)kv.Value * 1000.0 / Stopwatch.Frequency;
+                    var avgMs = (double)kv.Value * 1000.0 / Stopwatch.Frequency / count;
+                    sb.AppendLine(kv.Key + ": total=" + totalMs.ToString("F3") + "ms, count=" + count + ", avg=" + avgMs.ToString("F3") + "ms");
+                }
+                Debug.WriteLine(sb.ToString());
+                System.Diagnostics.Trace.WriteLine(sb.ToString());
+            }
+        }
+
+        public static void ResetResults()
+        {
+            lock (_lock)
+            {
+                _currentTimings.Clear();
+                _currentCounts.Clear();
+                _activeMeasurements.Clear();
+            }
+        }
+
+        // Legacy methods kept for backward compatibility but now delegate to switch scope
+        public static IDisposable BeginLanguageSwitch(string fromLang, string toLang)
+        {
+            return BeginSwitch(fromLang, toLang);
+        }
+
+        public static void EndLanguageSwitch()
+        {
+            // No-op: logging is handled by SwitchScope.Dispose() on thread pool
+            // This method is kept for backward compatibility only
+        }
+
+        private static void LogLanguageSwitchToFile(string direction, Dictionary<string, long> timings, Dictionary<string, int> counts, int switchId, bool completedSuccessfully)
+        {
+            try
+            {
+                var logDir = GetLogDirectory();
+                if (string.IsNullOrEmpty(logDir)) return;
+
+                var fileName = "lang-switch-profile-" + DateTime.Now.ToString("yyyyMMdd") + ".log";
+                var filePath = Path.Combine(logDir, fileName);
+
+                var sb = new StringBuilder();
+                sb.AppendLine("=== Language Switch Profile: " + direction + " ===");
+                sb.AppendLine("Switch ID: " + switchId);
+                sb.AppendLine("Status: " + (completedSuccessfully ? "COMPLETED" : "PARTIAL/ABORTED"));
+                sb.AppendLine("Timestamp: " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+                sb.AppendLine("OS: " + Environment.OSVersion);
+                sb.AppendLine(".NET: " + Environment.Version);
+                sb.AppendLine();
+
+                if (timings.Any())
+                {
+                    sb.AppendLine("--- Timing Summary (ms) ---");
+                    foreach (var kv in timings.OrderByDescending(kv => kv.Value))
+                    {
+                        var count = counts.GetValueOrDefault(kv.Key, 0);
+                        // Convert ticks to milliseconds: ticks / (Stopwatch.Frequency / 1000)
+                        var totalMs = (double)kv.Value * 1000.0 / Stopwatch.Frequency;
+                        var avgMs = count > 0 ? totalMs / count : 0;
+                        sb.AppendLine(kv.Key + ": total=" + totalMs.ToString("F3") + "ms, count=" + count + ", avg=" + avgMs.ToString("F3") + "ms");
+                    }
+                    sb.AppendLine();
+                }
+
+                // Calculate key metrics - convert ticks to ms
+                double TicksToMs(long ticks) => (double)ticks * 1000.0 / Stopwatch.Frequency;
+
+                var totalSync = TicksToMs(timings.GetValueOrDefault("SetLanguage.Total", 0L));
+                var validation = TicksToMs(timings.GetValueOrDefault("SetLanguage.Validation", 0L));
+                var registry = TicksToMs(timings.GetValueOrDefault("SetLanguage.Registry", 0L));
+                var refreshTotal = TicksToMs(timings.GetValueOrDefault("RefreshResources.Total", 0L));
+                var refreshAssign = TicksToMs(timings.GetValueOrDefault("RefreshResources.ResourceAssign", 0L));
+                var languageChanged = TicksToMs(timings.GetValueOrDefault("SetLanguage.LanguageChanged", 0L));
+                var applyToWindow = TicksToMs(timings.GetValueOrDefault("SetLanguage.ApplyToWindow", 0L));
+                var visit = TicksToMs(timings.GetValueOrDefault("ApplyToWindow.Visit", 0L));
+                var refreshBindings = TicksToMs(timings.GetValueOrDefault("ApplyToWindow.RefreshLocalizedBindings", 0L));
+                var traversal = TicksToMs(timings.GetValueOrDefault("ApplyToWindow.RefreshLocalizedBindings.Traversal", 0L));
+                var bindingUpdate = TicksToMs(timings.GetValueOrDefault("ApplyToWindow.RefreshLocalizedBindings.BindingUpdate", 0L));
+                var settingsRefresh = TicksToMs(timings.GetValueOrDefault("Settings.LanguageChanged", 0L) +
+                                    timings.GetValueOrDefault("Settings.RefreshAccounts", 0L) +
+                                    timings.GetValueOrDefault("Settings.RefreshSecurityOverview", 0L) +
+                                    timings.GetValueOrDefault("Settings.LoadBackupPolicyUi", 0L) +
+                                    timings.GetValueOrDefault("Settings.RefreshVaultHealth", 0L));
+                var cpFilter = TicksToMs(timings.GetValueOrDefault("MainWindow.LanguageChanged.FilterCommandPaletteResults", 0L));
+                var showPage = TicksToMs(timings.GetValueOrDefault("ShowPage.Total", 0L));
+                var syncSidebar = TicksToMs(timings.GetValueOrDefault("ShowPage.SyncSidebarSelection", 0L));
+
+                sb.AppendLine("--- Key Metrics ---");
+                sb.AppendLine("SetLanguage.Total: " + totalSync.ToString("F3") + "ms");
+                sb.AppendLine("  - Validation: " + validation.ToString("F3") + "ms");
+                sb.AppendLine("  - Registry: " + registry.ToString("F3") + "ms");
+                sb.AppendLine("  - RefreshResources.Total: " + refreshTotal.ToString("F3") + "ms");
+                sb.AppendLine("    - ResourceAssign: " + refreshAssign.ToString("F3") + "ms");
+                sb.AppendLine("  - LanguageChanged: " + languageChanged.ToString("F3") + "ms");
+                sb.AppendLine("  - ApplyToWindow: " + applyToWindow.ToString("F3") + "ms");
+                sb.AppendLine("    - Visit: " + visit.ToString("F3") + "ms");
+                sb.AppendLine("    - RefreshLocalizedBindings: " + refreshBindings.ToString("F3") + "ms");
+                sb.AppendLine("      - Traversal: " + traversal.ToString("F3") + "ms");
+                sb.AppendLine("      - BindingUpdate: " + bindingUpdate.ToString("F3") + "ms");
+                sb.AppendLine("Settings.LanguageChanged: " + settingsRefresh + "ms");
+                sb.AppendLine("MainWindow.LanguageChanged.FilterCommandPaletteResults: " + cpFilter + "ms");
+                sb.AppendLine("ShowPage.Total: " + showPage + "ms");
+                sb.AppendLine("  - SyncSidebarSelection: " + syncSidebar + "ms");
+                sb.AppendLine();
+
+                var targetMet = totalSync <= 500;
+                sb.AppendLine("TARGET (<=500ms): " + (targetMet ? "MET" : "NOT MET") + " (" + totalSync + "ms)");
+                sb.AppendLine();
+
+                File.AppendAllText(filePath, sb.ToString());
+                Debug.WriteLine(sb.ToString());
+                System.Diagnostics.Trace.WriteLine(sb.ToString());
+            }
+            catch (Exception)
+            {
+                // Silent fail - profiling should never crash the app
+            }
+        }
+
+        private static string GetLogDirectory()
+        {
+            try
+            {
+                var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+                var logDir = Path.Combine(localAppData, "TQLTK", "Logs", "LanguageSwitchProfiler");
+                Directory.CreateDirectory(logDir);
+                return logDir;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+    }
+
     private static readonly ConditionalWeakTable<DependencyObject, Dictionary<DependencyProperty, ObservedValue>> Observed = new();
     private static readonly ConditionalWeakTable<TextBlock, ObservedValue> LocalizedTextBlocks = new();
+    public static event Action? LanguageChanged;
+
+    public static string Fold(string s)
+    {
+        string decomposed = s.Normalize(NormalizationForm.FormD);
+        var sb = new StringBuilder(decomposed.Length);
+
+        foreach (char c in decomposed)
+        {
+            if (CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
+                sb.Append(c);
+        }
+
+        return sb.ToString()
+            .Replace('đ', 'd')
+            .Replace('Đ', 'D')
+            .ToLowerInvariant();
+    }
+
     private static readonly IReadOnlyDictionary<string, string> EnglishActivityActions =
         new Dictionary<string, string>(StringComparer.Ordinal)
         {
@@ -173,6 +484,46 @@ public static class LanguageService
     private static string _currentCode = RegistryService.GetLanguage();
     public static string CurrentCode => _currentCode;
     public static bool IsEnglish => _currentCode == "en";
+
+    // Dedicated localization ResourceDictionary key in MergedDictionaries
+    private const string LocalizationDictionaryKey = "TQLTK.Localization";
+    private static ResourceDictionary? _localizationDictionary;
+
+    // Initialize the dedicated localization ResourceDictionary in MergedDictionaries
+    // Fixed slot index for stable precedence (after theme/system dictionaries)
+    private const int LocalizationDictionaryIndex = 2;
+
+    public static void InitializeLocalizationDictionary()
+    {
+        if (Application.Current is not { } app) return;
+
+        // Check if already initialized
+        if (_localizationDictionary != null)
+        {
+            // Ensure it's at the correct index
+            int currentIndex = app.Resources.MergedDictionaries.IndexOf(_localizationDictionary);
+            if (currentIndex >= 0 && currentIndex != LocalizationDictionaryIndex)
+            {
+                app.Resources.MergedDictionaries.RemoveAt(currentIndex);
+                app.Resources.MergedDictionaries.Insert(LocalizationDictionaryIndex, _localizationDictionary);
+            }
+            return;
+        }
+
+        // Create and add the dedicated localization dictionary (no Source URI)
+        _localizationDictionary = new ResourceDictionary();
+
+        // Insert at fixed index for stable precedence
+        if (app.Resources.MergedDictionaries.Count > LocalizationDictionaryIndex)
+        {
+            app.Resources.MergedDictionaries.Insert(LocalizationDictionaryIndex, _localizationDictionary);
+        }
+        else
+        {
+            app.Resources.MergedDictionaries.Add(_localizationDictionary);
+        }
+    }
+
 #if SECURITY_TEST
     internal static void SetLanguageForTesting(string code)
     {
@@ -183,23 +534,91 @@ public static class LanguageService
     public static string GetDisplayName(string code) => code == "en" ? "English" : "Tiếng Việt";
     public static void RefreshResources()
     {
-        if (Application.Current is not { } app) return;
-        foreach (var message in LocalizationAuditService.Catalog.Where(message => message.Id.StartsWith("xaml.", StringComparison.Ordinal) || message.Id.StartsWith("ui.", StringComparison.Ordinal)))
+        using (LanguageSwitchProfiler.Measure("RefreshResources.Total"))
         {
-            string text = LocalizationAuditService.Get(message.Id, CurrentCode);
-            if (!Equals(app.Resources[message.Id], text)) app.Resources[message.Id] = text;
+            if (Application.Current is not { } app) return;
+
+            // Audit counters for Windows profiling
+            int enumeratedCount = 0;
+
+            // Build complete localization dictionary for batched swap
+            var newLocalizationDict = new ResourceDictionary();
+
+            foreach (var message in LocalizationAuditService.Catalog.Where(message => message.Id.StartsWith("xaml.", StringComparison.Ordinal) || message.Id.StartsWith("ui.", StringComparison.Ordinal)))
+            {
+                enumeratedCount++;
+                string text = LocalizationAuditService.Get(message.Id, CurrentCode);
+
+                // Build batched dictionary
+                using (LanguageSwitchProfiler.Measure("RefreshResources.ResourceAssign"))
+                {
+                    newLocalizationDict[message.Id] = text;
+                }
+            }
+
+            // Atomic swap via single index assignment (single invalidation)
+            using (LanguageSwitchProfiler.Measure("RefreshResources.DictionarySwap"))
+            {
+                if (_localizationDictionary != null)
+                {
+                    int index = app.Resources.MergedDictionaries.IndexOf(_localizationDictionary);
+                    if (index >= 0)
+                    {
+                        // Atomic swap: single invalidation
+                        app.Resources.MergedDictionaries[index] = newLocalizationDict;
+                        _localizationDictionary = newLocalizationDict;
+                    }
+                    else
+                    {
+                        // Dictionary was removed externally; re-add at fixed index
+                        app.Resources.MergedDictionaries.Insert(LocalizationDictionaryIndex, newLocalizationDict);
+                        _localizationDictionary = newLocalizationDict;
+                    }
+                }
+                else
+                {
+                    // Fallback: first time or initialization issue - insert at fixed index
+                    app.Resources.MergedDictionaries.Insert(LocalizationDictionaryIndex, newLocalizationDict);
+                    _localizationDictionary = newLocalizationDict;
+                }
+            }
+
+            // Debug output for Windows profiling analysis
+            Debug.WriteLine($"RefreshResources Audit: enumerated={enumeratedCount}, resourceAssign={enumeratedCount}, dictSwap=1");
         }
     }
     public static void SetLanguage(string code)
     {
-        string normalized = code.Equals("en", StringComparison.OrdinalIgnoreCase) ? "en" : "vi";
-        if (_currentCode == normalized) { RefreshResources(); return; }
-        _currentCode = normalized;
-        RegistryService.SetLanguage(normalized);
-        RefreshResources();
-        if (Application.Current == null) return;
-        foreach (Window window in Application.Current.Windows)
-            ApplyToWindow(window);
+        // Use switch scope to ensure profiling for ALL language changes (including login/restore)
+        using (LanguageSwitchProfiler.BeginSwitch(_currentCode, code.Equals("en", StringComparison.OrdinalIgnoreCase) ? "en" : "vi"))
+        {
+            string normalized;
+            using (LanguageSwitchProfiler.Measure("SetLanguage.Validation"))
+            {
+                normalized = code.Equals("en", StringComparison.OrdinalIgnoreCase) ? "en" : "vi";
+                if (_currentCode == normalized) { RefreshResources(); return; }
+                var oldCode = _currentCode;
+                _currentCode = normalized;
+            }
+            using (LanguageSwitchProfiler.Measure("SetLanguage.Total"))
+            {
+                using (LanguageSwitchProfiler.Measure("SetLanguage.Registry"))
+                {
+                    RegistryService.SetLanguage(normalized);
+                }
+                RefreshResources();
+                using (LanguageSwitchProfiler.Measure("SetLanguage.LanguageChanged"))
+                {
+                    LanguageChanged?.Invoke();
+                }
+                if (Application.Current == null) return;
+                using (LanguageSwitchProfiler.Measure("SetLanguage.ApplyToWindow"))
+                {
+                    foreach (Window window in Application.Current.Windows)
+                        ApplyToWindow(window);
+                }
+            }
+        }
     }
     public static string Translate(string value)
     {
@@ -482,28 +901,57 @@ public static class LanguageService
     }
     public static void ApplyToWindow(Window window)
     {
-        RefreshResources();
-        Visit(window, new HashSet<DependencyObject>());
-        RefreshLocalizedBindings(window, new HashSet<DependencyObject>());
+        using (LanguageSwitchProfiler.Measure("ApplyToWindow.Total"))
+        {
+            // RefreshResources is called once in SetLanguage; do not call again to avoid double-measurement
+            using (LanguageSwitchProfiler.Measure("ApplyToWindow.Visit"))
+            {
+                Visit(window, new HashSet<DependencyObject>());
+            }
+            using (LanguageSwitchProfiler.Measure("ApplyToWindow.RefreshLocalizedBindings"))
+            {
+                RefreshLocalizedBindings(window, new HashSet<DependencyObject>());
+            }
+        }
     }
     private static void RefreshLocalizedBindings(DependencyObject element, HashSet<DependencyObject> visited)
     {
         if (!visited.Add(element)) return;
+
+        // Measure binding update separately from traversal
         if (element is TextBlock textBlock &&
             BindingOperations.GetBindingExpression(textBlock, TextBlock.TextProperty) is { } binding &&
             binding.ParentBinding.Converter is LocalizedTextConverter)
         {
-            binding.UpdateTarget();
+            using (LanguageSwitchProfiler.Measure("ApplyToWindow.RefreshLocalizedBindings.BindingUpdate"))
+            {
+                binding.UpdateTarget();
+            }
         }
-        if (element is Visual or Visual3D)
+
+        // Measure ONLY the local traversal logic (iteration, not recursive calls)
+        using (LanguageSwitchProfiler.Measure("ApplyToWindow.RefreshLocalizedBindings.Traversal"))
         {
-            int visualChildren = VisualTreeHelper.GetChildrenCount(element);
-            for (int i = 0; i < visualChildren; i++)
-                RefreshLocalizedBindings(VisualTreeHelper.GetChild(element, i), visited);
+            var visualChildren = new List<DependencyObject>();
+            if (element is Visual or Visual3D)
+            {
+                int count = VisualTreeHelper.GetChildrenCount(element);
+                for (int i = 0; i < count; i++)
+                {
+                    var child = VisualTreeHelper.GetChild(element, i);
+                    if (child is DependencyObject dep) visualChildren.Add(dep);
+                }
+            }
+            var logicalChildren = new List<DependencyObject>();
+            foreach (object child in LogicalTreeHelper.GetChildren(element))
+                if (child is DependencyObject dep) logicalChildren.Add(dep);
+
+            // Recursive calls happen OUTSIDE the traversal measurement
+            foreach (var child in visualChildren)
+                RefreshLocalizedBindings(child, visited);
+            foreach (var child in logicalChildren)
+                RefreshLocalizedBindings(child, visited);
         }
-        foreach (object child in LogicalTreeHelper.GetChildren(element))
-            if (child is DependencyObject dependencyChild)
-                RefreshLocalizedBindings(dependencyChild, visited);
     }
     public static void SetLocalizedText(TextBlock textBlock, string sourceText)
     {

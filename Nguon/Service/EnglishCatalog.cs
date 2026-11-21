@@ -45,6 +45,7 @@ internal static class EnglishCatalog
         Add("Dùng PBKDF2-HMAC-SHA256 (tương thích FIPS)", "Use PBKDF2-HMAC-SHA256 (FIPS-compatible)");
         Add("Xoay khóa vault", "Rotate Vault Key");
         Add("Chỉ quản trị viên đang hoạt động mới được phép xoay khóa vault.", "Only an active administrator can rotate the vault key.");
+        Add("Cần quyền quản trị viên.", "Administrator privileges are required.");
         Add("Không đủ quyền", "Insufficient permissions");
         Add("Mã hóa lại vault, ghi chú và bản sao lưu cục bộ đã nhận diện. Hãy đặt cụm mật khẩu sao lưu trước; khóa cũ được giữ mã hóa để mở các bản xuất lịch sử.", "Re-encrypt the vault, notes, and recognized local backups. Set a backup passphrase first; the old key is retained in protected form for historical exports.");
         Add("Trạng thái", "Status");
@@ -2176,5 +2177,44 @@ internal static class EnglishCatalog
         new KeyValuePair<string, string>("Đã xử lý", "Fixed"),
         new KeyValuePair<string, string>("Nhắc lại", "Snoozed"),
         new KeyValuePair<string, string>("Đã bỏ qua", "Ignored"),
+
+        // Command Palette
+        new KeyValuePair<string, string>("Bảng lệnh", "Command Palette"),
+        new KeyValuePair<string, string>("Tìm kiếm lệnh hoặc hành động...", "Search commands or actions..."),
+        new KeyValuePair<string, string>("Không tìm thấy lệnh nào.", "No commands found."),
+        new KeyValuePair<string, string>("↑ ↓ Chọn  •  Enter Thực thi  •  Esc Đóng", "↑ ↓ Select  •  Enter Execute  •  Esc Close"),
+        new KeyValuePair<string, string>("Đóng", "Close"),
+        new KeyValuePair<string, string>("Điều hướng", "Navigation"),
+        new KeyValuePair<string, string>("Thao tác", "Actions"),
+        new KeyValuePair<string, string>("Quản trị", "Admin"),
+
+        // Command Palette items - Titles
+        new KeyValuePair<string, string>("Tài khoản", "Accounts"),
+        new KeyValuePair<string, string>("Tệp cá nhân", "Personal Files"),
+        new KeyValuePair<string, string>("Hồ sơ", "Profile"),
+        new KeyValuePair<string, string>("Cài đặt", "Settings"),
+        new KeyValuePair<string, string>("Bảo mật", "Security"),
+        new KeyValuePair<string, string>("Bảng điều khiển an toàn", "Vault Health Dashboard"),
+        new KeyValuePair<string, string>("Giao diện", "Appearance"),
+        new KeyValuePair<string, string>("Sao lưu", "Backup"),
+        new KeyValuePair<string, string>("Google Drive", "Google Drive"),
+        new KeyValuePair<string, string>("Hệ thống", "System"),
+        new KeyValuePair<string, string>("Quản trị", "Admin"),
+        new KeyValuePair<string, string>("Khóa vault", "Lock Vault"),
+
+        // Command Palette items - Descriptions
+        new KeyValuePair<string, string>("Mở danh sách tài khoản", "Open accounts list"),
+        new KeyValuePair<string, string>("Mở quản lý tệp cá nhân", "Open personal files manager"),
+        new KeyValuePair<string, string>("Mở hồ sơ người dùng", "Open user profile"),
+        new KeyValuePair<string, string>("Mở cài đặt", "Open settings"),
+        new KeyValuePair<string, string>("Mở cài đặt bảo mật", "Open security settings"),
+        new KeyValuePair<string, string>("Mở bảng điều khiển an toàn vault", "Open vault health dashboard"),
+        new KeyValuePair<string, string>("Mở cài đặt giao diện", "Open appearance settings"),
+        new KeyValuePair<string, string>("Mở quản lý bản sao lưu", "Open backup manager"),
+        new KeyValuePair<string, string>("Mở cài đặt Google Drive", "Open Google Drive settings"),
+        new KeyValuePair<string, string>("Mở cài đặt hệ thống", "Open system settings"),
+        new KeyValuePair<string, string>("Mở trang quản trị", "Open admin page"),
+        new KeyValuePair<string, string>("Tìm kiếm tài khoản", "Search accounts"),
+        new KeyValuePair<string, string>("Khóa ngay lập tức", "Lock immediately"),
     };
 }
