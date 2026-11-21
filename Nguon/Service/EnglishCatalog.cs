@@ -2200,7 +2200,6 @@ internal static class EnglishCatalog
         new KeyValuePair<string, string>("Google Drive", "Google Drive"),
         new KeyValuePair<string, string>("Hệ thống", "System"),
         new KeyValuePair<string, string>("Quản trị", "Admin"),
-        new KeyValuePair<string, string>("Tìm kiếm tài khoản", "Search Accounts"),
         new KeyValuePair<string, string>("Khóa vault", "Lock Vault"),
 
         // Command Palette items - Descriptions
